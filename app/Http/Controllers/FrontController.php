@@ -26,7 +26,7 @@ class FrontController
         $notFound = is_file("{$root}/404.html") ? file_get_contents("{$root}/404.html") : 'Not Found';
 
         if (str_contains($path, '..')) {
-            return response($notFound, 404);
+            return response($notFound, 404, ['Cache-Control' => 'no-store']);
         }
 
         if (is_dir($root)) {
@@ -45,10 +45,11 @@ class FrontController
         }
 
         if (GoneUrl::isGone($host, $path)) {
-            return response($notFound, 410, ['Content-Type' => 'text/html; charset=utf-8', 'X-Robots-Tag' => 'noindex']);
+            return response($notFound, 410, ['Content-Type' => 'text/html; charset=utf-8', 'X-Robots-Tag' => 'noindex', 'Cache-Control' => 'no-store']);
         }
 
-        return response($notFound, 404, ['Content-Type' => 'text/html; charset=utf-8']);
+        // no-store: a briefly missing asset must not stay cached as 404 in browsers / Cloudflare.
+        return response($notFound, 404, ['Content-Type' => 'text/html; charset=utf-8', 'Cache-Control' => 'no-store']);
     }
 
     protected function headers(string $file): array

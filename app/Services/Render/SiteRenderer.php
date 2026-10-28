@@ -242,7 +242,7 @@ class SiteRenderer
 
         return $this->assets = [
             'critical_css' => trim(preg_replace('/\s+/', ' ', file_get_contents(resource_path('theme/critical.css')))),
-            'base_css' => '/_theme/base.css?v='.substr(md5_file(resource_path('theme/base.css')), 0, 10),
+            'base_css' => '/_theme/base.css?v='.substr(sha1_file(resource_path('theme/base.css')), 0, 12),
             'site_css' => '/assets/site.css?v='.substr(md5($this->siteCss()), 0, 10),
             'preload_fonts' => array_slice($fonts, 0, 2),
             'cookie_banner' => (bool) Settings::get('cookie_banner', true),
