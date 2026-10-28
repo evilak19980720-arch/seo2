@@ -10,11 +10,34 @@ class BrandProfile extends Model
     protected $fillable = [
         'site_id', 'product_name', 'tagline', 'description', 'selling_points', 'specs', 'target_audience',
         'use_cases', 'media', 'cta_links', 'faq', 'company_name', 'company_email', 'company_address', 'completeness',
+        'localized', 'localized_hash',
     ];
+
+    /** Profile fields shown on the site; rendered from the site-language copy when the profile is written in another language. */
+    public const DISPLAY_FIELDS = ['tagline', 'description', 'selling_points', 'specs', 'target_audience', 'use_cases', 'faq', 'company_address'];
+
+    /** Copy of this profile with the site-language versions of the display fields. */
+    public function forDisplay(): self
+    {
+        $copy = clone $this;
+        foreach ((array) $this->localized as $field => $value) {
+            if (in_array($field, self::DISPLAY_FIELDS, true) && filled($value)) {
+                $copy->setAttribute($field, $value);
+            }
+        }
+
+        return $copy;
+    }
+
+    public function displayHash(string $locale): string
+    {
+        return md5($locale.json_encode($this->only(self::DISPLAY_FIELDS), JSON_UNESCAPED_UNICODE));
+    }
 
     protected function casts(): array
     {
         return [
+            'localized' => 'array',
             'selling_points' => 'array',
             'specs' => 'array',
             'media' => 'array',

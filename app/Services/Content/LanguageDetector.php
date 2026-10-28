@@ -36,6 +36,14 @@ class LanguageDetector
     /** True when the text is (probably) in $lang, or the language is not covered. */
     public static function matches(string $text, string $lang): bool
     {
+        // CJK text on a site in a Latin-script language (e.g. a profile typed in Chinese).
+        if (! in_array($lang, ['zh', 'ja', 'ko'], true)) {
+            $letters = preg_match_all('/\p{L}/u', $text);
+            $cjk = preg_match_all('/[\p{Han}\p{Hiragana}\p{Katakana}\p{Hangul}]/u', $text);
+            if ($letters > 0 && $cjk / $letters > 0.2) {
+                return false;
+            }
+        }
         if (! isset(self::STOPWORDS[$lang])) {
             return true;
         }

@@ -74,6 +74,9 @@ class SiteForm
                     ->helperText('自动生成 favicon.ico、apple-touch-icon、192/512 图标和 manifest'),
                 TextInput::make('reference_url')->label('参考网站')->url()
                     ->helperText('只提取配色、字体和布局结构，不复制文案、LOGO 和品牌名'),
+                FileUpload::make('reference_images')->label('参考截图')->image()->multiple()->maxFiles(3)->maxSize(4096)
+                    ->disk('public')->directory('reference')->columnSpanFull()
+                    ->helperText('参考网站有防护、无法抓取时上传 1-3 张截图（首页首屏最重要）；会从截图中提取配色，有视觉模型时也交给 AI 参考布局'),
             ]),
             Section::make('标题与描述')->schema([
                 TextInput::make('title')->label('首页标题')->maxLength(70)

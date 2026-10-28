@@ -26,7 +26,7 @@ class ThemeContext
 
     public function __construct(public readonly Site $site, public readonly MediaPublisher $media)
     {
-        $this->brand = $site->brandProfile ?? new BrandProfile(['product_name' => $site->product_name]);
+        $this->brand = $site->brandProfile?->forDisplay() ?? new BrandProfile(['product_name' => $site->product_name]);
         $this->lang = $site->language();
         $this->pages = $site->pages()->get()->keyBy('type');
 

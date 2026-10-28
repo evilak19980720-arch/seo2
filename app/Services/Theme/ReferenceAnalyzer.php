@@ -48,6 +48,50 @@ class ReferenceAnalyzer
         ];
     }
 
+    /**
+     * Palette of uploaded reference screenshots (for sites that can't be fetched):
+     * background = most common colour, primary = most common saturated colour,
+     * text = the common colour with the best contrast on the background.
+     *
+     * @param  array<int, string>  $paths  absolute image paths
+     * @return array{primary: ?string, background: ?string, text: ?string, palette: array<int, string>}|null
+     */
+    public function imageColors(array $paths): ?array
+    {
+        $counts = [];
+        foreach ($paths as $path) {
+            $img = is_file($path) ? @imagecreatefromstring((string) file_get_contents($path)) : false;
+            if (! $img) {
+                continue;
+            }
+            $small = imagescale($img, 96, max(1, (int) round(96 * imagesy($img) / max(1, imagesx($img)))));
+            for ($x = 0; $x < imagesx($small); $x++) {
+                for ($y = 0; $y < imagesy($small); $y++) {
+                    $rgb = imagecolorat($small, $x, $y);
+                    // 16 levels per channel merges anti-aliasing and gradients.
+                    $q = [(($rgb >> 16) & 0xF0) | 8, (($rgb >> 8) & 0xF0) | 8, ($rgb & 0xF0) | 8];
+                    $hex = Color::toHex($q);
+                    $counts[$hex] = ($counts[$hex] ?? 0) + 1;
+                }
+            }
+        }
+        if ($counts === []) {
+            return null;
+        }
+        arsort($counts);
+        $colors = array_keys($counts);
+        $background = $colors[0];
+        $saturated = array_values(array_filter($colors, fn ($c) => $this->saturation($c) > 0.35 && Color::contrast($c, $background) > 1.6));
+        $text = collect(array_slice($colors, 0, 12))->sortByDesc(fn ($c) => Color::contrast($c, $background))->first();
+
+        return [
+            'primary' => $saturated[0] ?? null,
+            'background' => $background,
+            'text' => Color::contrast($text, $background) >= 4.5 ? $text : null,
+            'palette' => array_slice(array_values(array_unique(array_merge(array_slice($saturated, 0, 5), array_slice($colors, 0, 5)))), 0, 10),
+        ];
+    }
+
     /** Match reference font names against the theme's self-hosted fonts. */
     public static function whitelistFont(array $referenceFonts): ?string
     {

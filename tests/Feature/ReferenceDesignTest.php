@@ -65,4 +65,39 @@ class ReferenceDesignTest extends TestCase
         preg_match('#<ul class="nav__links">(.*?)</ul>#s', $html, $nav);
         $this->assertLessThan(strpos($nav[1], 'blog'), strpos($nav[1], 'perguntas') ?: 0);
     }
+
+    public function test_uploaded_screenshots_provide_the_palette(): void
+    {
+        $img = imagecreatetruecolor(400, 300);
+        imagefill($img, 0, 0, imagecolorallocate($img, 10, 12, 30));               // dark background
+        imagefilledrectangle($img, 20, 20, 180, 80, imagecolorallocate($img, 250, 200, 0));   // yellow buttons
+        imagefilledrectangle($img, 20, 120, 380, 130, imagecolorallocate($img, 240, 240, 240)); // text lines
+        $path = tempnam(sys_get_temp_dir(), 'ref').'.png';
+        imagepng($img, $path);
+
+        $colors = app(ReferenceAnalyzer::class)->imageColors([$path]);
+
+        $this->assertSame('#080818', $colors['background']);
+        $this->assertSame('#f8c808', $colors['primary']);
+        $this->assertSame('#f8f8f8', $colors['text']);
+    }
+
+    public function test_chinese_brand_profile_is_shown_in_site_language(): void
+    {
+        $this->fakeAi(['brand' => ['tagline' => 'Entretenimento em um só lugar', 'selling_points' => ['Interface traduzida']]]);
+        $site = $this->makeSite();
+        $site->brandProfile->update(['tagline' => 'VIP345是一款面向巴西用户的娱乐应用', 'selling_points' => ['翻译后的界面']]);
+
+        $note = app(SiteGenerator::class)->localizeBrand($site->fresh());
+        $generator = app(SiteGenerator::class);
+        $generator->generatePages($site);
+        app(StaticSiteBuilder::class)->buildAll($site->fresh());
+        $html = file_get_contents(StaticSiteBuilder::dirFor($site).'/index.html');
+
+        $this->assertNotNull($note);
+        $this->assertStringNotContainsString('娱乐应用', $html);
+        $this->assertStringContainsString('Entretenimento em um só lugar', $html);
+        $this->assertSame('VIP345是一款面向巴西用户的娱乐应用', $site->brandProfile->fresh()->tagline, 'admin copy stays as typed');
+        $this->assertNull(app(SiteGenerator::class)->localizeBrand($site->fresh()), 'unchanged profile is not re-translated');
+    }
 }

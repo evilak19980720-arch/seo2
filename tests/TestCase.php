@@ -87,6 +87,7 @@ abstract class TestCase extends BaseTestCase
                 str_contains($text, 'Polish this article') => ['html' => $overrides['polished'] ?? self::portugueseArticle()],
                 str_contains($text, 'Review this article') => ['pass' => true, 'issues' => []],
                 str_contains($text, 'List every claim') => $overrides['factcheck'] ?? ['supported' => true, 'unsupported_claims' => []],
+                str_contains($text, 'Rewrite this brand profile') => $overrides['brand'] ?? ['tagline' => 'Corra entre planetas'],
                 default => ['ok' => true],
             };
 

@@ -6,10 +6,12 @@ use App\Enums\PromptType;
 use App\Enums\SiteStatus;
 use App\Models\AiProvider;
 use App\Models\Alert;
+use App\Models\BrandProfile;
 use App\Models\DesignVersion;
 use App\Models\GenerationTask;
 use App\Models\Site;
 use App\Services\Ai\AiManager;
+use App\Services\Content\LanguageDetector;
 use App\Services\Integrations\Lighthouse;
 use App\Services\Integrations\Screenshot;
 use App\Services\Render\HtmlSanitizer;
@@ -21,6 +23,7 @@ use App\Services\Theme\DefaultDesign;
 use App\Services\Theme\DesignConfigValidator;
 use App\Services\Theme\ReferenceAnalyzer;
 use App\Support\Settings;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
@@ -55,6 +58,10 @@ class SiteGenerator
             if (! $designOnly) {
                 $task->progress('生成标题与描述');
                 $this->ensureMeta($site);
+            }
+
+            if ($note = $this->localizeBrand($site)) {
+                $task->progress($note);
             }
 
             $task->progress('生成设计配置');
@@ -131,15 +138,29 @@ class SiteGenerator
 
         // A broken reference must never stop the site from being generated.
         $reference = $site->reference_url ? rescue(fn () => $this->reference->analyze($site->reference_url), null) : null;
-        if ($site->reference_url) {
-            $this->designNotes[] = $reference
-                ? '参考网站：主色 '.($reference['colors']['primary'] ?? '未识别').'，背景 '.($reference['colors']['background'] ?? '未识别')
-                    .'，字体 '.(implode(' / ', $reference['fonts']) ?: '未识别').'，菜单 '.count($reference['menu']).' 项'
-                : '参考网站无法读取（可能有防护或超时），只能按品牌资料设计';
+        if ($site->reference_url && ! $reference) {
+            $this->designNotes[] = '参考网站无法读取（可能有防护或超时）'.($site->reference_images ? '，改用上传的参考截图' : '，可在「参考截图」上传几张截图代替');
+        }
+
+        // Uploaded screenshots: their colours fill whatever the HTML/CSS analysis could not find.
+        $shotPaths = collect($site->reference_images ?? [])->map(fn ($p) => Storage::disk('public')->path($p))->filter(fn ($p) => is_file($p))->values()->all();
+        if ($shotPaths !== [] && ($fromImages = rescue(fn () => $this->reference->imageColors($shotPaths), null))) {
+            $reference ??= ['url' => $site->reference_url, 'title' => null, 'colors' => [], 'fonts' => [], 'menu' => [], 'sections' => []];
+            foreach (['primary', 'background', 'text'] as $key) {
+                $reference['colors'][$key] = ($reference['colors'][$key] ?? null) ?: $fromImages[$key];
+            }
+            $reference['colors']['palette'] = array_values(array_unique(array_merge($reference['colors']['palette'] ?? [], $fromImages['palette'])));
+        }
+        if ($reference) {
+            $this->designNotes[] = '参考网站：主色 '.($reference['colors']['primary'] ?? '未识别').'，背景 '.($reference['colors']['background'] ?? '未识别')
+                .'，字体 '.(implode(' / ', $reference['fonts']) ?: '未识别').'，菜单 '.count($reference['menu']).' 项';
         }
 
         try {
             $images = $site->reference_url ? $this->screenshot->capture($site->reference_url) : [];
+            foreach (array_slice(array_filter($shotPaths, fn ($p) => filesize($p) < 4_000_000), 0, 3) as $path) {
+                $images[] = 'data:'.(mime_content_type($path) ?: 'image/png').';base64,'.base64_encode((string) file_get_contents($path));
+            }
             if ($images !== [] && ! AiProvider::where('is_active', true)->where('supports_vision', true)->exists()) {
                 $images = [];
             }
@@ -201,6 +222,36 @@ class SiteGenerator
         }
 
         return $config;
+    }
+
+    /**
+     * Brand profiles are often typed in Chinese; the fields the theme shows
+     * directly (tagline, selling points, FAQ…) get a site-language copy.
+     */
+    public function localizeBrand(Site $site): ?string
+    {
+        $profile = $site->brandProfile;
+        if (! $profile || $profile->localized_hash === ($hash = $profile->displayHash($site->locale))) {
+            return null;
+        }
+
+        // Only fields not already in the site language are sent for translation.
+        $fields = array_filter($profile->only(BrandProfile::DISPLAY_FIELDS), fn ($v) => filled($v)
+            && ! LanguageDetector::matches(collect(Arr::wrap($v))->flatten()->filter(fn ($x) => is_string($x))->implode("\n"), $site->language()));
+        if ($fields === []) {
+            $profile->updateQuietly(['localized' => null, 'localized_hash' => $hash]);
+
+            return null;
+        }
+
+        try {
+            $data = $this->ai->prompt(PromptType::BrandTranslate, ['profile' => json_encode($fields, JSON_UNESCAPED_UNICODE)], $site)->json();
+            $profile->updateQuietly(['localized' => array_intersect_key($data, $fields), 'localized_hash' => $hash]);
+
+            return "品牌资料不是{$site->locale}，已转为站点语言用于页面展示（后台资料保持原样）";
+        } catch (Throwable $e) {
+            return '品牌资料转为站点语言失败：'.Str::limit($e->getMessage(), 150);
+        }
     }
 
     public function saveDesign(Site $site, array $config, ?string $customCss, string $source): void
