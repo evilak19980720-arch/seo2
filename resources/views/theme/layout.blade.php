@@ -39,7 +39,7 @@
 <script async src="https://www.googletagmanager.com/gtag/js?id={{ $site->ga4_measurement_id }}"></script>
 @endif
 </head>
-<body>
+<body class="{{ $ctx->bodyClass() }}">
 <a class="skip" href="#main">{{ $ctx->t('skip') }}</a>
 @include('theme.blocks.nav', ['variant' => $ctx->design['nav']])
 @include('theme.partials.ad', ['position' => 'top'])

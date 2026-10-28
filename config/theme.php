@@ -8,7 +8,7 @@
 return [
     // Block => available layout variants (resources/views/theme/blocks/{block}/{variant}.blade.php)
     'blocks' => [
-        'nav' => ['bar', 'centered', 'split', 'minimal'],
+        'nav' => ['bar', 'centered', 'split', 'minimal', 'portal'],
         'hero' => ['split', 'centered', 'image-bg', 'stacked'],
         'features' => ['grid', 'list', 'cards', 'alternating'],
         'gallery' => ['grid', 'masonry', 'strip', 'featured'],
@@ -17,6 +17,12 @@ return [
         'cta' => ['banner', 'card', 'split', 'minimal'],
         'article_list' => ['cards', 'list', 'compact', 'featured'],
         'footer' => ['columns', 'simple', 'centered', 'dark'],
+        'banner' => ['slider', 'wide', 'boxed'],
+        'card_grid' => ['tiles', 'cards', 'compact', 'showcase'],
+        'steps' => ['numbered', 'timeline', 'cards'],
+        'stats' => ['strip', 'cards', 'big'],
+        'notice' => ['bar', 'marquee'],
+        'download' => ['banner', 'card', 'split'],
         'prose' => ['default'],
         'contact' => ['default'],
         'legal' => ['default'],
@@ -37,6 +43,14 @@ return [
         'space-grotesk' => ['family' => '"Space Grotesk", system-ui, sans-serif', 'file' => 'space-grotesk-latin.woff2'],
     ],
 
+    // Global style switches, rendered as body classes (st-{key}-{value}).
+    'styles' => [
+        'background' => ['plain', 'glow', 'grid', 'dots', 'gradient'],
+        'cards' => ['bordered', 'flat', 'elevated', 'glass'],
+        'buttons' => ['solid', 'gradient', 'outline'],
+        'headings' => ['normal', 'uppercase', 'accent'],
+    ],
+
     'radius' => ['none' => '0', 'sm' => '4px', 'md' => '8px', 'lg' => '16px', 'pill' => '999px'],
     'density' => ['compact' => '0.75', 'normal' => '1', 'relaxed' => '1.3'],
     'shadow' => [
@@ -47,6 +61,6 @@ return [
     ],
 
     'min_contrast' => 4.5,
-    'custom_css_max_bytes' => 10240,
+    'custom_css_max_bytes' => 16384,
     'articles_per_page' => 12,
 ];

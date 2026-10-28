@@ -191,14 +191,17 @@ class SiteRenderer
     {
         $html = '';
         $first = $page !== null || $pageType === 'blog';
-        foreach ($this->ctx->blocks($pageType) as $i => $entry) {
+        foreach ($this->ctx->blocks($pageType) as $entry) {
+            // Strips (notice, stats) never carry the page's <h1>; the next block does.
+            $isFirst = $first && ! in_array($entry['block'], ['notice', 'stats'], true);
             $html .= View::make('theme.blocks.'.$entry['block'], [
                 'ctx' => $this->ctx,
                 'variant' => $entry['variant'],
                 'data' => $content[$entry['block']] ?? [],
                 'page' => $page,
-                'isFirst' => $first && $i === 0,
+                'isFirst' => $isFirst,
             ] + $extra)->render();
+            $first = $first && ! $isFirst;
         }
 
         return $html;

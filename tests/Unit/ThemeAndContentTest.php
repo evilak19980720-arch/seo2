@@ -20,7 +20,7 @@ class ThemeAndContentTest extends TestCase
         $this->assertNotEmpty(CustomCssValidator::errors('.hero{background:url(https://cdn.evil.test/a.png)}'));
         $this->assertNotEmpty(CustomCssValidator::errors('main p{display:none}'));
         $this->assertNotEmpty(CustomCssValidator::errors('.prose{font-size:0}'));
-        $this->assertNotEmpty(CustomCssValidator::errors(str_repeat('a{}', 4000)));
+        $this->assertNotEmpty(CustomCssValidator::errors(str_repeat('a{}', 6000)));
         $this->assertSame([], CustomCssValidator::errors('.cookie{display:none}'), 'non-content elements may be hidden');
     }
 

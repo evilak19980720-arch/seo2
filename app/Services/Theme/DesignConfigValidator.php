@@ -82,15 +82,30 @@ class DesignConfigValidator
             return $value;
         };
 
+        $style = [];
+        foreach ($theme['styles'] as $key => $allowed) {
+            $value = $config['style'][$key] ?? null;
+            if ($value !== null && ! in_array($value, $allowed, true)) {
+                $this->repaired[] = "style.{$key} [{$value}] invalid, using {$allowed[0]}";
+            }
+            $style[$key] = in_array($value, $allowed, true) ? $value : $allowed[0];
+        }
+
+        // Extra pages mirror reference menu sections the site type has no page for.
+        $extraPages = ExtraPages::clean($config['extra_pages'] ?? []);
+        $siteTypeConfig = ExtraPages::merge($siteTypeConfig, $extraPages);
+
         $result = [
             'colors' => $colors,
             'fonts' => $fonts,
             'radius' => $pick('radius', $theme['radius'], 'md'),
             'density' => $pick('density', $theme['density'], 'normal'),
             'shadow' => $pick('shadow', $theme['shadow'], 'soft'),
+            'style' => $style,
             'nav' => $this->variant('nav', $config['nav'] ?? null),
             'footer' => $this->variant('footer', $config['footer'] ?? null),
             'menu' => $this->menu($config['menu'] ?? [], $siteTypeConfig),
+            'extra_pages' => $extraPages,
             'pages' => [],
         ];
 

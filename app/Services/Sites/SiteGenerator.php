@@ -9,6 +9,8 @@ use App\Models\Alert;
 use App\Models\BrandProfile;
 use App\Models\DesignVersion;
 use App\Models\GenerationTask;
+use App\Models\GoneUrl;
+use App\Models\Page;
 use App\Models\Site;
 use App\Services\Ai\AiManager;
 use App\Services\Content\LanguageDetector;
@@ -21,10 +23,12 @@ use App\Services\Theme\Color;
 use App\Services\Theme\CustomCssValidator;
 use App\Services\Theme\DefaultDesign;
 use App\Services\Theme\DesignConfigValidator;
+use App\Services\Theme\ExtraPages;
 use App\Services\Theme\ReferenceAnalyzer;
 use App\Support\Media;
 use App\Support\Settings;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -145,7 +149,7 @@ class SiteGenerator
         // Uploaded screenshots: their colours fill whatever the HTML/CSS analysis could not find.
         $shotPaths = collect($site->reference_images ?? [])->map(fn ($p) => Media::localPath($p))->filter(fn ($p) => $p && is_file($p))->values()->all();
         if ($shotPaths !== [] && ($fromImages = rescue(fn () => $this->reference->imageColors($shotPaths), null))) {
-            $reference ??= ['url' => $site->reference_url, 'title' => null, 'colors' => [], 'fonts' => [], 'menu' => [], 'sections' => []];
+            $reference ??= ['url' => $site->reference_url, 'title' => null, 'colors' => [], 'fonts' => [], 'menu' => [], 'sections' => [], 'structure' => []];
             foreach (['primary', 'background', 'text'] as $key) {
                 $reference['colors'][$key] = ($reference['colors'][$key] ?? null) ?: $fromImages[$key];
             }
@@ -153,7 +157,8 @@ class SiteGenerator
         }
         if ($reference) {
             $this->designNotes[] = '参考网站：主色 '.($reference['colors']['primary'] ?? '未识别').'，背景 '.($reference['colors']['background'] ?? '未识别')
-                .'，字体 '.(implode(' / ', $reference['fonts']) ?: '未识别').'，菜单 '.count($reference['menu']).' 项';
+                .'，字体 '.(implode(' / ', $reference['fonts']) ?: '未识别').'，菜单 '.count($reference['menu']).' 项'
+                .($reference['structure'] ?? [] ? '，版块 '.implode(' → ', $reference['structure']) : '');
         }
 
         try {
@@ -221,6 +226,22 @@ class SiteGenerator
             $config['fonts'] = ['heading' => $font, 'body' => $font];
         }
 
+        // Home follows the reference's section order; the model's variants are kept.
+        $structure = array_values(array_filter($reference['structure'] ?? [], fn ($b) => isset(config('theme.blocks')[$b])));
+        if (count($structure) >= 3) {
+            $chosen = collect($config['pages']['home'] ?? [])->filter(fn ($e) => is_array($e))->keyBy('block');
+            $home = array_map(fn ($b) => ['block' => $b, 'variant' => $chosen[$b]['variant'] ?? null], $structure);
+            if (! array_intersect(array_slice($structure, 0, 2), ['banner', 'hero'])) {
+                array_unshift($home, $chosen['hero'] ?? ['block' => 'hero', 'variant' => null]);
+            }
+            foreach ($chosen as $block => $entry) {
+                if (! in_array($block, array_column($home, 'block'), true)) {
+                    $home[] = $entry;
+                }
+            }
+            $config['pages']['home'] = $home;
+        }
+
         return $config;
     }
 
@@ -270,7 +291,9 @@ class SiteGenerator
 
         try {
             // Labels in the site language: the admin's Chinese labels would be copied into page titles.
-            $spec = collect($types)->map(fn ($p, $type) => ['label' => __("theme.page_titles.{$type}", [], $lang), 'default_slug' => $p['slug'][$lang] ?? $p['slug']['en'], 'blocks' => $p['blocks']])->all();
+            // Ask for content of the blocks the design actually uses on each page.
+            $designBlocks = fn ($type, $p) => collect($site->design_config['pages'][$type] ?? [])->pluck('block')->unique()->values()->all() ?: $p['blocks'];
+            $spec = collect($types)->map(fn ($p, $type) => ['label' => $this->defaultTitle($type, $p, $lang), 'default_slug' => $p['slug'][$lang] ?? $p['slug']['en'], 'blocks' => $designBlocks($type, $p)])->all();
             $ai = $this->ai->prompt(PromptType::PageContent, [
                 'brand' => $this->brandContext($site),
                 'pages' => json_encode($spec, JSON_UNESCAPED_UNICODE),
@@ -295,7 +318,7 @@ class SiteGenerator
             $usedSlugs[] = $slug;
 
             $title = is_string($data['title'] ?? null) && LanguageDetector::matches($data['title'], $lang)
-                ? $data['title'] : __("theme.page_titles.{$type}", [], $lang);
+                ? $data['title'] : $this->defaultTitle($type, $def, $lang);
             $content = $this->cleanBlocks($data['blocks'] ?? [], $type, $site);
 
             $site->pages()->updateOrCreate(['type' => $type], [
@@ -307,6 +330,19 @@ class SiteGenerator
                 'noindex' => false,
             ]);
         }
+
+        // Extra pages the current design no longer has.
+        $site->pages()->where('type', 'like', 'extra%')->whereNotIn('type', array_keys($types))->get()->each(function (Page $page) use ($site) {
+            if ($site->launched_at) {
+                GoneUrl::firstOrCreate(['host' => $site->domain->name, 'path' => trim($page->slug, '/')]);
+            }
+            $page->delete();
+        });
+    }
+
+    protected function defaultTitle(string $type, array $def, string $lang): string
+    {
+        return Lang::has("theme.page_titles.{$type}", $lang) ? __("theme.page_titles.{$type}", [], $lang) : $def['label'];
     }
 
     public function expandKeywords(Site $site): int
@@ -379,6 +415,8 @@ class SiteGenerator
 
     protected function whitelist(Site $site): array
     {
+        $pages = ExtraPages::merge($site->typeConfig(), [])['pages'];
+
         return [
             'blocks' => collect(config('theme.blocks'))->except(config('theme.layout_blocks'))->all(),
             'nav' => config('theme.blocks.nav'),
@@ -387,8 +425,10 @@ class SiteGenerator
             'radius' => array_keys(config('theme.radius')),
             'density' => array_keys(config('theme.density')),
             'shadow' => array_keys(config('theme.shadow')),
-            'page_types' => array_keys($site->typeConfig()['pages'] + DesignConfigValidator::SYSTEM_PAGES),
-            'menu_items' => array_values(array_merge(array_diff(array_keys($site->typeConfig()['pages']), ['home', 'privacy', 'terms']), ['blog'])),
+            'style' => config('theme.styles'),
+            'page_types' => array_keys($pages + DesignConfigValidator::SYSTEM_PAGES),
+            'menu_items' => array_values(array_merge(array_diff(array_keys($pages), ['home', 'privacy', 'terms']), ['blog'])),
+            'extra_pages' => 'up to '.ExtraPages::MAX.' pages named extra_1…extra_'.ExtraPages::MAX.' in the order of "extra_pages"; usable in "menu" and "pages" (blocks: '.implode(', ', ExtraPages::BLOCKS).')',
         ];
     }
 
@@ -441,7 +481,7 @@ class SiteGenerator
         $str = fn ($v, $len = 300) => is_string($v) ? Str::limit(trim(strip_tags($v)), $len, '') : null;
         $out = [];
 
-        foreach (['hero', 'features', 'faq', 'cta', 'prose', 'gallery', 'specs', 'article_list', 'contact', 'legal'] as $block) {
+        foreach (['hero', 'features', 'faq', 'cta', 'prose', 'gallery', 'specs', 'article_list', 'contact', 'legal', 'banner', 'card_grid', 'steps', 'stats', 'notice', 'download'] as $block) {
             $b = is_array($blocks[$block] ?? null) ? $blocks[$block] : [];
             $clean = array_filter([
                 'heading' => $str($b['heading'] ?? null, 120),
@@ -461,6 +501,7 @@ class SiteGenerator
                 $clean['items'] = collect($b['items'])->filter(fn ($i) => is_array($i))->map(fn ($i) => array_filter([
                     'title' => $str($i['title'] ?? null, 120),
                     'text' => $str($i['text'] ?? null, 400),
+                    'tag' => $str($i['tag'] ?? null, 20),
                     'question' => $str($i['question'] ?? null, 200),
                     'answer' => $str($i['answer'] ?? null, 800),
                 ]))->filter()->values()->take(12)->all();

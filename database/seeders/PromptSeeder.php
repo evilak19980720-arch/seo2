@@ -16,7 +16,7 @@ class PromptSeeder extends Seeder
     public const SYSTEM = 'You are a senior content strategist and SEO editor for the official website of {{product_name}} ({{site_type}}). Write natively in {{language}} for readers in {{country}}; never write in another language and never translate from another language. The BRAND PROFILE is the only source of facts: never invent features, numbers, prices, awards, reviews, release dates or company details that are not in it. Always answer with a single JSON object.';
 
     /** Templates revised after the first release ship as a new version; the highest active version wins. */
-    public const VERSIONS = [PromptType::DesignConfig->value => 2, PromptType::PageContent->value => 2];
+    public const VERSIONS = [PromptType::DesignConfig->value => 3, PromptType::PageContent->value => 3];
 
     public function run(): void
     {
@@ -57,36 +57,38 @@ Propose {{count}} search keywords people in {{country}} would type in {{language
 Return JSON: {"keywords": [{"keyword": "", "intent": "informational|navigational|commercial|transactional"}]}
 TXT,
             PromptType::DesignConfig->value => <<<'TXT'
-Design the visual identity of the official website of {{product_name}}.
+You are a senior web designer. Design the visual identity of the official website of {{product_name}} so it looks like a complete, polished, modern site (rich home page, clear navigation, strong visual hierarchy), not a bare template.
 
 BRAND PROFILE:
 {{brand}}
 
 Logo dominant colour: {{logo_color}}
 Reference site: {{reference_url}}
-Reference analysis (read from its HTML/CSS; "none" if there is no reference):
+Reference analysis (read from its HTML/CSS; "none" if there is no reference). "structure" lists its home sections in order, already mapped to our block names:
 {{reference}}
-Attached screenshots, if any, show the reference on desktop and mobile.
+Attached screenshots, if any, show the reference. Study them closely: layout (portal/lobby with game cards, banner slider, notice bar, dark or light), header type, card shapes, button style, background treatment, spacing.
 
 When there is a reference, the design MUST follow it closely:
 - colors: use the reference primary, background and text colours as given; pick secondary/accent from its palette.
 - fonts: the whitelisted fonts closest to the reference fonts.
-- nav/footer variants, radius, density, shadow and block order: match the reference look and the order of its sections.
-- "menu": map the reference menu items, in their order, to the matching values of "menu_items" (skip items with no match).
+- nav: "portal" for game/casino-style sites with a coloured menu bar, otherwise the closest variant. footer/radius/density/shadow/style: match the reference look.
+- home: the same sections in the same order as the reference ("structure" and the screenshots), using our blocks: banner (slider of big promo images), notice (announcement strip), card_grid (grid of game/product cards), stats, features, steps, gallery, faq, download (app download area), cta, article_list.
+- "menu": map each reference menu item, in order, to the matching value of "menu_items". For reference menu items with no match (e.g. events, ranking, promotions, VIP, support) add an entry to "extra_pages" ({"label": "<label in {{language}}>", "slug": "<slug in {{language}}>"}, max 5, only items that make sense for this brand), and put "extra_1"…"extra_N" into "menu" at their position.
+Without a reference: still build a rich home page (7-9 blocks) appropriate for the brand.
 Never copy text, logos or brand names from the reference.
 Feedback from the previous attempt (may be empty): {{feedback}}
 
 You may ONLY use values from this whitelist:
 {{whitelist}}
 
-For every page type in "page_types" choose an ordered list of blocks with a variant. Keep the first screen light: one hero or one heading block first. Text colours must have at least 4.5:1 contrast on the background. At most 2 font families.
-Optionally add "custom_css" (max 2KB, no @import, no external url(), never hide content) only for effects the config cannot express; otherwise "".
+For every page type in "page_types" choose an ordered list of blocks with a variant. The first block of a page is its title area (hero or banner on home, hero/prose/faq/... elsewhere). Text colours must have at least 4.5:1 contrast on the background. At most 2 font families.
+"custom_css": up to 8KB of CSS that recreates reference details the config cannot express (header/menu bar look, card frames, glows, gradients, section separators, hover effects, background textures). Use the CSS variables --c-primary --c-on-primary --c-secondary --c-on-secondary --c-accent --c-bg --c-surface --c-text --c-muted --radius --shadow and these classes: .nav .nav__inner .nav__bar .nav__links .nav__cta .btn .btn--ghost .hero .hero__art .banner .banner__slide .notice .section .section__head .card-grid .tile .tile__media .tile__tag .tile__body .feature .feature__icon .step .stats-block .faq details .cta .download .post-card .footer. No @import, no external url(), never hide or shrink content, no fixed heights on text containers. Use "" when not needed.
 
 Return JSON:
-{"design": {"colors": {"primary": "#", "secondary": "#", "accent": "#", "background": "#", "surface": "#", "text": "#", "muted": "#"}, "fonts": {"heading": "", "body": ""}, "radius": "", "density": "", "shadow": "", "nav": "", "footer": "", "menu": ["product", "guide", "blog"], "pages": {"home": [{"block": "hero", "variant": "split"}]}}, "custom_css": ""}
+{"design": {"colors": {"primary": "#", "secondary": "#", "accent": "#", "background": "#", "surface": "#", "text": "#", "muted": "#"}, "fonts": {"heading": "", "body": ""}, "radius": "", "density": "", "shadow": "", "style": {"background": "", "cards": "", "buttons": "", "headings": ""}, "nav": "", "footer": "", "menu": ["product", "extra_1", "blog"], "extra_pages": [{"label": "", "slug": ""}], "pages": {"home": [{"block": "banner", "variant": "slider"}]}}, "custom_css": ""}
 TXT,
             PromptType::CustomCss->value => <<<'TXT'
-Write a small CSS snippet (max 2KB) for the site of {{product_name}} that achieves: {{request}}
+Write a CSS snippet (max 8KB) for the site of {{product_name}} that achieves: {{request}}
 Available CSS variables: --c-primary, --c-on-primary, --c-secondary, --c-accent, --c-bg, --c-surface, --c-text, --c-muted, --radius, --shadow. Main classes: .btn, .hero, .nav, .card, .section, .footer, .feature, .post-card.
 Rules: no @import, no external url(), never hide or shrink main content, keep it performant (no heavy filters on large areas).
 Return JSON: {"css": "..."}
@@ -95,15 +97,20 @@ TXT,
 BRAND PROFILE:
 {{brand}}
 
-Write the core pages of the official site of {{product_name}}. Page types with their blocks:
+Write the core pages of the official site of {{product_name}}. Page types with their label hint, default slug and the blocks the design uses:
 {{pages}}
 
-For every page type return a URL slug in {{language}} (lowercase, hyphens, keyword-based, max 2 segments, keep the default if fine), a visible title in {{language}} (the labels above are only hints, never copy another language), an SEO meta_title (max 60 chars) and meta_description (max 155 chars), and content for its blocks. Write like a polished official site: every block needs real copy, never leave text fields empty.
+For every page type return a URL slug in {{language}} (lowercase, hyphens, keyword-based, max 2 segments, keep the default if fine), a visible title in {{language}} (the labels are only hints, never copy another language), an SEO meta_title (max 60 chars) and meta_description (max 155 chars), and content for each of its blocks. Write like a polished official site: every block needs real copy, never leave text fields empty, and only state facts from the profile.
 - hero: eyebrow (2-4 words), heading, subheading (one or two sentences), cta_label, points (3 benefit phrases of max 4 words each)
+- banner: items [{title, text}] (1-3 slides: short punchy headline + one sentence), cta_label
+- notice: text (one short announcement sentence), label (link text)
 - features: eyebrow (1-3 words), heading, intro, items [{title, text}] (3 or 6 items from the selling points; text = one or two concrete sentences each)
+- card_grid: eyebrow, heading, intro, items [{title, text, tag}] (4-8 cards about modes, features, content or products of this brand; tag = 1 word like "Novo" or "Top" or empty)
+- steps: heading, intro, items [{title, text}] (3-4 steps to start using the product)
+- stats: heading (optional), items [{title: short value, text: label}] (2-4 key facts from the profile, e.g. platforms, genre, price "Grátis")
 - faq: heading, items [{question, answer}] (answers only from the profile)
-- cta: heading, text, label
-- prose: heading, html (semantic HTML with <h2>/<p>/<ul>, 250-600 words, factual)
+- cta / download: heading, text, label
+- prose: heading, html (semantic HTML with <h2>/<p>/<ul>, 300-700 words, factual and useful; for extra pages write about that topic for this brand)
 - gallery / specs / article_list: heading, intro
 - contact: heading, html (short intro)
 - legal: html (privacy policy / terms appropriate for {{country}}, e.g. LGPD for Brazil; generic, no invented company data)

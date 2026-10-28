@@ -29,6 +29,7 @@ return [
     'cookie_reject' => 'Rechazar',
     'specs' => 'Especificaciones',
     'faq' => 'Preguntas frecuentes',
+    'how_to_start' => 'Cómo empezar',
     'gallery' => 'Imágenes',
     'advertisement' => 'Publicidad',
     'page_titles' => [

@@ -19,7 +19,7 @@ class ReferenceAnalyzer
     protected const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
 
     /**
-     * @return array{url: string, title: ?string, colors: array{primary: ?string, background: ?string, text: ?string, palette: array<int, string>}, fonts: array<int, string>, menu: array<int, string>, sections: array<int, string>}|null
+     * @return array{url: string, title: ?string, colors: array{primary: ?string, background: ?string, text: ?string, palette: array<int, string>}, fonts: array<int, string>, menu: array<int, string>, sections: array<int, string>, structure: array<int, string>}|null
      */
     public function analyze(string $url): ?array
     {
@@ -45,7 +45,59 @@ class ReferenceAnalyzer
             'fonts' => $this->fonts($css, $xpath),
             'menu' => $this->menu($xpath),
             'sections' => $this->texts($xpath, '//main//h2 | //section//h2 | //body//h2', 12),
+            'structure' => $this->structure($xpath),
         ];
+    }
+
+    /** Section kinds, as theme block names, guessed from class/id names in document order. */
+    public const STRUCTURE_HINTS = [
+        'notice' => 'marquee|notice|announce|ticker|bulletin|noticia-bar|aviso',
+        'banner' => 'banner|slider|swiper|carousel|slick|hero',
+        'stats' => 'stat|counter|numbers|metric',
+        'card_grid' => 'game-?list|games|lobby|card-?list|cards|grid|product-?list|items|tiles|jogos',
+        'features' => 'feature|advantage|benefit|why|vantage',
+        'steps' => 'step|how-?to|process|passo',
+        'gallery' => 'gallery|screenshot|album|galeria',
+        'faq' => 'faq|accordion|question|pergunta',
+        'download' => 'download|app-?store|google-?play|baixar',
+        'article_list' => 'news|article|blog|post|noticia',
+    ];
+
+    /** @return array<int, string> */
+    public function structure(DOMXPath $xpath): array
+    {
+        $found = [];
+        $nodes = $xpath->query('//body//*[(@class or @id) and not(ancestor-or-self::header) and not(ancestor-or-self::footer) and not(ancestor-or-self::nav) and not(self::a) and not(self::span) and not(self::img) and not(self::i)] | //marquee');
+        foreach ($nodes as $node) {
+            if ($node->nodeName === 'marquee') {
+                $kind = 'notice';
+            } else {
+                $name = strtolower($node->getAttribute('class').' '.$node->getAttribute('id'));
+                $kind = null;
+                foreach (self::STRUCTURE_HINTS as $block => $pattern) {
+                    if (preg_match('/(^|[\s_-])('.$pattern.')([\s_-]|$)/', $name)) {
+                        $kind = $block;
+                        break;
+                    }
+                }
+                // A container of many image items reads as a card grid whatever its name.
+                if ($kind === null && $node->childNodes->length >= 6) {
+                    $withImages = 0;
+                    foreach ($node->childNodes as $child) {
+                        $withImages += $child instanceof \DOMElement && $child->getElementsByTagName('img')->length > 0 ? 1 : 0;
+                    }
+                    $kind = $withImages >= 6 ? 'card_grid' : null;
+                }
+            }
+            if ($kind !== null && end($found) !== $kind && ! in_array($kind, $found, true)) {
+                $found[] = $kind;
+            }
+            if (count($found) >= 10) {
+                break;
+            }
+        }
+
+        return $found;
     }
 
     /**

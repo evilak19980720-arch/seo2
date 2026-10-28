@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\SiteStatus;
+use App\Services\Theme\ExtraPages;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -102,7 +103,9 @@ class Site extends Model
 
     public function typeConfig(): array
     {
-        return config('site_types.'.$this->site_type, config('site_types.brand'));
+        $config = config('site_types.'.$this->site_type, config('site_types.brand'));
+
+        return ExtraPages::merge($config, $this->design_config['extra_pages'] ?? []);
     }
 
     public function ageInMonths(): float

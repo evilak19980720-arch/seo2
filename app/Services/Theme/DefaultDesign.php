@@ -44,6 +44,7 @@ class DefaultDesign
             'radius' => $pick(array_keys(config('theme.radius'))),
             'density' => $pick(array_keys(config('theme.density'))),
             'shadow' => $pick(array_keys(config('theme.shadow'))),
+            'style' => array_map($pick, config('theme.styles')),
             'nav' => $pick($blocks['nav']),
             'footer' => $pick($blocks['footer']),
             'pages' => $pages,

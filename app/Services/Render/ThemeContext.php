@@ -59,6 +59,12 @@ class ThemeContext
         return $page ? $this->href($page->slug) : null;
     }
 
+    /** Body classes for the design's global style switches. */
+    public function bodyClass(): string
+    {
+        return collect($this->design['style'] ?? [])->map(fn ($value, $key) => "st-{$key}-{$value}")->implode(' ');
+    }
+
     public function blocks(string $pageType): array
     {
         return $this->design['pages'][$pageType] ?? [];
