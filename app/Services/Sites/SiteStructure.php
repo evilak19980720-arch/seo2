@@ -20,8 +20,6 @@ class SiteStructure
         $brand = $site->brandProfile;
 
         return [
-            'accounts' => (bool) $site->has_accounts,
-            'payments' => (bool) $site->has_payments,
             'app' => collect($brand?->cta_links ?? [])->contains(fn ($l) => filled($l['url'] ?? null)),
             'company' => filled($brand?->company_name),
             'license' => filled($brand?->license_info),

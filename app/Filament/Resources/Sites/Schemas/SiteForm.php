@@ -81,10 +81,6 @@ class SiteForm
                     ->helperText('生成时把参考网站的游戏图、横幅等图片下载并上传到绑定的对象存储（OSS），网站直接从 OSS 加载。仅用于你有权使用的网站，否则有版权风险'),
                 Toggle::make('reference_rewrite_content')->label('参考网站内容二次创作')
                     ->helperText('生成页面时读取参考网站正文，由 AI 按其主题和结构重新撰写，不照抄句子；品牌名替换为本站产品'),
-                Toggle::make('has_accounts')->label('网站有用户账户')
-                    ->helperText('打开后才会出现用户中心、注册登录指南、账户安全等栏目；没有账户就不要打开，避免描述不存在的功能'),
-                Toggle::make('has_payments')->label('网站有支付 / 充值')
-                    ->helperText('打开后才会出现支付问题、金额限制等栏目'),
             ]),
             Section::make('标题与描述')->schema([
                 TextInput::make('title')->label('首页标题')->maxLength(70)

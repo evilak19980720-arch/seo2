@@ -13,7 +13,7 @@
 |                      upcoming, demo, active, ongoing, ended, latest, tag:x, type:x,
 |                      theme:x, device:x)
 |   links              link_grid targets: page types, or "sections:<page>"
-|   requires           accounts | payments | app | company | license | certification
+|   requires           app | company | license | certification
 |   source             true = only facts from the brand profile or the reference;
 |                      the section is left out when the sources say nothing
 | "nav": main = header, secondary = dropdown under "parent", footer, legal.
@@ -362,11 +362,6 @@ return [
             'label' => '新手中心', 'slug' => $slug('beginners-guide', 'guia-para-iniciantes', 'guia-para-principiantes'), 'nav' => 'secondary', 'parent' => 'help', 'max_sections' => 10,
             'sections' => [
                 $s('start', 'steps', '新用户入门', 'getting started on the site', $req),
-                $s('register', 'steps', '注册指南', 'how to register', ['requires' => 'accounts']),
-                $s('login', 'steps', '登录指南', 'how to log in', ['requires' => 'accounts']),
-                $s('recover', 'steps', '找回账户', 'how to recover an account', ['requires' => 'accounts']),
-                $s('profile', 'prose', '设置个人资料', 'setting up a profile', ['requires' => 'accounts']),
-                $s('verification', 'steps', '身份验证指南', 'identity verification', ['requires' => 'accounts']),
                 $s('first_use', 'prose', '首次使用指南', 'your first visit'),
                 $s('lobby_guide', 'steps', '游戏大厅使用指南', 'using the game lobby'),
                 $s('search_guide', 'prose', '游戏搜索指南', 'finding a game with search and filters'),
@@ -375,8 +370,6 @@ return [
                 $s('mobile_guide', 'prose', '手机端使用指南', 'using the site on a phone'),
                 $s('desktop_guide', 'prose', '电脑端使用指南', 'using the site on a computer'),
                 $s('support_guide', 'prose', '客服使用指南', 'getting help from support'),
-                $s('security_guide', 'checklist', '安全设置指南', 'security settings', ['requires' => 'accounts']),
-                $s('limits_guide', 'steps', '游戏限制设置指南', 'setting play limits', ['requires' => 'accounts']),
             ],
         ],
 
@@ -385,13 +378,9 @@ return [
             'label' => '帮助中心', 'slug' => $slug('help', 'ajuda', 'ayuda'), 'nav' => 'main', 'required' => true, 'max_sections' => 10,
             'sections' => [
                 $s('faq', 'faq', '常见问题', 'frequently asked questions', $req),
-                $s('account', 'faq', '账户问题', 'account questions', ['requires' => 'accounts']),
-                $s('login', 'faq', '登录问题', 'login questions', ['requires' => 'accounts']),
-                $s('verification', 'faq', '验证问题', 'verification questions', ['requires' => 'accounts']),
                 $s('loading', 'faq', '游戏加载问题', 'games not loading'),
                 $s('lag', 'faq', '游戏卡顿问题', 'games running slowly'),
                 $s('disconnect', 'faq', '游戏断线问题', 'disconnections'),
-                $s('results', 'faq', '游戏结果查询', 'checking game results', ['requires' => 'accounts']),
                 $s('promo_faq', 'faq', '优惠问题', 'promotion questions'),
                 $s('event_faq', 'faq', '活动问题', 'event questions'),
                 $s('app_faq', 'faq', 'App 使用问题', 'app questions', ['requires' => 'app']),
@@ -403,7 +392,7 @@ return [
                 $s('disputes', 'prose', '争议处理说明', 'how disputes are resolved'),
                 $s('hours', 'table', '客服服务时间', 'support hours', $src),
                 $s('accessibility', 'prose', '无障碍支持', 'accessibility support'),
-                $s('more', 'link_grid', '更多帮助', 'other help pages', ['links' => ['guide', 'notices', 'payments', 'security', 'contact', 'responsible']]),
+                $s('more', 'link_grid', '更多帮助', 'other help pages', ['links' => ['guide', 'notices', 'security', 'contact', 'responsible']]),
             ],
         ],
 
@@ -417,7 +406,6 @@ return [
                 $list('launches', '游戏上新公告', 'new game notices', 'notice', 'tag:new_game'),
                 $list('removals', '游戏下架公告', 'games removed', 'notice', 'tag:removed'),
                 $list('game_updates', '游戏更新公告', 'game update notices', 'notice', 'tag:game_update'),
-                $list('payments', '支付渠道公告', 'payment channel notices', 'notice', 'tag:payments', ['requires' => 'payments']),
                 $list('rules', '活动规则更新', 'rule changes', 'notice', 'tag:rules'),
                 $list('policy', '协议与隐私政策更新', 'terms and privacy updates', 'notice', 'tag:policy'),
                 $list('channels', '官方渠道变更', 'official channel changes', 'notice', 'tag:channels'),
@@ -437,26 +425,6 @@ return [
                 $list('monthly', '品牌月报', 'monthly reports', 'news', 'tag:monthly'),
                 $list('partners', '品牌合作动态', 'partnership news', 'news', 'tag:partners'),
                 $list('archive', '资讯归档', 'news archive', 'news', 'latest'),
-            ],
-        ],
-
-        // 十四、资金与交易服务（如适用）
-        'payments' => [
-            'label' => '资金与交易服务', 'slug' => $slug('payments', 'pagamentos', 'pagos'), 'nav' => 'secondary', 'parent' => 'help', 'requires' => 'payments',
-            'sections' => [
-                $s('overview', 'prose', '钱包概览', 'how the wallet works', $req),
-                $s('methods', 'table', '支持的支付方式', 'payment methods', $src),
-                $s('deposit', 'steps', '存款指南', 'how to deposit'),
-                $s('withdraw', 'steps', '提款指南', 'how to withdraw'),
-                $s('currencies', 'table', '支持币种', 'currencies', $src),
-                $s('limits', 'table', '交易限额', 'transaction limits', $src),
-                $s('fees', 'table', '手续费说明', 'fees', $src),
-                $s('timing', 'table', '到账时间说明', 'processing times', $src),
-                $s('status', 'prose', '交易状态查询', 'checking a transaction\'s status'),
-                $s('failed', 'checklist', '失败交易帮助', 'what to do when a transaction fails'),
-                $s('refunds', 'prose', '退款说明', 'refunds'),
-                $s('safety', 'callout', '资金安全说明', 'how funds are protected', $src),
-                $s('faq', 'faq', '支付常见问题', 'payment questions'),
             ],
         ],
 
@@ -485,9 +453,6 @@ return [
             'label' => '安全中心', 'slug' => $slug('security', 'seguranca', 'seguridad'), 'nav' => 'footer',
             'sections' => [
                 $s('center', 'prose', '安全中心', 'how the site keeps players safe', $req),
-                $s('account_protection', 'checklist', '账户保护', 'protecting your account', ['requires' => 'accounts']),
-                $s('passwords', 'checklist', '密码安全', 'password safety', ['requires' => 'accounts']),
-                $s('two_factor', 'steps', '双重验证说明', 'two-factor authentication', ['requires' => 'accounts']),
                 $s('phishing', 'checklist', '钓鱼网站识别', 'recognising phishing sites'),
                 $s('fake_support', 'callout', '假冒客服识别', 'recognising fake support agents'),
                 $s('domains', 'prose', '官方域名查询', 'checking official domains'),
@@ -517,13 +482,6 @@ return [
                 $s('risks', 'prose', '游戏风险说明', 'risks of gaming'),
                 $s('self_assessment', 'checklist', '自我评估', 'questions to check your gaming habits'),
                 $s('reminders', 'prose', '时间提醒', 'time reminders'),
-                $s('time_limits', 'steps', '游戏时间限制', 'setting time limits', ['requires' => 'accounts']),
-                $s('deposit_limits', 'steps', '存款限制', 'deposit limits', ['requires' => 'payments']),
-                $s('loss_limits', 'steps', '消费或损失限制', 'spending or loss limits', ['requires' => 'payments']),
-                $s('pause', 'steps', '暂停游戏', 'taking a break', ['requires' => 'accounts']),
-                $s('self_exclusion', 'steps', '自我排除', 'self-exclusion', ['requires' => 'accounts']),
-                $s('limits_info', 'prose', '限制设置说明', 'how limits work', ['requires' => 'accounts']),
-                $s('history', 'prose', '历史使用情况', 'reviewing your play history', ['requires' => 'accounts']),
                 $s('minors', 'prose', '未成年人保护', 'protecting minors'),
                 $s('family', 'prose', '家人和朋友支持', 'support for family and friends'),
                 $s('get_help', 'prose', '寻求帮助', 'getting help'),
@@ -568,13 +526,6 @@ return [
         ],
 
         // 二十、法律、隐私与网站服务
-        'account' => [
-            'label' => '用户中心', 'slug' => $slug('account', 'minha-conta', 'mi-cuenta'), 'nav' => 'footer', 'requires' => 'accounts',
-            'sections' => [
-                $s('overview', 'prose', '用户中心说明', 'what players manage in their account: profile, verification, security, favourites, history, messages, support records', $req),
-                $s('data_requests', 'steps', '个人数据请求与删除', 'requesting or deleting personal data'),
-            ],
-        ],
         'status' => [
             'label' => '服务状态', 'slug' => $slug('service-status', 'status-do-servico', 'estado-del-servicio'), 'nav' => 'footer', 'min_words' => 0,
             'sections' => [
@@ -593,7 +544,6 @@ return [
         'cookies' => ['label' => 'Cookie 政策', 'slug' => $slug('cookie-policy', 'politica-de-cookies', 'politica-de-cookies'), 'nav' => 'legal', 'min_words' => 0, 'sections' => [$s('legal', 'legal', 'Cookie 政策', 'cookie policy', $req), $s('preferences', 'cookie_settings', 'Cookie 偏好设置', 'change cookie preferences')]],
         'bonus_terms' => ['label' => '优惠与活动通用条款', 'slug' => $slug('bonus-terms', 'termos-de-bonus', 'terminos-de-bonos'), 'nav' => 'legal', 'min_words' => 0, 'sections' => [$s('legal', 'legal', '优惠通用条款', 'general promotion terms', $req), $s('event_terms', 'prose', '活动通用条款', 'general event terms')]],
         'game_terms' => ['label' => '游戏使用条款', 'slug' => $slug('game-rules', 'regras-dos-jogos', 'reglas-de-los-juegos'), 'nav' => 'legal', 'min_words' => 0, 'sections' => [$s('legal', 'legal', '游戏使用条款', 'terms for using the games', $req)]],
-        'payment_terms' => ['label' => '支付条款', 'slug' => $slug('payment-terms', 'termos-de-pagamento', 'terminos-de-pago'), 'nav' => 'legal', 'requires' => 'payments', 'min_words' => 0, 'sections' => [$s('legal', 'legal', '支付条款', 'payment terms', $req)]],
         'regions' => ['label' => '地区限制', 'slug' => $slug('restricted-regions', 'regioes-restritas', 'regiones-restringidas'), 'nav' => 'legal', 'min_words' => 0, 'sections' => [$s('legal', 'legal', '地区限制说明', 'restricted regions', $req)]],
         'ip' => ['label' => '知识产权声明', 'slug' => $slug('intellectual-property', 'propriedade-intelectual', 'propiedad-intelectual'), 'nav' => 'legal', 'min_words' => 0, 'sections' => [$s('legal', 'legal', '知识产权声明 / 商标与版权', 'intellectual property, trademarks and copyright', $req), $s('third_party', 'prose', '第三方服务说明', 'third-party services used by the site')]],
         'accessibility' => ['label' => '无障碍声明', 'slug' => $slug('accessibility', 'acessibilidade', 'accesibilidad'), 'nav' => 'legal', 'min_words' => 0, 'sections' => [$s('legal', 'legal', '无障碍声明', 'accessibility statement', $req)]],

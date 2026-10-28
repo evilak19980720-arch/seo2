@@ -111,11 +111,14 @@ class GameSiteTest extends TestCase
             $this->assertGreaterThanOrEqual(1, count($sections));
         }
 
-        // With accounts, account pages and sections become possible (chosen at random per site).
-        $withAccounts = collect(range(1, 8))->map(fn () => SiteStructure::choose($this->gameSite(['has_accounts' => true, 'has_payments' => true]), $type));
-        $this->assertTrue($withAccounts->contains(fn ($st) => isset($st['pages']['account']) || in_array('register', $st['pages']['guide'] ?? [], true)));
-        $this->assertTrue($withAccounts->contains(fn ($st) => isset($st['pages']['payments'])));
-        $this->assertFalse(collect(range(1, 8))->contains(fn () => isset(SiteStructure::choose($this->gameSite(), $type)['pages']['payments'])));
+        // Brand sites only: no account or payment pages and sections exist in the pool.
+        $pool = json_encode($type['pages']);
+        foreach (['account', 'payments', 'payment_terms'] as $page) {
+            $this->assertArrayNotHasKey($page, $type['pages']);
+        }
+        foreach (['register', 'login', 'deposit', 'withdraw', 'self_exclusion'] as $key) {
+            $this->assertStringNotContainsString('"key":"'.$key.'"', $pool);
+        }
 
         // Long pools are capped; detail pages and block looks are chosen too.
         foreach ($first['pages'] as $page => $sections) {

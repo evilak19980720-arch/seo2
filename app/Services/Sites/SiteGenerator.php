@@ -175,9 +175,11 @@ class SiteGenerator
     /** What the site really has, so copy never describes missing features. */
     public function siteFeatures(Site $site): string
     {
-        $names = ['accounts' => 'user accounts', 'payments' => 'payments', 'app' => 'app download', 'company' => 'company details', 'license' => 'licence details', 'certification' => 'testing/certification details'];
+        $names = ['app' => 'app download', 'company' => 'company details', 'license' => 'licence details', 'certification' => 'testing/certification details'];
 
-        return collect(SiteStructure::conditions($site))->map(fn ($has, $key) => $names[$key].': '.($has ? 'yes' : 'no'))->implode('; ');
+        // Brand sites only: never user accounts, sign-up, log-in, deposits or withdrawals.
+        return 'user accounts: no; payments or deposits: no; '
+            .collect(SiteStructure::conditions($site))->map(fn ($has, $key) => $names[$key].': '.($has ? 'yes' : 'no'))->implode('; ');
     }
 
     /** The reference site, read once per run (a broken one never stops generation). */

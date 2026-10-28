@@ -38,7 +38,7 @@ class SiteDataGenerator
         'game' => ['hot', 'new', 'classic', 'featured', 'upcoming'],
         'promotion' => ['new_user', 'regular', 'festival', 'featured', 'anniversary', 'app', 'invite'],
         'event' => ['featured', 'launch', 'anniversary', 'festival', 'community', 'quiz', 'creative', 'collab', 'live', 'offline'],
-        'notice' => ['maintenance', 'game_maintenance', 'rules', 'restored', 'new_game', 'removed', 'game_update', 'payments', 'policy', 'channels'],
+        'notice' => ['maintenance', 'game_maintenance', 'rules', 'restored', 'new_game', 'removed', 'game_update', 'policy', 'channels'],
         'news' => ['brand', 'new_games', 'features', 'updates', 'partners', 'editorial', 'monthly', 'community'],
     ];
 
