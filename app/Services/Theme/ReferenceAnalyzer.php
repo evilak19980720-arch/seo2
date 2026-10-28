@@ -41,6 +41,12 @@ class ReferenceAnalyzer
         }
 
         $html = $this->page($url);
+        // Doorway pages: a meta refresh or a full-page iframe around the real site.
+        for ($hop = 0; $html !== null && $hop < 2 && ($next = $this->forward($html, $url)); $hop++) {
+            $this->diagnostics['messages'][] = $next['why'].'：'.$next['url'];
+            $url = $next['url'];
+            $html = $this->page($url);
+        }
         if ($html === null) {
             return null;
         }
@@ -51,6 +57,7 @@ class ReferenceAnalyzer
         $xpath = new DOMXPath($dom);
 
         $css = $this->styles($xpath, $url);
+        $this->prune($xpath);
         $content = $this->content($xpath);
 
         return [
@@ -75,6 +82,8 @@ class ReferenceAnalyzer
     protected function page(string $url): ?string
     {
         $d = &$this->diagnostics;
+        $d['js_rendered'] = $d['blocked'] = false;
+        $d['via'] = null;
         $html = null;
         try {
             $res = Http::withHeaders(['User-Agent' => self::UA, 'Accept-Language' => 'pt-BR,pt;q=0.9,en;q=0.8'])->timeout(12)->connectTimeout(6)->get($url);
@@ -89,7 +98,7 @@ class ReferenceAnalyzer
         }
 
         $text = $html !== null ? $this->visibleTextLength($html) : 0;
-        if ($html !== null && ! $d['blocked'] && $text < 600 && substr_count(strtolower($html), '<script') >= 3) {
+        if ($html !== null && ! $d['blocked'] && $text < 600 && str_contains(strtolower($html), '<script')) {
             $d['js_rendered'] = true;
             $d['messages'][] = "参考网站是 JavaScript 渲染的页面，直接读取只拿到 {$text} 个字符";
         }
@@ -252,7 +261,7 @@ class ReferenceAnalyzer
     {
         $found = [];
         $add = function (?string $src, string $alt = '') use (&$found, $base) {
-            $src = trim((string) $src);
+            $src = preg_replace('/^url\(\s*[\'"]?([^\'")]+).*$/i', '$1', trim((string) $src));
             if ($src === '' || str_starts_with($src, 'data:') || preg_match('/\.(svg|ico|gif)(\?|$)|sprite|pixel|tracking|logo|icon|avatar|flag/i', $src)) {
                 return;
             }
@@ -267,7 +276,7 @@ class ReferenceAnalyzer
         }
         foreach ($xpath->query('//img | //source') as $node) {
             $alt = $node->getAttribute('alt');
-            foreach (['data-src', 'data-original', 'data-lazy-src', 'src'] as $attr) {
+            foreach (['data-src', 'data-original', 'data-lazy-src', 'data-lazy', 'data-original-src', 'data-url', 'data-echo', 'lazy-src', 'data-actualsrc', 'src'] as $attr) {
                 if ($node->getAttribute($attr) !== '') {
                     $add($node->getAttribute($attr), $alt);
                     break;
@@ -280,6 +289,9 @@ class ReferenceAnalyzer
                 $add($candidates[0][0] ?? null, $alt);
             }
         }
+        foreach ($xpath->query('//*[@data-bg or @data-background or @data-background-image or @data-bg-src]') as $node) {
+            $add($node->getAttribute('data-bg') ?: $node->getAttribute('data-background') ?: $node->getAttribute('data-background-image') ?: $node->getAttribute('data-bg-src'));
+        }
         if (preg_match_all('/background(?:-image)?\s*:[^;}]*url\(\s*[\'"]?([^\'")]+)/i', $css, $m)) {
             foreach ($m[1] as $src) {
                 $add($src);
@@ -290,7 +302,7 @@ class ReferenceAnalyzer
     }
 
     /** Account links (login, register…) are never reproduced: brand sites have no accounts. */
-    public const ACCOUNT_PATTERN = '/^(log ?in|sign ?(in|up)|register|entrar|login|cadastr|cadastre-se|registr|criar conta|minha conta|my account|登录|注册)/iu';
+    public const ACCOUNT_PATTERN = '/^(log ?in|log ?out|sign ?(in|up|out)|register|join now|create account|my account|entrar|cadastr|registr|criar conta|minha conta|iniciar sesi[oó]n|reg[ií]strate|crear cuenta|mi cuenta|connexion|se connecter|s\'inscrire|inscri|mon compte|anmelden|registrieren|konto|accedi|registrati|masuk|daftar|đăng nhập|đăng ký|เข้าสู่ระบบ|สมัคร|войти|регистрац|ログイン|新規登録|会員登録|로그인|회원가입|登录|登錄|注册|註冊|تسجيل)/iu';
 
     /** Section kinds, as theme block names, guessed from class/id names in document order. */
     public const STRUCTURE_HINTS = [
@@ -629,7 +641,7 @@ class ReferenceAnalyzer
         foreach ($xpath->query('//header//a | //header//button') as $node) {
             $name = strtolower($node->getAttribute('class').' '.$node->getAttribute('id').' '.$node->textContent);
             // Login / register buttons are left out: brand sites have no accounts.
-            if (preg_match('/login|log-in|register|sign|entrar|cadastr|registr|conta|account|senha/', $name)) {
+            if (preg_match('/login|log-in|logout|register|sign|entrar|cadastr|registr|conta|account|senha|password|member|daftar|masuk|inscri|anmeld/', $name) || preg_match(self::ACCOUNT_PATTERN, trim($node->textContent))) {
                 continue;
             }
             if (preg_match('/btn|button|download|baixar|jogar|play|app/', $name) && ! $xpath->query('ancestor::li', $node)->length) {
@@ -732,6 +744,53 @@ class ReferenceAnalyzer
         }
 
         return [];
+    }
+
+    /**
+     * Where a doorway page sends visitors: a meta refresh, or an iframe that
+     * fills a page with (almost) no text of its own.
+     *
+     * @return array{url: string, why: string}|null
+     */
+    protected function forward(string $html, string $base): ?array
+    {
+        $dom = new DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.substr($html, 0, 500_000), LIBXML_NOERROR | LIBXML_NOWARNING);
+        $xpath = new DOMXPath($dom);
+        $refresh = (string) $xpath->evaluate('string(//meta[translate(@http-equiv,"REFSH","refsh")="refresh"]/@content)');
+        if (preg_match('/url\s*=\s*[\'"]?([^\'";]+)/i', $refresh, $m)) {
+            $target = $this->absolute(trim($m[1]), $base);
+            if (preg_match('#^https?://#i', $target) && rtrim($target, '/') !== rtrim($base, '/')) {
+                return ['url' => $target, 'why' => '参考网站跳转到'];
+            }
+        }
+        if ($this->visibleTextLength($html) < 200) {
+            foreach ($xpath->query('//iframe[@src]') as $frame) {
+                $target = $this->absolute(trim($frame->getAttribute('src')), $base);
+                $small = preg_match('/^\d+$/', $frame->getAttribute('width')) && (int) $frame->getAttribute('width') < 300;
+                if (! $small && preg_match('#^https?://#i', $target) && ! preg_match('#google|facebook|youtube|doubleclick|recaptcha|hcaptcha|cloudflare#i', $target)) {
+                    return ['url' => $target, 'why' => '参考网站内容在 iframe 里，改为读取'];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /** Drop what a visitor never sees as content: hidden nodes, slider clones, cookie banners. */
+    protected function prune(DOMXPath $xpath): void
+    {
+        $noise = 'cookie|consent|gdpr|lgpd|privacy-banner';
+        $query = '//body//*[@hidden or contains(translate(@style," ",""),"display:none") or contains(concat(" ",@class," ")," slick-cloned ") or contains(concat(" ",@class," ")," swiper-slide-duplicate ") or contains(concat(" ",@class," ")," cloned ")]';
+        $remove = iterator_to_array($xpath->query($query));
+        foreach ($xpath->query('//body//*[@class or @id]') as $node) {
+            if (preg_match('/(^|[\s_-])('.$noise.')([\s_-]|$)/i', $node->getAttribute('class').' '.$node->getAttribute('id'))) {
+                $remove[] = $node;
+            }
+        }
+        foreach ($remove as $node) {
+            $node->parentNode?->removeChild($node);
+        }
     }
 
     /** The HTML that was analysed, kept for troubleshooting (one file per host). */

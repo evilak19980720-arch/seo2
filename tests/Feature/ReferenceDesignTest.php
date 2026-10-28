@@ -69,6 +69,52 @@ class ReferenceDesignTest extends TestCase
         $this->assertSame('#ffdc50', $ref['colors']['primary']);
     }
 
+    private function pageWith(string $body): string
+    {
+        return '<html><head><title>T</title></head><body>'.$body.'</body></html>';
+    }
+
+    public function test_analyzer_follows_doorway_pages(): void
+    {
+        $real = $this->pageWith('<nav><a href="/">Home</a><a href="/a">About</a><a href="/b">Blog</a></nav><p>'.str_repeat('Real content of the actual website. ', 30).'</p>');
+        Http::fake([
+            'refresh.test/*' => Http::response('<html><head><meta http-equiv="Refresh" content="0; URL=https://frame.test/"></head><body></body></html>'),
+            'frame.test/*' => Http::response($this->pageWith('<iframe src="https://real.test/" width="100%" height="100%"></iframe>')),
+            'real.test/*' => Http::response($real),
+        ]);
+
+        $analyzer = app(ReferenceAnalyzer::class);
+        $ref = $analyzer->analyze('https://refresh.test/');
+
+        $this->assertSame('https://real.test/', $ref['url']);
+        $this->assertSame(['Home', 'About', 'Blog'], $ref['menu']);
+        $this->assertStringContainsString('Real content', $ref['content']);
+        $this->assertStringContainsString('iframe', implode("\n", $analyzer->report($ref)));
+    }
+
+    public function test_analyzer_skips_hidden_clones_cookie_banners_and_account_links(): void
+    {
+        $slides = implode('', array_map(fn ($i) => "<div class=\"swiper-slide\"><img data-lazy=\"/s{$i}.jpg\"><p>Slide caption {$i}</p></div>", range(1, 3)));
+        Http::fake(['mix.test/*' => Http::response($this->pageWith('
+            <header><nav><ul><li><a>Inicio</a></li><li><a>Juegos</a></li><li><a>Noticias</a></li><li><a>Iniciar sesión</a></li><li><a>Regístrate</a></li><li><a>Đăng nhập</a></li></ul></nav></header>
+            <div class="swiper">'.$slides.'<div class="swiper-slide swiper-slide-duplicate"><p>Slide caption 1 copy</p></div></div>
+            <div hidden><p>Secret hidden paragraph text here</p></div>
+            <div style="display: none"><p>Another invisible paragraph text</p></div>
+            <div id="cookie-consent"><p>We use cookies to improve your experience</p></div>
+            <section data-bg="url(\'/bg.jpg\')"><p>'.str_repeat('Visible paragraph about the product. ', 20).'</p></section>'))]);
+
+        $ref = app(ReferenceAnalyzer::class)->analyze('https://mix.test/');
+
+        $this->assertSame(['Inicio', 'Juegos', 'Noticias'], $ref['menu']);
+        $this->assertStringNotContainsString('copy', $ref['content']);
+        $this->assertStringNotContainsString('hidden paragraph', $ref['content']);
+        $this->assertStringNotContainsString('invisible', $ref['content']);
+        $this->assertStringNotContainsString('cookies', $ref['content']);
+        $urls = array_column($ref['images'], 'url');
+        $this->assertContains('https://mix.test/s2.jpg', $urls);
+        $this->assertContains('https://mix.test/bg.jpg', $urls);
+    }
+
     public function test_generated_design_follows_reference_even_if_ai_ignores_it(): void
     {
         $this->fakeReference();
