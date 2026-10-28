@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\PromptType;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -34,6 +35,21 @@ class Prompt extends Model
                 $p->version,
             ])
             ->first();
+    }
+
+    /**
+     * Only (or, with $history, all but) the newest version of each prompt
+     * (same type, site type and locale).
+     */
+    public function scopeLatestVersions(Builder $query, bool $history = false): void
+    {
+        $newer = fn ($q) => $q->selectRaw('1')->from('prompts as newer')
+            ->whereColumn('newer.type', 'prompts.type')
+            ->whereColumn('newer.version', '>', 'prompts.version')
+            ->where(fn ($w) => $w->whereColumn('newer.site_type', 'prompts.site_type')->orWhere(fn ($n) => $n->whereNull('newer.site_type')->whereNull('prompts.site_type')))
+            ->where(fn ($w) => $w->whereColumn('newer.locale', 'prompts.locale')->orWhere(fn ($n) => $n->whereNull('newer.locale')->whereNull('prompts.locale')));
+
+        $history ? $query->whereExists($newer) : $query->whereNotExists($newer);
     }
 
     public function articles(): HasMany

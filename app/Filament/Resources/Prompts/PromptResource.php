@@ -69,17 +69,27 @@ class PromptResource extends Resource
             ->recordActions([
                 Action::make('newVersion')->label('新版本')->icon(Heroicon::OutlinedDocumentDuplicate)
                     ->requiresConfirmation()->modalDescription('复制为新版本并启用，旧版本停用（文章记录仍保留其使用的版本）。')
-                    ->action(function (Prompt $record) {
-                        $new = $record->replicate();
-                        $new->version = (int) Prompt::where(['type' => $record->type, 'site_type' => $record->site_type, 'locale' => $record->locale])->max('version') + 1;
-                        $new->is_active = true;
-                        $new->save();
-                        $record->update(['is_active' => false]);
-
-                        return redirect(self::getUrl('edit', ['record' => $new]));
-                    }),
+                    ->visible(fn ($livewire) => ($livewire->activeTab ?? 'latest') !== 'history')
+                    ->action(fn (Prompt $record) => redirect(self::getUrl('edit', ['record' => self::copyAsLatest($record)]))),
+                Action::make('restore')->label('恢复此版本')->icon(Heroicon::OutlinedArrowUturnLeft)
+                    ->requiresConfirmation()->modalDescription('把这个旧版本复制为最新版本并启用，当前版本停用后移到历史版本。')
+                    ->visible(fn ($livewire) => ($livewire->activeTab ?? null) === 'history')
+                    ->action(fn (Prompt $record) => self::copyAsLatest($record)),
                 EditAction::make(),
             ]);
+    }
+
+    /** Copy a prompt as the newest version of its group and make it the only active one. */
+    public static function copyAsLatest(Prompt $record): Prompt
+    {
+        $group = Prompt::where(['type' => $record->type, 'site_type' => $record->site_type, 'locale' => $record->locale]);
+        $new = $record->replicate();
+        $new->version = (int) (clone $group)->max('version') + 1;
+        $new->is_active = true;
+        (clone $group)->update(['is_active' => false]);
+        $new->save();
+
+        return $new;
     }
 
     public static function getPages(): array
