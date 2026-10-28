@@ -34,6 +34,23 @@ class HostRoutingTest extends TestCase
         $this->get('https://admin.test/install')->assertNotFound();
     }
 
+    public function test_admin_panel_reachable_by_server_ip_after_install(): void
+    {
+        $this->get('http://203.0.113.10/admin/login')->assertOk();
+        $this->get('http://203.0.113.10/install')->assertNotFound();
+    }
+
+    public function test_session_cookie_is_secure_only_over_https(): void
+    {
+        config(['session.secure' => true]);
+
+        $http = $this->get('http://admin.test/admin/login')->assertOk();
+        $this->assertFalse(collect($http->headers->getCookies())->first(fn ($c) => $c->getName() === config('session.cookie'))->isSecure());
+
+        $https = $this->get('https://admin.test/admin/login')->assertOk();
+        $this->assertTrue(collect($https->headers->getCookies())->first(fn ($c) => $c->getName() === config('session.cookie'))->isSecure());
+    }
+
     public function test_installer_only_reachable_before_install_from_trusted_host(): void
     {
         unlink(config('platform.installed_lock'));

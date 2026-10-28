@@ -20,10 +20,7 @@ class InstallController
 
     public function show(Request $request, string $step = 'requirements')
     {
-        abort_unless(isset(self::STEPS[$step]) || $step === 'done', 404);
-        if ($step === 'done') {
-            abort_unless(Installer::installed(), 404);
-        }
+        abort_unless(isset(self::STEPS[$step]), 404);
 
         return view('install.wizard', [
             'step' => $step,
@@ -32,7 +29,7 @@ class InstallController
             'requirements' => $step === 'requirements' ? $this->installer->requirements() : [],
             'canContinue' => $step !== 'requirements' || $this->installer->requirementsPass(),
             'detectedIp' => $step === 'system' ? $this->installer->detectPublicIp() : null,
-            'config' => $step === 'done' ? ['nginx' => ServerConfig::nginx(), 'supervisor' => ServerConfig::supervisor(), 'cron' => ServerConfig::crontab()] : null,
+            'config' => null,
         ]);
     }
 
@@ -122,7 +119,17 @@ class InstallController
                     });
                     $request->session()->forget('install');
 
-                    return redirect('/install/done')->with('log', $log);
+                    // Rendered directly: once the lock exists every /install URL is 404.
+                    return view('install.wizard', [
+                        'step' => 'done',
+                        'steps' => self::STEPS,
+                        'data' => $data,
+                        'log' => $log,
+                        'requirements' => [],
+                        'canContinue' => true,
+                        'detectedIp' => null,
+                        'config' => ['nginx' => ServerConfig::nginx(), 'supervisor' => ServerConfig::supervisor(), 'cron' => ServerConfig::crontab()],
+                    ]);
             }
         } catch (ValidationException $e) {
             throw $e;

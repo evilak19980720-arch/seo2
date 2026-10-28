@@ -134,8 +134,8 @@ fieldset{border:1px solid var(--line);border-radius:10px;padding:4px 16px 16px;m
 @break
 
 @case('done')
-<div class="alert ok">安装完成。</div>
-@if (session('log'))<ol class="muted">@foreach (session('log') as $line)<li>{{ $line }}</li>@endforeach</ol>@endif
+<div class="alert ok">安装完成。现在可以通过本页地址（服务器 IP）或后台域名进入后台；配置好下面的 Nginx 和证书后，请改用 https://后台域名 访问。</div>
+@if ($log ?? null)<ol class="muted">@foreach ($log as $line)<li>{{ $line }}</li>@endforeach</ol>@endif
 <h3>1. Nginx 配置</h3><pre>{{ $config['nginx'] }}</pre>
 <h3>2. Supervisor 队列进程</h3><pre>{{ $config['supervisor'] }}</pre>
 <h3>3. crontab</h3><pre>{{ $config['cron'] }}</pre>

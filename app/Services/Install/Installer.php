@@ -153,7 +153,8 @@ class Installer
             'CACHE_STORE' => 'redis',
             'QUEUE_CONNECTION' => 'redis',
             'SESSION_DRIVER' => 'redis',
-            'SESSION_SECURE_COOKIE' => 'true',
+            // Empty: the secure flag follows the request scheme (see RouteByHost).
+            'SESSION_SECURE_COOKIE' => '',
         ];
         if (! filled(config('app.key')) || ($data['regenerate_key'] ?? false)) {
             $env['APP_KEY'] = 'base64:'.base64_encode(random_bytes(32));
@@ -229,6 +230,8 @@ class Installer
             'database.redis.cache.port' => $env['REDIS_PORT'],
             'database.redis.cache.password' => $env['REDIS_PASSWORD'] === 'null' ? null : $env['REDIS_PASSWORD'],
             'cache.default' => 'redis',
+            'platform.admin_domain' => $env['ADMIN_DOMAIN'],
+            'platform.server_ip' => $env['SERVER_PUBLIC_IP'],
         ]);
         app()->forgetInstance('encrypter');
         Crypt::clearResolvedInstance('encrypter');

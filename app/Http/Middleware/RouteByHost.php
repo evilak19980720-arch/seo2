@@ -13,7 +13,7 @@ use Symfony\Component\HttpFoundation\Response;
  * - not installed: only /install, and only via server IP / admin domain / localhost
  * - brand domains: only static fallbacks (404/410) and the ad beacon; /admin,
  *   /install etc. are 404 so 100 sites never expose one login page
- * - admin domain: the Filament panel; /install is 404 once installed
+ * - admin domain or server IP: the Filament panel; /install is 404 once installed
  */
 class RouteByHost
 {
@@ -23,6 +23,10 @@ class RouteByHost
         $admin = strtolower((string) config('platform.admin_domain'));
         $path = trim($request->path(), '/');
         $isInstallPath = $path === 'install' || str_starts_with($path, 'install/');
+
+        // Secure cookies only over HTTPS (Cloudflare/X-Forwarded-Proto is trusted), so the
+        // panel still works over plain HTTP before the admin domain has a certificate.
+        config(['session.secure' => $request->isSecure()]);
 
         if (! Installer::installed()) {
             // No database yet: keep sessions and cache off the DB.
@@ -42,7 +46,9 @@ class RouteByHost
             abort(404);
         }
 
-        $isAdminHost = $admin === '' || $host === $admin || in_array($host, ['localhost', '127.0.0.1'], true);
+        // Brand sites are always domains, so a bare IP (e.g. right after installing via
+        // http://SERVER_IP/install) is treated as the admin host too.
+        $isAdminHost = $admin === '' || $host === $admin || $host === 'localhost' || filter_var($host, FILTER_VALIDATE_IP);
         if ($isAdminHost) {
             return $next($request);
         }
