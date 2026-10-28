@@ -57,7 +57,26 @@ class ThemeContext
         $this->pages = $site->pages()->get()->filter(fn (Page $p) => isset($types[$p->type]))->keyBy('type');
 
         $config = $site->design_config ?: DefaultDesign::make($site->domain_id ?? $site->id, $site->typeConfig());
-        $this->design = (new DesignConfigValidator)->validate($config, $site->typeConfig());
+        $this->design = self::withLatestArticles((new DesignConfigValidator)->validate($config, $site->typeConfig()));
+    }
+
+    /**
+     * Every home page shows the latest articles (sectioned layouts and AI
+     * designs may leave them out), so a new article is visible and linked
+     * from the first page at once. Shown only while there are articles.
+     */
+    protected static function withLatestArticles(array $design): array
+    {
+        $home = $design['pages']['home'] ?? null;
+        if ($home === null || collect($home)->contains('block', 'article_list')) {
+            return $design;
+        }
+        // Before a closing call to action, else last.
+        $at = ($home !== [] && (end($home)['block'] ?? null) === 'cta') ? count($home) - 1 : count($home);
+        array_splice($home, $at, 0, [['block' => 'article_list', 'variant' => 'cards']]);
+        $design['pages']['home'] = $home;
+
+        return $design;
     }
 
     /** Start rendering another page. */
@@ -125,6 +144,10 @@ class ThemeContext
             ->reject(fn ($type) => $type === 'home' || in_array($type, $this->legalTypes(), true) || ! $this->pages->has($type))
             ->push('blog')->reject(fn ($type) => in_array($type, $this->hidden, true))->values();
         $menu = collect($this->design['menu'] ?? [])->intersect($available)->values();
+        // Articles are the site's fresh content: once the blog is listed, the main menu links to it.
+        if ($menu->isNotEmpty() && $available->contains('blog') && ! $menu->contains('blog') && ! collect($this->design['navigation']['submenu'] ?? [])->flatten()->contains('blog')) {
+            $menu->push('blog');
+        }
         $submenu = collect($this->design['navigation']['submenu'] ?? [])->map(fn ($children) => collect($children)->intersect($available)->values());
 
         if ($all) {
