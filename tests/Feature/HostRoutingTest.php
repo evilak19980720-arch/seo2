@@ -28,6 +28,8 @@ class HostRoutingTest extends TestCase
         $this->get('https://marca.com.br/install')->assertNotFound();
         $this->get('https://marca.com.br/')->assertOk()->assertSee('Galaxy Run');
         $this->get('https://www.marca.com.br/x')->assertRedirect('https://marca.com.br/x');
+        $this->get('https://marca.com.br/_theme/base.css?v=1')->assertOk()->assertHeader('Content-Type', 'text/css; charset=utf-8');
+        $this->get('https://marca.com.br/_theme/../.env')->assertNotFound();
     }
 
     public function test_admin_domain_serves_panel_and_hides_installer_once_installed(): void

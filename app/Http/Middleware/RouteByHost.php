@@ -54,7 +54,8 @@ class RouteByHost
         }
 
         // Brand domain reached PHP (Nginx had no static file for it).
-        if ($path === '_t/ad') {
+        // Ad beacon and the shared theme assets (when Nginx has no /_theme/ alias, e.g. panel-managed sites).
+        if ($path === '_t/ad' || str_starts_with($path, '_theme/')) {
             return $next($request);
         }
 
