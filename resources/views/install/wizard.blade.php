@@ -109,9 +109,25 @@ fieldset{border:1px solid var(--line);border-radius:10px;padding:4px 16px 16px;m
 <div class="row"><div><label>Region</label><input name="oss_region" value="{{ $d['oss_region'] ?? '' }}"></div><div><label>Endpoint</label><input name="oss_endpoint" value="{{ $d['oss_endpoint'] ?? '' }}"></div></div>
 </fieldset>
 <fieldset><legend>第一个 AI 服务商</legend>
-<div class="row"><div><label>名称</label><input name="ai_name" value="{{ $d['ai_name'] ?? 'Default' }}"></div><div><label>接口类型</label><select name="ai_driver"><option value="openai">OpenAI 兼容</option><option value="anthropic" @selected(($d['ai_driver'] ?? '') === 'anthropic')>Anthropic</option></select></div></div>
-<label>Base URL</label><input name="ai_base_url" value="{{ $d['ai_base_url'] ?? 'https://api.openai.com/v1' }}">
-<div class="row"><div><label>API Key</label><input name="ai_api_key" type="password" value="{{ $d['ai_api_key'] ?? '' }}"></div><div><label>模型</label><input name="ai_model" value="{{ $d['ai_model'] ?? '' }}"></div></div>
+@php($presets = config('ai_providers'))
+<div class="row"><div><label>服务商</label><select name="ai_preset" id="ai_preset">@foreach (collect($presets)->groupBy('group', preserveKeys: true) as $group => $items)<optgroup label="{{ $group }}">@foreach ($items as $key => $p)<option value="{{ $key }}" @selected(($d['ai_preset'] ?? 'openai') === $key)>{{ $p['label'] }}</option>@endforeach</optgroup>@endforeach</select></div><div><label>名称</label><input name="ai_name" id="ai_name" value="{{ $d['ai_name'] ?? 'OpenAI' }}"></div></div>
+<input type="hidden" name="ai_driver" id="ai_driver" value="{{ $d['ai_driver'] ?? 'openai' }}">
+<label>Base URL</label><input name="ai_base_url" id="ai_base_url" value="{{ $d['ai_base_url'] ?? 'https://api.openai.com/v1' }}">
+<p class="muted" id="ai_hint"></p>
+<div class="row"><div><label>API Key</label><input name="ai_api_key" type="password" value="{{ $d['ai_api_key'] ?? '' }}"></div><div><label>模型（可直接输入其他模型名）</label><input name="ai_model" id="ai_model" list="ai_models" value="{{ $d['ai_model'] ?? 'gpt-5' }}"><datalist id="ai_models"></datalist></div></div>
+<script>
+(() => {
+  const presets = @json($presets);
+  const $ = id => document.getElementById(id);
+  const models = () => { const p = presets[$('ai_preset').value]; $('ai_models').innerHTML = (p.models || []).map(m => `<option value="${m}">`).join(''); $('ai_hint').textContent = p.hint || ''; return p; };
+  models();
+  $('ai_preset').addEventListener('change', () => {
+    const p = models();
+    $('ai_driver').value = p.driver; $('ai_base_url').value = p.base_url; $('ai_model').value = (p.models || [])[0] || ''; $('ai_name').value = p.label;
+    const vision = document.querySelector('input[name=ai_vision]'); if (vision) vision.checked = !!p.vision;
+  });
+})();
+</script>
 <label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" name="ai_vision" value="1" style="width:auto" {{ ($d['ai_vision'] ?? false) ? 'checked' : '' }}> 支持视觉（图片输入）</label>
 </fieldset>
 <fieldset><legend>Google（Search Console / GA4）</legend>

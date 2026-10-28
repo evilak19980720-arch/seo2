@@ -191,11 +191,14 @@ class Installer
             'gsc_service_account' => $services['gsc_service_account'] ?? null,
         ], fn ($v) => $v !== null && $v !== ''));
 
-        if (filled($services['ai_api_key'] ?? null)) {
+        $preset = config('ai_providers.'.($services['ai_preset'] ?? 'custom'), []);
+        if (filled($services['ai_api_key'] ?? null) || (($preset['key_required'] ?? true) === false && filled($services['ai_model'] ?? null))) {
             AiProvider::updateOrCreate(['name' => $services['ai_name'] ?: 'Default'], [
+                'preset' => $services['ai_preset'] ?? null,
+                'embedding_model' => $preset['embedding'] ?? null,
                 'driver' => $services['ai_driver'] ?? 'openai',
                 'base_url' => $services['ai_base_url'],
-                'api_key' => $services['ai_api_key'],
+                'api_key' => $services['ai_api_key'] ?? null,
                 'model' => $services['ai_model'],
                 'supports_vision' => (bool) ($services['ai_vision'] ?? false),
                 'is_default' => true,

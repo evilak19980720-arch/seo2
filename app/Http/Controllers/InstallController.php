@@ -95,8 +95,8 @@ class InstallController
                         if (filled($services['gsc_service_account'] ?? null)) {
                             $msgs[] = 'Google 服务账号: '.$this->installer->testGoogle($services['gsc_service_account']);
                         }
-                        if (filled($services['ai_api_key'] ?? null)) {
-                            $provider = new AiProvider(['name' => 'test', 'driver' => $services['ai_driver'] ?? 'openai', 'base_url' => $services['ai_base_url'] ?? '', 'api_key' => $services['ai_api_key'], 'model' => $services['ai_model'] ?? '']);
+                        if (filled($services['ai_api_key'] ?? null) || ($services['ai_preset'] ?? null) === 'ollama') {
+                            $provider = new AiProvider(['name' => 'test', 'driver' => $services['ai_driver'] ?? 'openai', 'base_url' => $services['ai_base_url'] ?? '', 'api_key' => $services['ai_api_key'] ?? null, 'model' => $services['ai_model'] ?? '']);
                             $msgs[] = 'AI: '.$this->testAi($provider);
                         }
                         $request->session()->put('install.services', $services);

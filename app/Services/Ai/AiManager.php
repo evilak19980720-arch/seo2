@@ -60,10 +60,7 @@ class AiManager
 
         return $this->withSlot($provider, function () use ($provider, $messages, $purpose, $site, $images, $json) {
             try {
-                $response = match ($provider->driver) {
-                    'anthropic' => $this->callAnthropic($provider, $messages, $images, $json),
-                    default => $this->callOpenAi($provider, $messages, $images, $json),
-                };
+                $response = $this->send($provider, $messages, $images, $json);
             } catch (Throwable $e) {
                 $this->log($provider, $site, $purpose, 0, 0, $e->getMessage());
                 throw $e instanceof AiException ? $e : new AiException($e->getMessage(), 0, $e);
@@ -79,7 +76,7 @@ class AiManager
     public function embed(string $text, ?Site $site = null): ?array
     {
         $provider = AiProvider::where('is_active', true)->whereNotNull('embedding_model')->orderByDesc('is_default')->first();
-        if (! $provider || $provider->driver !== 'openai') {
+        if (! $provider || in_array($provider->driver, ['anthropic', 'azure'], true)) {
             return null;
         }
 
@@ -99,9 +96,7 @@ class AiManager
     public function test(AiProvider $provider): string
     {
         try {
-            $res = $provider->driver === 'anthropic'
-                ? $this->callAnthropic($provider, [['role' => 'user', 'content' => 'Reply with OK']], [], false)
-                : $this->callOpenAi($provider, [['role' => 'user', 'content' => 'Reply with OK']], [], false);
+            $res = $this->send($provider, [['role' => 'user', 'content' => 'Reply with OK']], [], false);
             $result = 'OK: '.mb_substr($res->text, 0, 50);
         } catch (Throwable $e) {
             $result = 'FAIL: '.mb_substr($e->getMessage(), 0, 200);
@@ -153,13 +148,24 @@ class AiManager
         }
     }
 
+    protected function send(AiProvider $provider, array $messages, array $images, bool $json): AiResponse
+    {
+        return match ($provider->driver) {
+            'anthropic' => $this->callAnthropic($provider, $messages, $images, $json),
+            default => $this->callOpenAi($provider, $messages, $images, $json),
+        };
+    }
+
     protected function http(AiProvider $provider): PendingRequest
     {
-        return Http::baseUrl(rtrim($provider->base_url, '/'))
-            ->withToken($provider->api_key)
-            ->acceptJson()
-            ->timeout(180)
-            ->retry(2, 2000, throw: false);
+        $request = Http::baseUrl(rtrim($provider->base_url, '/'))->acceptJson()->timeout(180)->retry(2, 2000, throw: false);
+
+        if ($provider->driver === 'azure') {
+            return $request->withHeaders(['api-key' => (string) $provider->api_key])
+                ->withQueryParameters(['api-version' => $provider->options['api_version'] ?? '2024-10-21']);
+        }
+
+        return filled($provider->api_key) ? $request->withToken($provider->api_key) : $request;
     }
 
     protected function callOpenAi(AiProvider $provider, array $messages, array $images, bool $json): AiResponse
@@ -178,7 +184,13 @@ class AiManager
             $payload['response_format'] = ['type' => 'json_object'];
         }
 
-        $res = $this->http($provider)->post('/chat/completions', $payload)->throw()->json();
+        $response = $this->http($provider)->post('/chat/completions', $payload);
+        // Not every compatible provider accepts response_format; the prompts already ask for JSON.
+        if ($json && $response->status() === 400) {
+            unset($payload['response_format']);
+            $response = $this->http($provider)->post('/chat/completions', $payload);
+        }
+        $res = $response->throw()->json();
 
         return new AiResponse(
             (string) ($res['choices'][0]['message']['content'] ?? ''),
@@ -208,7 +220,7 @@ class AiManager
             $system = trim($system."\n\nRespond with a single valid JSON object only.");
         }
 
-        $res = Http::baseUrl(rtrim($provider->base_url, '/'))
+        $res = Http::baseUrl(preg_replace('#/v1$#', '', rtrim($provider->base_url, '/')))
             ->withHeaders(['x-api-key' => $provider->api_key, 'anthropic-version' => '2023-06-01'])
             ->acceptJson()
             ->timeout(180)

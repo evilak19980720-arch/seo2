@@ -9,6 +9,7 @@ use Throwable;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\password;
+use function Laravel\Prompts\select;
 use function Laravel\Prompts\text;
 use function Laravel\Prompts\textarea;
 
@@ -85,12 +86,7 @@ class InstallCommand extends Command
         $services = [
             'cloudflare_api_token' => password('Cloudflare API Token'),
             'cloudflare_account_id' => text('Cloudflare Account ID'),
-            'ai_name' => 'Default',
-            'ai_driver' => text('AI 接口类型 openai / anthropic', default: 'openai'),
-            'ai_base_url' => text('AI Base URL', default: 'https://api.openai.com/v1'),
-            'ai_api_key' => password('AI API Key'),
-            'ai_model' => text('AI 模型'),
-            'ai_vision' => confirm('该模型支持视觉？', default: true),
+            ...$this->askAiProvider(),
             'gsc_service_account' => textarea('Google 服务账号 JSON'),
         ];
         if ($services['cloudflare_api_token']) {
@@ -113,5 +109,23 @@ class InstallCommand extends Command
         $this->line(ServerConfig::crontab());
 
         return self::SUCCESS;
+    }
+
+    /** @return array<string, mixed> */
+    protected function askAiProvider(): array
+    {
+        $presets = config('ai_providers');
+        $key = select('AI 服务商', collect($presets)->map(fn ($p) => "[{$p['group']}] {$p['label']}")->all(), default: 'openai', scroll: 12);
+        $preset = $presets[$key];
+
+        return [
+            'ai_preset' => $key,
+            'ai_name' => $preset['label'],
+            'ai_driver' => $preset['driver'],
+            'ai_base_url' => text('AI Base URL', default: $preset['base_url'], hint: $preset['hint'] ?? ''),
+            'ai_api_key' => password('AI API Key'),
+            'ai_model' => text('AI 模型', default: $preset['models'][0] ?? '', hint: '推荐：'.implode(', ', $preset['models'])),
+            'ai_vision' => confirm('该模型支持视觉？', default: (bool) $preset['vision']),
+        ];
     }
 }
