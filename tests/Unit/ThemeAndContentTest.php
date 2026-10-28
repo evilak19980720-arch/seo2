@@ -62,4 +62,14 @@ class ThemeAndContentTest extends TestCase
         $this->assertLessThanOrEqual(60, mb_strlen(SeoHead::limit(str_repeat('palavra ', 20), 60)));
         $this->assertSame('Curto', SeoHead::limit('Curto', 60));
     }
+
+    public function test_custom_css_is_kept_phone_safe(): void
+    {
+        $this->assertNotEmpty(CustomCssValidator::errors('.nav{width:1200px}'));
+        $this->assertSame([], CustomCssValidator::errors('@media (min-width:960px){.nav{width:1200px}} .a{max-width:1400px;width:320px}'));
+
+        $fixed = CustomCssValidator::mobileSafe('.a{width:1200px;min-width:480px}.b{width:300px}@media (min-width:900px){.c{width:1100px}}');
+        $this->assertSame('.a{width:min(1200px,100%);min-width:min(480px,100%)}.b{width:300px}@media (min-width:900px){.c{width:1100px}}', $fixed);
+        $this->assertSame([], CustomCssValidator::errors($fixed));
+    }
 }

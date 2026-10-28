@@ -16,7 +16,7 @@ class PromptSeeder extends Seeder
     public const SYSTEM = 'You are a senior content strategist and SEO editor for the official website of {{product_name}} ({{site_type}}). Write natively in {{language}} for readers in {{country}}; never write in another language and never translate from another language. The BRAND PROFILE is the only source of facts: never invent features, numbers, prices, awards, reviews, release dates or company details that are not in it. Always answer with a single JSON object.';
 
     /** Templates revised after the first release ship as a new version; the highest active version wins. */
-    public const VERSIONS = [PromptType::DesignConfig->value => 4, PromptType::PageContent->value => 7, PromptType::SiteData->value => 2, PromptType::SiteMeta->value => 2];
+    public const VERSIONS = [PromptType::DesignConfig->value => 5, PromptType::PageContent->value => 7, PromptType::SiteData->value => 2, PromptType::SiteMeta->value => 2];
 
     public function run(): void
     {
@@ -77,6 +77,7 @@ When there is a reference, the design MUST follow it closely:
 - "navigation": reproduce the reference header behaviour (see "navigation" in the analysis and the screenshots): "submenu" groups menu items under a parent like the reference dropdowns ({"<parent menu item>": ["<menu item>", …]}, children are left out of the top level of "menu"), "buttons" = 0-2 download/CTA buttons in the header, "mobile_bar" = true when the reference has a fixed bottom navigation bar on mobile, "sticky" = header stays on top while scrolling, "home_link" = menu starts with a Home link.
 Never add login, register or account links or buttons: the site has no user accounts.
 Without a reference: still build a rich home page (7-9 blocks) appropriate for the brand.
+Phones first: most visitors arrive on a phone, so judge every choice at 360-430px wide first. Prefer blocks and variants that read well in one column (carousels and compact grids for long lists, short banners), keep the first screen to the title, one line of text and the main button, and set "navigation.mobile_bar" true unless the reference clearly has no mobile navigation.
 Never copy text, logos or brand names from the reference.
 Feedback from the previous attempt (may be empty): {{feedback}}
 
@@ -84,7 +85,7 @@ You may ONLY use values from this whitelist:
 {{whitelist}}
 
 For every page type in "page_types" choose an ordered list of blocks with a variant. The first block of a page is its title area (hero or banner on home, hero/prose/faq/... elsewhere). Text colours must have at least 4.5:1 contrast on the background. At most 2 font families.
-"custom_css": up to 8KB of CSS that recreates reference details the config cannot express (header/menu bar look, card frames, glows, gradients, section separators, hover effects, background textures). Use the CSS variables --c-primary --c-on-primary --c-secondary --c-on-secondary --c-accent --c-bg --c-surface --c-text --c-muted --radius --shadow and these classes: .nav .nav__inner .nav__bar .nav__links .nav__cta .btn .btn--ghost .hero .hero__art .banner .banner__slide .notice .section .section__head .card-grid .tile .tile__media .tile__tag .tile__body .feature .feature__icon .step .stats-block .faq details .cta .download .post-card .footer. No @import, no external url(), never hide or shrink content, no fixed heights on text containers. Use "" when not needed.
+"custom_css": up to 8KB of CSS that recreates reference details the config cannot express (header/menu bar look, card frames, glows, gradients, section separators, hover effects, background textures). Use the CSS variables --c-primary --c-on-primary --c-secondary --c-on-secondary --c-accent --c-bg --c-surface --c-text --c-muted --radius --shadow and these classes: .nav .nav__inner .nav__bar .nav__links .nav__cta .btn .btn--ghost .hero .hero__art .banner .banner__slide .notice .section .section__head .card-grid .tile .tile__media .tile__tag .tile__body .feature .feature__icon .step .stats-block .faq details .cta .download .post-card .footer. Write it mobile-first: base rules for phones, wider-screen changes inside @media (min-width: …); outside media queries no fixed widths over 360px, no horizontal scrolling, tap targets at least 44px high. No @import, no external url(), never hide or shrink content, no fixed heights on text containers. Use "" when not needed.
 
 Return JSON:
 {"design": {"colors": {"primary": "#", "secondary": "#", "accent": "#", "background": "#", "surface": "#", "text": "#", "muted": "#"}, "fonts": {"heading": "", "body": ""}, "radius": "", "density": "", "shadow": "", "style": {"background": "", "cards": "", "buttons": "", "headings": ""}, "nav": "", "footer": "", "menu": ["product", "extra_1", "blog"], "navigation": {"submenu": {"product": ["guide", "faq"]}, "buttons": 1, "mobile_bar": false, "sticky": true, "home_link": false}, "extra_pages": [{"label": "", "slug": ""}], "pages": {"home": [{"block": "banner", "variant": "slider"}]}}, "custom_css": ""}

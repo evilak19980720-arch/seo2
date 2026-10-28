@@ -361,7 +361,7 @@ main{display:block}
 .has-mobile-bar .cookie{bottom:80px}
 .has-mobile-bar .nav__actions{display:none}
 .mobile-bar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:45;height:calc(64px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:color-mix(in srgb,var(--c-bg) 94%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);box-shadow:0 -10px 30px -20px rgba(0,0,0,.4)}
-.mobile-bar a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--c-muted);text-decoration:none;font-size:.68rem;font-weight:700;min-width:0}
+.mobile-bar a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--c-muted);text-decoration:none;font-size:.75rem;font-weight:700;min-width:0}
 .mobile-bar span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 4px}
 .mobile-bar svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .mobile-bar a:hover{color:var(--c-primary)}
@@ -489,3 +489,34 @@ main{display:block}
 @media (min-width:760px){.entry-list--featured .entry-list__items>:first-child{flex-direction:row}.entry-list--featured .entry-list__items>:first-child .tile__media{flex:0 0 55%;aspect-ratio:16/9}}
 .entry-list--carousel .entry-list__items{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:.5rem}
 .entry-list--carousel .entry-card{flex:0 0 min(70%,260px);scroll-snap-align:start}
+/* Mobile first: phones are the main audience. Long words and links wrap,
+   flex/grid children may shrink, and small screens get tighter spacing,
+   clamped card text and full-width tools. */
+p,li,dd,dt,td,th,figcaption,blockquote,.tile__body{overflow-wrap:anywhere}
+.entry__head>*,.entry__body>*,.hero__grid>*,.lobby__tools>*{min-width:0}
+.site-search__form input{min-width:0}
+.nav__brand>span:last-child{overflow:hidden;text-overflow:ellipsis}
+@media (max-width:759px){
+.section{padding:calc(3rem*var(--space)) 0}
+.hero{padding:calc(2.75rem*var(--space)) 0 calc(2.5rem*var(--space))}
+.section__head{margin-bottom:calc(1.5rem*var(--space))}
+.section__head p{font-size:1rem}
+.page-head{padding-top:1.5rem;padding-bottom:1.5rem}
+.card{padding:1.15rem}
+.nav__inner{min-height:60px;gap:.6rem}
+.nav__brand{font-size:1.1rem}
+.nav__brand img,.nav__mark{width:36px;height:36px}
+.nav__cta{max-width:42vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;line-height:40px}
+.lobby__grid .tile__body,.entry-list__items .tile__body{padding:.7rem .75rem .85rem;gap:.25rem}
+.lobby__grid .tile__body h3,.entry-list__items .tile__body h3{font-size:.95rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.lobby__grid .tile__body p,.entry-list__items .tile__body p{font-size:.84rem;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.lobby__tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.lobby__search{grid-column:1/-1}
+.lobby__select{width:100%}
+.footer ul{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:1rem}
+.footer--centered ul,.footer--centered .footer__pages ul{display:grid;justify-items:center}
+.cookie{left:10px;right:10px;bottom:10px;padding:.85rem 1rem;font-size:.85rem}
+.cookie__actions{margin-top:.6rem}
+.cookie__actions .btn{min-height:40px;padding:0 1.1rem;flex:1}
+}
+

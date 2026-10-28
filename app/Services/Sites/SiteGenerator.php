@@ -409,6 +409,7 @@ class SiteGenerator
             $validated = $current;
         }
 
+        $customCss = $customCss !== null ? CustomCssValidator::mobileSafe($customCss) : null;
         if ($customCss !== null && CustomCssValidator::errors($customCss) !== []) {
             $customCss = null;
         }

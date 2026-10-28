@@ -1,9 +1,9 @@
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
 body{margin:0;background:var(--c-bg);color:var(--c-text);font-family:var(--f-body);font-size:1rem;line-height:1.7;-webkit-font-smoothing:antialiased;--r-box:min(var(--radius),20px);--r-btn:min(var(--radius),999px);--line:color-mix(in srgb,var(--c-text) 10%,transparent)}
-h1,h2,h3,h4{font-family:var(--f-heading);line-height:1.15;margin:0 0 calc(.6rem*var(--space));letter-spacing:-.01em;font-weight:800}
-h1{font-size:clamp(2.1rem,5.5vw,3.6rem)}
-h2{font-size:clamp(1.6rem,3.6vw,2.4rem)}
+h1,h2,h3,h4{overflow-wrap:anywhere;font-family:var(--f-heading);line-height:1.15;margin:0 0 calc(.6rem*var(--space));letter-spacing:-.01em;font-weight:800}
+h1{font-size:clamp(1.75rem,5.5vw,3.6rem)}
+h2{font-size:clamp(1.4rem,3.6vw,2.4rem)}
 img{max-width:100%;height:auto;display:block}
 a{color:var(--c-link)}
 .container{width:100%;max-width:1200px;margin:0 auto;padding:0 20px}
@@ -15,7 +15,7 @@ a{color:var(--c-link)}
 .skip:focus{left:8px;top:8px;z-index:99;background:var(--c-bg);padding:8px}
 .nav{position:sticky;top:0;z-index:40;background:color-mix(in srgb,var(--c-bg) 88%,transparent);backdrop-filter:saturate(1.4) blur(12px);-webkit-backdrop-filter:saturate(1.4) blur(12px);border-bottom:1px solid var(--line)}
 .nav__inner{display:flex;align-items:center;gap:1rem;min-height:72px}
-.nav__brand{display:flex;align-items:center;gap:.65rem;font-family:var(--f-heading);font-weight:800;font-size:1.25rem;color:var(--c-text);text-decoration:none;min-height:48px;margin-right:auto}
+.nav__brand{display:flex;align-items:center;gap:.65rem;min-width:0;white-space:nowrap;font-family:var(--f-heading);font-weight:800;font-size:1.25rem;color:var(--c-text);text-decoration:none;min-height:48px;margin-right:auto}
 .nav__brand img{width:42px;height:42px;object-fit:contain;border-radius:10px}
 .nav__mark{display:inline-grid;place-items:center;width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--c-primary),color-mix(in srgb,var(--c-primary) 60%,var(--c-secondary)));color:var(--c-on-primary);font-size:1.2rem}
 .nav__links{display:flex;gap:.15rem;list-style:none;margin:0;padding:0}

@@ -64,6 +64,8 @@ return [
     'sectioned' => true,
     'responsible_notice' => true,
     'main_nav_max' => 6,
+    // Phones first: a fixed bottom bar (home, games, download…) even when the reference has none.
+    'mobile_bar' => true,
     'main_nav_order' => ['games', 'lobby', 'promotions', 'events', 'providers', 'news', 'download', 'about', 'help'],
     'optional_page_chance' => 0.6,
     'optional_section_chance' => 0.55,

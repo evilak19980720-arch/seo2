@@ -12,6 +12,7 @@ use App\Services\Render\StaticSiteBuilder;
 use App\Services\Render\ThemeContext;
 use App\Services\Sites\SiteGenerator;
 use App\Services\Sites\SiteStructure;
+use App\Services\Theme\DesignConfigValidator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -70,6 +71,13 @@ class GameSiteTest extends TestCase
         $site->entries()->create(['collection' => 'promotion', 'slug' => 'bonus-boas-vindas', 'title' => 'Bônus de boas-vindas', 'summary' => 'Oferta para novos jogadores.', 'data' => ['tags' => ['new_user'], 'reward' => 'R$ 20', 'ends_at' => now()->addMonth()->toDateString()]]);
         $site->entries()->create(['collection' => 'promotion', 'slug' => 'antiga', 'title' => 'Promoção antiga', 'data' => ['ends_at' => now()->subMonth()->toDateString()]]);
         $site->entries()->create(['collection' => 'notice', 'slug' => 'manutencao', 'title' => 'Manutenção programada', 'data' => ['tags' => ['maintenance'], 'date' => now()->subDay()->toDateString()]]);
+    }
+
+    public function test_game_sites_get_the_mobile_bar_by_default(): void
+    {
+        $validator = new DesignConfigValidator;
+        $this->assertTrue($validator->validate(['navigation' => ['mobile_bar' => false]], $this->gameSite()->typeConfig())['navigation']['mobile_bar']);
+        $this->assertFalse($validator->validate([], $this->makeSite()->typeConfig())['navigation']['mobile_bar']);
     }
 
     public function test_structure_is_stable_random_and_respects_conditions(): void

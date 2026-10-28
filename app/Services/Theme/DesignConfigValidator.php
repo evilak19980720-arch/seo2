@@ -218,7 +218,7 @@ class DesignConfigValidator
         return [
             'submenu' => $submenu,
             'buttons' => max(0, min(2, (int) ($nav['buttons'] ?? 1))),
-            'mobile_bar' => (bool) ($nav['mobile_bar'] ?? false),
+            'mobile_bar' => (bool) ($nav['mobile_bar'] ?? false) || ! empty($siteTypeConfig['mobile_bar']),
             'sticky' => (bool) ($nav['sticky'] ?? true),
             'home_link' => (bool) ($nav['home_link'] ?? $variant === 'portal'),
         ];

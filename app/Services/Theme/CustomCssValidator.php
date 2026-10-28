@@ -8,6 +8,21 @@ namespace App\Services\Theme;
  */
 class CustomCssValidator
 {
+    /**
+     * AI CSS: fixed widths wider than a phone (outside min-width media
+     * queries) become min(Npx, 100%), so they can never push the page sideways.
+     */
+    public static function mobileSafe(string $css): string
+    {
+        $parts = preg_split('/(@media[^{]*min-width[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\})/i', $css, -1, PREG_SPLIT_DELIM_CAPTURE);
+
+        return implode('', array_map(fn ($part, $i) => $i % 2 ? $part : preg_replace_callback(
+            '/(?<![\w-])((?:min-)?width\s*:\s*)(\d+(?:\.\d+)?)px/i',
+            fn ($m) => (float) $m[2] > 360 ? "{$m[1]}min({$m[2]}px,100%)" : $m[0],
+            $part,
+        ), $parts, array_keys($parts)));
+    }
+
     /** @return array<int, string> errors (empty = valid) */
     public static function errors(?string $css): array
     {
@@ -34,6 +49,17 @@ class CustomCssValidator
         }
         if (preg_match('/<\s*\/?\s*(script|style)|expression\s*\(|behavior\s*:|-moz-binding/i', $css)) {
             $errors[] = '包含不允许的脚本写法';
+        }
+
+        // Phones first: fixed widths wider than a phone belong in a min-width media query.
+        $outside = preg_replace('/@media[^{]*min-width[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/i', '', $css);
+        if (preg_match_all('/(?<![\w-])(?:min-)?width\s*:\s*(\d+(?:\.\d+)?)px/i', (string) $outside, $w)) {
+            foreach ($w[1] as $px) {
+                if ((float) $px > 360) {
+                    $errors[] = "固定宽度 {$px}px 会撑破手机屏幕，请写在 @media (min-width: …) 里";
+                    break;
+                }
+            }
         }
 
         // Rules that hide main content areas.
