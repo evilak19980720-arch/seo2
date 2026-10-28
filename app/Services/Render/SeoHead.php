@@ -3,6 +3,7 @@
 namespace App\Services\Render;
 
 use App\Models\Article;
+use Illuminate\Support\Carbon;
 
 /**
  * Builds the platform-owned <head> data: title, description, canonical,
@@ -85,7 +86,7 @@ class SeoHead
             'description' => self::limit((string) ($brand->tagline ?: $brand->description), 300),
             'url' => $site->url(),
             'image' => $this->image,
-            'inLanguage' => $site->locale,
+            'inLanguage' => $this->ctx->seoLocale(),
             'brand' => $type === 'Product' ? ['@type' => 'Brand', 'name' => $brand->product_name ?: $site->product_name] : null,
             'publisher' => ['@id' => $site->url().'#organization'],
         ]);
@@ -109,6 +110,38 @@ class SeoHead
         return $this;
     }
 
+    /** WebPage node with its last real change, so freshness is explicit. */
+    public function withWebPage(?\DateTimeInterface $modified): self
+    {
+        $this->schema[] = array_filter([
+            '@type' => 'WebPage',
+            '@id' => $this->canonical.'#webpage',
+            'url' => $this->canonical,
+            'name' => $this->title,
+            'description' => $this->description ?: null,
+            'inLanguage' => $this->ctx->seoLocale(),
+            'isPartOf' => ['@id' => $this->ctx->site->url().'#website'],
+            'dateModified' => $modified ? Carbon::instance($modified)->toAtomString() : null,
+        ]);
+
+        return $this;
+    }
+
+    /** @param  array<int, array{question: string, answer: string}>  $items */
+    public function withFaq(array $items): self
+    {
+        $this->schema[] = [
+            '@type' => 'FAQPage',
+            'mainEntity' => collect($items)->take(20)->map(fn ($i) => [
+                '@type' => 'Question',
+                'name' => strip_tags($i['question']),
+                'acceptedAnswer' => ['@type' => 'Answer', 'text' => strip_tags($i['answer'])],
+            ])->values()->all(),
+        ];
+
+        return $this;
+    }
+
     public function withArticle(Article $article): self
     {
         $site = $this->ctx->site;
@@ -120,7 +153,7 @@ class SeoHead
             'image' => $this->image,
             'datePublished' => $article->published_at?->toAtomString(),
             'dateModified' => ($article->updated_at ?? $article->published_at)?->toAtomString(),
-            'inLanguage' => $site->locale,
+            'inLanguage' => $this->ctx->seoLocale(),
             'mainEntityOfPage' => $this->canonical,
             'author' => ['@type' => 'Organization', 'name' => $article->author ?: $this->ctx->t('editorial', ['brand' => $site->name]), 'url' => $site->url()],
             'publisher' => ['@id' => $site->url().'#organization'],
@@ -150,7 +183,7 @@ class SeoHead
                 '@id' => $site->url().'#website',
                 'name' => $site->name,
                 'url' => $site->url(),
-                'inLanguage' => $site->locale,
+                'inLanguage' => $this->ctx->seoLocale(),
                 'publisher' => ['@id' => $site->url().'#organization'],
             ],
         ];

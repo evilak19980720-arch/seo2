@@ -14,9 +14,12 @@ use App\Models\Page;
 use App\Models\Site;
 use App\Services\Ai\AiManager;
 use App\Services\Content\LanguageDetector;
+use App\Services\Content\SeoRules;
+use App\Services\Content\Similarity;
 use App\Services\Integrations\Lighthouse;
 use App\Services\Integrations\Screenshot;
 use App\Services\Render\HtmlSanitizer;
+use App\Services\Render\SchemaValidator;
 use App\Services\Render\SeoHead;
 use App\Services\Render\StaticSiteBuilder;
 use App\Services\Theme\Color;
@@ -112,24 +115,46 @@ class SiteGenerator
         }
     }
 
+    /**
+     * Homepage title and description. A title that is only the brand name or
+     * a too-short description is regenerated, even when typed in the admin:
+     * the result must name the product plus what it is (main keyword).
+     */
     public function ensureMeta(Site $site): void
     {
-        if (filled($site->title) && filled($site->description)) {
+        $brand = $site->product_name;
+        if (! SeoRules::weakTitle($site->title, $brand) && ! SeoRules::weakDescription($site->description, $brand)) {
             return;
         }
+        $title = $site->title;
+        $description = $site->description;
         try {
             $res = $this->ai->prompt(PromptType::SiteMeta, ['brand' => $this->brandContext($site)], $site)->json();
-            $title = (string) ($res['title'] ?? '');
-            if (! Str::contains(Str::lower($title), Str::lower($site->product_name))) {
-                $title = $site->product_name.' – '.$title;
+            $aiTitle = (string) ($res['title'] ?? '');
+            if (! SeoRules::mentions($aiTitle, $brand)) {
+                $aiTitle = $brand.' – '.$aiTitle;
             }
-            $site->title = $site->title ?: SeoHead::limit($title, 60);
-            $site->description = $site->description ?: SeoHead::limit((string) ($res['description'] ?? ''), 155);
+            if (SeoRules::weakTitle($title, $brand) && ! SeoRules::weakTitle($aiTitle, $brand)) {
+                $title = SeoHead::limit($aiTitle, 60);
+            }
+            $aiDescription = SeoRules::stripClaims((string) ($res['description'] ?? ''), $this->brandContext($site));
+            if (SeoRules::weakDescription($description, $brand) && ! SeoRules::weakDescription($aiDescription, $brand)) {
+                $description = SeoHead::limit($aiDescription, 155);
+            }
         } catch (Throwable) {
-            $site->title = $site->title ?: SeoHead::limit($site->product_name.' – '.($site->brandProfile?->tagline ?? $site->name), 60);
-            $site->description = $site->description ?: SeoHead::limit((string) ($site->brandProfile?->tagline ?: $site->brandProfile?->description), 155);
+            // Fallbacks below.
         }
-        $site->save();
+
+        $profile = $site->brandProfile;
+        if (SeoRules::weakTitle($title, $brand)) {
+            $what = $profile?->tagline ?: (__('theme.page_titles.product', [], $site->language()) ?: $site->name);
+            $title = SeoHead::limit($brand.' – '.$what, 60);
+        }
+        if (SeoRules::weakDescription($description, $brand)) {
+            $description = SeoHead::limit(collect([$profile?->tagline, $profile?->description, implode('. ', (array) ($profile?->selling_points ?? []))])
+                ->filter()->implode(' '), 155) ?: $description;
+        }
+        $site->forceFill(['title' => $title, 'description' => $description])->save();
     }
 
     /**
@@ -322,28 +347,45 @@ class SiteGenerator
         $site->update(['design_config' => $config, 'design_version' => $version, 'custom_css' => $customCss]);
     }
 
-    /** One AI call for all core pages of the site type; defaults fill any gaps. */
+    /**
+     * One AI call for all core pages of the site type; defaults fill any gaps.
+     * Pages that come back thin, too close to the reference or to another
+     * site's page get one more attempt with that feedback; still failing,
+     * they are published as noindex so they never count against the site.
+     */
     public function generatePages(Site $site): void
     {
         $types = $site->typeConfig()['pages'];
         $lang = $site->language();
-        $ai = [];
+        $facts = $this->brandContext($site);
 
-        try {
-            // Labels in the site language: the admin's Chinese labels would be copied into page titles.
-            // Ask for content of the blocks the design actually uses on each page.
-            $designBlocks = fn ($type, $p) => collect($site->design_config['pages'][$type] ?? [])->pluck('block')->unique()->values()->all() ?: $p['blocks'];
-            $spec = collect($types)->map(fn ($p, $type) => ['label' => $this->defaultTitle($type, $p, $lang), 'default_slug' => $p['slug'][$lang] ?? $p['slug']['en'], 'blocks' => $designBlocks($type, $p)])->all();
-            $ai = $this->ai->prompt(PromptType::PageContent, [
-                'brand' => $this->brandContext($site),
-                'pages' => json_encode($spec, JSON_UNESCAPED_UNICODE),
-                'reference_content' => $this->referenceContent($site),
-            ], $site)->json()['pages'] ?? [];
-        } catch (Throwable) {
-            $ai = [];
+        // Labels in the site language: the admin's Chinese labels would be copied into page titles.
+        // Ask for content of the blocks the design actually uses on each page.
+        $designBlocks = fn ($type, $p) => collect($site->design_config['pages'][$type] ?? [])->pluck('block')->unique()->values()->all() ?: $p['blocks'];
+        $spec = collect($types)->map(fn ($p, $type) => array_filter([
+            'label' => $this->defaultTitle($type, $p, $lang),
+            'default_slug' => $p['slug'][$lang] ?? $p['slug']['en'],
+            'blocks' => $designBlocks($type, $p),
+            'min_words' => SeoRules::minWords($type) ?: null,
+        ]))->all();
+        $ai = $this->askPages($site, $spec);
+
+        $problems = $this->pageProblems($site, $ai, $facts);
+        if ($problems !== []) {
+            $retry = array_intersect_key($spec, $problems);
+            foreach ($problems as $type => $why) {
+                $retry[$type]['feedback'] = $why;
+            }
+            foreach ($this->askPages($site, $retry) as $type => $data) {
+                if (is_array($data) && ! isset($this->pageProblems($site, [$type => $data], $facts)[$type])) {
+                    $ai[$type] = $data;
+                    unset($problems[$type]);
+                }
+            }
         }
 
         $usedSlugs = [];
+        $titles = [];
         foreach ($types as $type => $def) {
             $data = is_array($ai[$type] ?? null) ? $ai[$type] : [];
             $existing = $site->pages()->where('type', $type)->first();
@@ -360,15 +402,35 @@ class SiteGenerator
 
             $title = is_string($data['title'] ?? null) && LanguageDetector::matches($data['title'], $lang)
                 ? $data['title'] : $this->defaultTitle($type, $def, $lang);
+            // Two pages about the same thing (e.g. "About the game" and "About us") get distinct titles.
+            foreach ($titles as $other) {
+                if (SeoRules::titleOverlap($title, $other, $site->product_name) >= 0.6) {
+                    $title = $this->defaultTitle($type, $def, $lang);
+                    break;
+                }
+            }
+            $titles[] = $title;
             $content = $this->cleanBlocks($data['blocks'] ?? [], $type, $site);
+            if ($type === 'home') {
+                $content = $this->homeHeading($site, $content);
+            }
+
+            $metaTitle = $type === 'home' ? ($site->title ?: $title) : (string) ($data['meta_title'] ?? '');
+            if ($type !== 'home' && (SeoRules::weakTitle($metaTitle, $site->product_name) || ! LanguageDetector::matches($metaTitle, $lang))) {
+                $metaTitle = "{$title} – {$site->product_name}";
+            }
+            $metaDescription = $type === 'home' ? (string) $site->description : SeoRules::stripClaims((string) ($data['meta_description'] ?? ''), $facts);
+            if (SeoRules::weakDescription($metaDescription, $site->product_name)) {
+                $metaDescription = $this->excerpt($content) ?: (string) $site->description;
+            }
 
             $site->pages()->updateOrCreate(['type' => $type], [
                 'slug' => $slug,
                 'title' => Str::limit(strip_tags($title), 120, ''),
-                'meta_title' => SeoHead::limit($type === 'home' ? ($site->title ?: $title) : ($data['meta_title'] ?? "{$title} – {$site->product_name}"), 60),
-                'meta_description' => SeoHead::limit($type === 'home' ? (string) $site->description : (string) ($data['meta_description'] ?? $site->description), 155),
+                'meta_title' => SeoHead::limit($metaTitle, 60),
+                'meta_description' => SeoHead::limit($metaDescription, 155),
                 'content' => $content,
-                'noindex' => false,
+                'noindex' => isset($problems[$type]),
             ]);
         }
 
@@ -379,6 +441,102 @@ class SiteGenerator
             }
             $page->delete();
         });
+    }
+
+    /** @return array<string, mixed> page type => AI page data */
+    protected function askPages(Site $site, array $spec): array
+    {
+        try {
+            return $this->ai->prompt(PromptType::PageContent, [
+                'brand' => $this->brandContext($site),
+                'pages' => json_encode($spec, JSON_UNESCAPED_UNICODE),
+                'reference_content' => $this->referenceContent($site),
+            ], $site)->json()['pages'] ?? [];
+        } catch (Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * Why each generated page is not good enough to index: too short, or
+     * too similar to the reference site or to the same page of another site.
+     *
+     * @return array<string, string> page type => feedback for the model
+     */
+    public function pageProblems(Site $site, array $pages, string $facts): array
+    {
+        $problems = [];
+        $reference = $site->reference_rewrite_content ? (string) ($this->referenceData['content'] ?? '') : '';
+        $limit = (float) Settings::get('page_similarity', 0.6);
+        foreach ($pages as $type => $data) {
+            if (! is_array($data) || ! is_array($data['blocks'] ?? null)) {
+                continue;
+            }
+            $content = $this->cleanBlocks($data['blocks'], $type, $site);
+            $words = SeoRules::wordCount($content);
+            $min = SeoRules::minWords($type);
+            if ($min > 0 && $words < $min * 0.8) {
+                $problems[$type] = "Only {$words} words; write at least {$min} words of useful, specific copy for this page.";
+
+                continue;
+            }
+            if (in_array($type, SeoRules::NO_MIN_WORDS, true)) {
+                continue;
+            }
+            $text = $this->plainText($content);
+            $mine = Similarity::fingerprint($text);
+            if ($reference !== '' && ($score = Similarity::compare($mine, Similarity::fingerprint($reference))) >= $limit) {
+                $problems[$type] = sprintf('Too close to the reference site (similarity %.2f); rewrite with your own structure and wording.', $score);
+
+                continue;
+            }
+            $others = Page::query()->where('type', $type)->where('site_id', '!=', $site->id)
+                ->whereIn('site_id', Site::where('locale', $site->locale)->select('id'))->latest('id')->limit(300)->pluck('content');
+            foreach ($others as $other) {
+                if (is_array($other) && ($score = Similarity::compare($mine, Similarity::fingerprint($this->plainText($other)))) >= $limit) {
+                    $problems[$type] = sprintf('Too similar to the same page on another site (similarity %.2f); write different angles and wording.', $score);
+                    break;
+                }
+            }
+        }
+
+        return $problems;
+    }
+
+    protected function plainText(array $content): string
+    {
+        return collect($content)->flatten()->filter(fn ($v) => is_string($v))->map(fn ($v) => strip_tags($v))->implode(' ');
+    }
+
+    /** First real sentence(s) of a page, for its meta description. */
+    protected function excerpt(array $content): string
+    {
+        foreach (['hero' => 'subheading', 'prose' => 'html', 'features' => 'intro', 'card_grid' => 'intro', 'steps' => 'intro', 'cta' => 'text', 'contact' => 'html', 'faq' => 'heading'] as $block => $field) {
+            $text = trim(preg_replace('/\s+/u', ' ', strip_tags((string) ($content[$block][$field] ?? ''))));
+            if (mb_strlen($text) >= 70) {
+                return SeoHead::limit($text, 155);
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * The home <h1> names the product and what it is: seasonal or promo
+     * headlines move to the eyebrow, the SEO title takes their place.
+     */
+    protected function homeHeading(Site $site, array $content): array
+    {
+        $block = isset($content['hero']) || ! isset($content['banner']) ? 'hero' : 'banner';
+        $heading = (string) ($content[$block]['heading'] ?? '');
+        if ($heading === '' || SeoRules::seasonal($heading) || ! SeoRules::mentions($heading, $site->product_name)) {
+            if ($heading !== '' && empty($content[$block]['eyebrow']) && mb_strlen($heading) <= 40) {
+                $content[$block]['eyebrow'] = $heading;
+            }
+            $content[$block]['heading'] = Str::limit((string) ($site->title ?: $site->product_name), 120, '');
+        }
+
+        return $content;
     }
 
     /** Reference text for AI rewriting, when the site's switch is on. */
@@ -436,6 +594,11 @@ class SiteGenerator
     /** Lighthouse each page type; regenerate only failing page compositions. */
     public function acceptance(Site $site, GenerationTask $task): void
     {
+        $paths = $site->pages()->pluck('slug')->all();
+        foreach (SchemaValidator::checkSite(StaticSiteBuilder::dirFor($site), $paths) as $path => $problems) {
+            $task->progress("结构化数据 {$path}：".implode('；', $problems));
+        }
+
         if (! Lighthouse::available()) {
             $task->progress('未安装 Lighthouse，跳过验收');
 
@@ -531,7 +694,10 @@ class SiteGenerator
     protected function cleanBlocks(array $blocks, string $type, Site $site): array
     {
         $lang = $site->language();
-        $str = fn ($v, $len = 300) => is_string($v) ? Str::limit(trim(strip_tags($v)), $len, '') : null;
+        $facts = $this->brandContext($site);
+        // Unverifiable promises (money, speed, superlatives) are dropped sentence by sentence.
+        $str = fn ($v, $len = 300) => is_string($v) ? (Str::limit(SeoRules::stripClaims(trim(strip_tags($v)), $facts), $len, '') ?: null) : null;
+        $label = fn ($v) => ($l = $str($v, 40)) !== null && ! SeoRules::accountLabel($l) ? $l : null;
         $out = [];
 
         foreach (['hero', 'features', 'faq', 'cta', 'prose', 'gallery', 'specs', 'article_list', 'contact', 'legal', 'banner', 'card_grid', 'steps', 'stats', 'notice', 'download'] as $block) {
@@ -541,10 +707,10 @@ class SiteGenerator
                 'subheading' => $str($b['subheading'] ?? null),
                 'intro' => $str($b['intro'] ?? null, 400),
                 'text' => $str($b['text'] ?? null, 400),
-                'cta_label' => $str($b['cta_label'] ?? null, 40),
-                'label' => $str($b['label'] ?? null, 40),
+                'cta_label' => $label($b['cta_label'] ?? null),
+                'label' => $label($b['label'] ?? null),
                 'eyebrow' => $str($b['eyebrow'] ?? null, 40),
-                'html' => isset($b['html']) ? HtmlSanitizer::clean($b['html']) : null,
+                'html' => isset($b['html']) && is_string($b['html']) ? (SeoRules::stripClaimsHtml(HtmlSanitizer::clean($b['html']), $facts) ?: null) : null,
             ]);
             if (isset($b['points']) && is_array($b['points'])) {
                 $clean['points'] = collect($b['points'])->map(fn ($p) => $str($p, 40))->filter()->values()->take(4)->all() ?: null;

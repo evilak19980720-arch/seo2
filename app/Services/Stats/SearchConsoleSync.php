@@ -4,6 +4,7 @@ namespace App\Services\Stats;
 
 use App\Enums\ArticleStatus;
 use App\Enums\KeywordStatus;
+use App\Models\Alert;
 use App\Models\Article;
 use App\Models\Keyword;
 use App\Models\SearchStat;
@@ -74,6 +75,24 @@ class SearchConsoleSync
         return $created;
     }
 
+    /**
+     * Raise an alert when Google keeps most of a settled site out of its index
+     * ("Crawled - currently not indexed" usually means thin or duplicate pages).
+     *
+     * @param  array<string, int>  $coverage  coverage state => count among non-indexed URLs
+     */
+    public function alertCoverage(Site $site, int $checked, array $coverage): void
+    {
+        $failed = array_sum($coverage);
+        $settled = $site->launched_at && $site->launched_at->lt(now()->subDays(21));
+        if (! $settled || $checked < 10 || $failed / max(1, $checked) < 0.4) {
+            return;
+        }
+        arsort($coverage);
+        $reasons = collect($coverage)->take(3)->map(fn ($n, $state) => "{$state} ×{$n}")->implode('；');
+        Alert::raise('index_coverage', "站点 {$site->name} 抽查 {$checked} 个网址，{$failed} 个未被收录：{$reasons}。常见原因是内容单薄或与其他页面重复。", $site->id);
+    }
+
     /** URL Inspection sampling (quota ~2000/day/property): oldest-checked first. */
     public function sampleIndexStatus(Site $site, int $limit = 60): void
     {
@@ -82,13 +101,18 @@ class SearchConsoleSync
             ->concat($site->articles()->where('status', ArticleStatus::Published->value)->orderByRaw('index_checked_at is not null, index_checked_at')->limit($limit)->get())
             ->take($limit);
 
+        $coverage = [];
         foreach ($items as $item) {
             $path = $item instanceof Article ? $item->path() : $item->slug;
-            $verdict = $this->gsc->inspect($domain, $site->url($path));
-            if ($verdict !== null) {
-                $item->forceFill(['index_verdict' => $verdict, 'index_checked_at' => now()])->saveQuietly();
+            $detail = $this->gsc->inspectDetail($domain, $site->url($path));
+            if (($detail['verdict'] ?? null) !== null) {
+                $item->forceFill(['index_verdict' => $detail['verdict'], 'index_checked_at' => now()])->saveQuietly();
+                if ($detail['verdict'] !== 'PASS' && filled($detail['coverage'])) {
+                    $coverage[$detail['coverage']] = ($coverage[$detail['coverage']] ?? 0) + 1;
+                }
             }
         }
+        $this->alertCoverage($site, $items->count(), $coverage);
 
         $indexed = $site->pages()->where('index_verdict', 'PASS')->count()
             + $site->articles()->where('status', ArticleStatus::Published->value)->where('index_verdict', 'PASS')->count();

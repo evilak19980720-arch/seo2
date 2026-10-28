@@ -83,12 +83,16 @@ class GlobalSettings extends Page
                         TextInput::make('min_completeness')->label('品牌资料完整度门槛 %')->numeric()->required(),
                         TextInput::make('intra_site_similarity')->label('站内相似度上限')->numeric()->step(0.01)->required(),
                         TextInput::make('cross_site_similarity')->label('跨站相似度上限')->numeric()->step(0.01)->required(),
+                        TextInput::make('page_similarity')->label('核心页面相似度上限')->numeric()->step(0.01)->required()->helperText('与参考站或其他站同类页面相比，超过就重写，仍超过就不收录'),
+                        TextInput::make('min_list_articles')->label('列表页最少文章数')->numeric()->required()->helperText('博客、更新公告少于这个数时不收录、不进导航'),
                         TextInput::make('cold_days')->label('冷内容天数')->numeric()->required(),
                         TextInput::make('drop_threshold')->label('熔断下降比例')->numeric()->step(0.05)->required(),
                     ]),
                     Section::make('站点生成')->columns(2)->schema([
                         Toggle::make('auto_launch')->label('生成成功后自动上线并提交 sitemap')->helperText('关闭则生成后先预览，手动上线'),
                         Toggle::make('cookie_banner')->label('显示 Cookie 同意横幅（GA4 Consent Mode）'),
+                        Toggle::make('robots_allow_ai_search')->label('robots.txt 放行 AI 搜索爬虫')->helperText('OAI-SearchBot、PerplexityBot、Claude-SearchBot 等，会在 AI 搜索里引用并链接网站'),
+                        Toggle::make('robots_block_ai_training')->label('robots.txt 屏蔽 AI 训练爬虫')->helperText('GPTBot、Google-Extended、CCBot 等，不影响 Google 搜索'),
                         Toggle::make('mfa_required')->label('后台强制两步验证'),
                         TextInput::make('server_ip')->label('服务器公网 IP')->ip(),
                     ]),
@@ -153,10 +157,10 @@ class GlobalSettings extends Page
                 unset($data[$key]);
             }
         }
-        foreach (['cap_months_0_3', 'cap_months_3_6', 'cap_after_6', 'cap_step', 'cap_max', 'min_completeness', 'cold_days'] as $int) {
+        foreach (['cap_months_0_3', 'cap_months_3_6', 'cap_after_6', 'cap_step', 'cap_max', 'min_completeness', 'cold_days', 'min_list_articles'] as $int) {
             $data[$int] = (int) $data[$int];
         }
-        foreach (['cap_raise_ratio', 'intra_site_similarity', 'cross_site_similarity', 'drop_threshold'] as $float) {
+        foreach (['cap_raise_ratio', 'intra_site_similarity', 'cross_site_similarity', 'page_similarity', 'drop_threshold'] as $float) {
             $data[$float] = (float) $data[$float];
         }
 

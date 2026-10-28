@@ -66,6 +66,16 @@ class SearchConsole
     /** URL Inspection: returns coverage verdict (PASS / NEUTRAL / FAIL ...). */
     public function inspect(string $domain, string $url): ?string
     {
+        return $this->inspectDetail($domain, $url)['verdict'] ?? null;
+    }
+
+    /**
+     * URL Inspection with the reason, e.g. "Crawled - currently not indexed".
+     *
+     * @return array{verdict: ?string, coverage: ?string}|null
+     */
+    public function inspectDetail(string $domain, string $url): ?array
+    {
         $res = GoogleAuth::http()->post('https://searchconsole.googleapis.com/v1/urlInspection/index:inspect', [
             'inspectionUrl' => $url,
             'siteUrl' => self::property($domain),
@@ -74,7 +84,10 @@ class SearchConsole
             return null;
         }
 
-        return $res->json('inspectionResult.indexStatusResult.verdict');
+        return [
+            'verdict' => $res->json('inspectionResult.indexStatusResult.verdict'),
+            'coverage' => $res->json('inspectionResult.indexStatusResult.coverageState'),
+        ];
     }
 
     protected function ensure($res, string $what): void

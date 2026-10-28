@@ -11,7 +11,7 @@
 <div class="nav__menu"><nav aria-label="{{ $ctx->t('pages') }}">@include('theme.partials.nav-links')</nav></div>
 @endif
 @if ($buttons !== [] && $variant !== 'minimal' && $variant !== 'centered')
-<div class="nav__actions">@foreach ($buttons as $i => $button)<a class="btn nav__cta {{ $i > 0 ? 'btn--ghost' : '' }}" href="{{ $button['url'] }}" rel="noopener">{{ $button['label'] }}</a>@endforeach</div>
+<div class="nav__actions">@foreach ($buttons as $i => $button)<a class="btn nav__cta {{ $i > 0 ? 'btn--ghost' : '' }}" href="{{ $button['url'] }}" @if ($ctx->rel($button['url'])) rel="{{ $ctx->rel($button['url']) }}" @endif>{{ $button['label'] }}</a>@endforeach</div>
 @endif
 </div>
 @if ($variant === 'portal')

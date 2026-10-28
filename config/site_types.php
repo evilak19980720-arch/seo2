@@ -15,6 +15,8 @@ return [
     'game' => [
         'label' => '游戏品牌站',
         'schema' => 'VideoGame',
+        // Age / play-responsibly line in the footer.
+        'responsible_notice' => true,
         'pages' => [
             'home' => ['label' => '首页', 'slug' => ['en' => ''], 'blocks' => ['hero', 'stats', 'features', 'card_grid', 'steps', 'gallery', 'faq', 'download', 'article_list']],
             'product' => ['label' => '游戏介绍', 'slug' => ['pt' => 'sobre-o-jogo', 'es' => 'sobre-el-juego', 'en' => 'about-the-game'], 'blocks' => ['hero', 'features', 'card_grid', 'specs', 'cta']],

@@ -39,6 +39,21 @@ cp .env.example .env && php artisan key:generate
 location ^~ /_theme/ { alias /www/wwwroot/<项目目录>/public/theme/; expires 30d; access_log off; }
 ```
 
+（新版每个品牌站都在自己的 `/assets/` 下有一份主题 CSS 和字体，不再引用 `/_theme/`；保留这段配置对旧页面无害。）
+
+## SEO 规则（生成与渲染时自动执行）
+
+- 首页标题只有品牌名、描述少于 70 字时，生成时重写，渲染时也会兜底补全。
+- 首页 H1 必须包含品牌，季节和促销标题会挪到眉标题。
+- 品牌资料里没有的金额、百分比、到账时间、「最好 / 第一 / 领先」等说法，会逐句删除。
+- 核心页面字数不够（默认 400 词，首页 600 词，`.env` 里的 `PAGE_MIN_WORDS`），或者和参考站、其他站同类页面过于相似，会重新生成一次；仍不合格就设为 noindex，并撤出导航和 sitemap。
+- 博客和更新公告少于 3 篇（后台可调）时不收录，也不进导航和 sitemap。
+- 同一页面不重复使用同一张图片；CTA 不会指向首页或当前页，外链加 nofollow，注册和登录类按钮文字会被替换。
+- html lang、og:locale 和 schema 使用「语言 + 目标国家」（如 en-PH）；FAQ 页输出 FAQPage，每页输出带更新日期的 WebPage。
+- robots.txt 放行 AI 搜索爬虫、屏蔽 AI 训练爬虫，两项都可以在后台关闭。
+- 每个站点使用自己的 class 名、CSS 文件名和统计路径，降低站群足迹。调试时可设 `RANDOMIZE_MARKUP=false`。
+- 每次重建后会自动检查结构化数据；装了 Lighthouse 的话还会跑一次，不达标就发告警。Search Console 抽查中未收录比例过高时也会告警。
+
 ## 参考网站读取（可选：安装 Chromium）
 
 很多参考网站是 JavaScript 渲染的，直接请求只能拿到空壳。服务器装上 Chromium 后，会自动用无头浏览器渲染读取，并截图交给视觉模型：

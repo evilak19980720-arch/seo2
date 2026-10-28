@@ -1,6 +1,6 @@
 @php($site = $ctx->site)
 <!DOCTYPE html>
-<html lang="{{ $site->locale }}">
+<html lang="{{ $ctx->seoLocale() }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -14,7 +14,7 @@
 <meta property="og:title" content="{{ $head->title }}">
 <meta property="og:description" content="{{ $head->description }}">
 <meta property="og:url" content="{{ $head->canonical }}">
-<meta property="og:locale" content="{{ str_replace('-', '_', $site->locale) }}">
+<meta property="og:locale" content="{{ str_replace('-', '_', $ctx->seoLocale()) }}">
 @if ($head->image)<meta property="og:image" content="{{ $head->image }}">
 @endif
 <meta name="twitter:card" content="{{ $head->image ? 'summary_large_image' : 'summary' }}">

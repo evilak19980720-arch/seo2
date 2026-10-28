@@ -32,6 +32,10 @@ return [
     'how_to_start' => 'How to get started',
     'gallery' => 'Screenshots',
     'advertisement' => 'Advertisement',
+    'get_started' => 'Get started',
+    'see_also' => 'See also',
+    'responsible_notice' => '18+ only. Play for fun and take breaks; no real-money gambling on this site.',
+    'blog_description' => 'News, guides and tips about :brand: updates, how-tos and answers to common questions.',
     'page_titles' => [
         'home' => 'Home',
         'product' => 'About the product',

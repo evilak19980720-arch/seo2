@@ -16,7 +16,8 @@ Route::get('/robots.txt', fn () => response("User-agent: *\nDisallow: /\n", 200,
 Route::get('/install/{step?}', [InstallController::class, 'show']);
 Route::post('/install/{step}', [InstallController::class, 'store']);
 
-Route::post('/_t/ad', AdTrackController::class)->withoutMiddleware([PreventRequestForgery::class]);
+// Ad beacon: "/_t/ad" or the site's own prefix (SiteRenderer::trackingPrefix).
+Route::post('/{prefix}/ad', AdTrackController::class)->where('prefix', '_t|x[0-9a-f]{6}')->withoutMiddleware([PreventRequestForgery::class]);
 
 Route::get('/_theme/{path}', ThemeAssetController::class)->where('path', '.*');
 

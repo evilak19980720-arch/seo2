@@ -8,7 +8,7 @@
 @if ($ctx->brand->company_address)<div><dt>{{ $ctx->t('contact_address') }}</dt><dd>{{ $ctx->brand->company_address }}</dd></div>@endif
 </dl>
 @foreach ($ctx->brand->cta_links ?? [] as $link)
-@if (! empty($link['url']))<p><a class="btn" href="{{ $link['url'] }}" rel="noopener">{{ $link['label'] ?? $link['url'] }}</a></p>@endif
+@if (! empty($link['url']))<p><a class="btn" href="{{ $link['url'] }}" @if ($ctx->rel($link['url'])) rel="{{ $ctx->rel($link['url']) }}" @endif>{{ $link['label'] ?? $link['url'] }}</a></p>@endif
 @endforeach
 </div>
 </section>

@@ -11,7 +11,7 @@
 </div>
 @if (count($videos))
 <ul class="grid grid--2 gallery__videos">
-@foreach ($videos as $video)<li><a class="btn btn--ghost" href="{{ $video['url'] }}" rel="noopener">▶ {{ $video['caption'] ?? $video['alt'] ?? 'Video' }}</a></li>@endforeach
+@foreach ($videos as $video)<li><a class="btn btn--ghost" href="{{ $video['url'] }}" @if ($ctx->rel($video['url'])) rel="{{ $ctx->rel($video['url']) }}" @endif>▶ {{ $video['caption'] ?? $video['alt'] ?? 'Video' }}</a></li>@endforeach
 </ul>
 @endif
 </div>

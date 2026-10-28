@@ -54,7 +54,7 @@ class FrontController
 
     protected function headers(string $file): array
     {
-        $types = ['html' => 'text/html; charset=utf-8', 'css' => 'text/css', 'xml' => 'application/xml', 'txt' => 'text/plain', 'webp' => 'image/webp', 'avif' => 'image/avif', 'png' => 'image/png', 'ico' => 'image/x-icon', 'webmanifest' => 'application/manifest+json'];
+        $types = ['html' => 'text/html; charset=utf-8', 'css' => 'text/css', 'xml' => 'application/xml', 'txt' => 'text/plain', 'webp' => 'image/webp', 'avif' => 'image/avif', 'png' => 'image/png', 'ico' => 'image/x-icon', 'webmanifest' => 'application/manifest+json', 'woff2' => 'font/woff2', 'js' => 'text/javascript', 'jpg' => 'image/jpeg', 'svg' => 'image/svg+xml'];
 
         return ['Content-Type' => $types[pathinfo($file, PATHINFO_EXTENSION)] ?? 'application/octet-stream'];
     }

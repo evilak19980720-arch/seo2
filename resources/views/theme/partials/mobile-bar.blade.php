@@ -6,7 +6,7 @@
 <nav class="mobile-bar" aria-label="{{ $ctx->t('pages') }}">
 <a href="/"><svg viewBox="0 0 24 24" aria-hidden="true">{!! $icons[0] !!}</svg><span>{{ $ctx->t('home') }}</span></a>
 @foreach (array_slice($items, 0, 1) as $item)<a href="{{ $item['href'] }}"><svg viewBox="0 0 24 24" aria-hidden="true">{!! $icons[1] !!}</svg><span>{{ $item['label'] }}</span></a>@endforeach
-@if ($cta)<a class="mobile-bar__cta" href="{{ $cta['url'] }}" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg><span>{{ $cta['label'] }}</span></a>@endif
+@if ($cta)<a class="mobile-bar__cta" href="{{ $cta['url'] }}" @if ($ctx->rel($cta['url'])) rel="{{ $ctx->rel($cta['url']) }}" @endif><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg><span>{{ $cta['label'] }}</span></a>@endif
 @foreach (array_slice($items, 1) as $i => $item)<a href="{{ $item['href'] }}"><svg viewBox="0 0 24 24" aria-hidden="true">{!! $icons[$i + 2] ?? $icons[4] !!}</svg><span>{{ $item['label'] }}</span></a>@endforeach
 </nav>
 @endif

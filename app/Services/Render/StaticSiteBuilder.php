@@ -178,6 +178,15 @@ class StaticSiteBuilder
         if ($iconsAndCss) {
             File::ensureDirectoryExists("{$dir}/assets");
             $this->writeFile("{$dir}/assets/site.css", $renderer->siteCss());
+            // Each site serves its own copy of the theme CSS and fonts (no shared /_theme/ path).
+            foreach (glob("{$dir}/assets/s[0-9a-f]*.css") ?: [] as $old) {
+                @unlink($old);
+            }
+            $this->writeFile("{$dir}/assets/".$renderer->baseCssName(), $renderer->baseCss());
+            File::ensureDirectoryExists("{$dir}/assets/fonts");
+            foreach (glob(public_path('theme/fonts/*.woff2')) ?: [] as $font) {
+                copy($font, "{$dir}/assets/fonts/".basename($font));
+            }
             IconGenerator::generate($site, $dir, $renderer->ctx->design['colors']);
         }
         $this->writeFile("{$dir}/robots.txt", SitemapBuilder::robots($site));

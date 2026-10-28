@@ -55,7 +55,7 @@ class RouteByHost
 
         // Brand domain reached PHP (Nginx had no static file for it).
         // Ad beacon and the shared theme assets (when Nginx has no /_theme/ alias, e.g. panel-managed sites).
-        if ($path === '_t/ad' || str_starts_with($path, '_theme/')) {
+        if (preg_match('#^(_t|x[0-9a-f]{6})/ad$#', $path) || str_starts_with($path, '_theme/')) {
             return $next($request);
         }
 

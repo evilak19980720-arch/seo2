@@ -72,7 +72,7 @@ server {
     location ^~ /_theme/ { alias {$public}/theme/; expires 1y; add_header Cache-Control "public, immutable"; }
     location ^~ /assets/ { expires 1y; add_header Cache-Control "public, immutable"; }
     location ^~ /media/  { expires 30d; add_header Cache-Control "public"; }
-    location = /_t/ad    { try_files /nonexistent @php; }
+    location ~ ^/(_t|x[0-9a-f]{6})/ad\$ { try_files /nonexistent @php; }
 
     location / {
         add_header Cache-Control "public, max-age=300";

@@ -32,6 +32,10 @@ return [
     'how_to_start' => 'Cómo empezar',
     'gallery' => 'Imágenes',
     'advertisement' => 'Publicidad',
+    'get_started' => 'Empezar',
+    'see_also' => 'Ver también',
+    'responsible_notice' => 'Solo mayores de 18 años. Juega por diversión y haz pausas; este sitio no ofrece apuestas con dinero real.',
+    'blog_description' => 'Noticias, guías y consejos sobre :brand: novedades, tutoriales y respuestas a las preguntas frecuentes.',
     'page_titles' => [
         'home' => 'Inicio',
         'product' => 'Sobre el producto',

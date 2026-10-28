@@ -139,7 +139,8 @@ class ReferenceDesignTest extends TestCase
         app(StaticSiteBuilder::class)->buildAll($site->fresh());
         $html = file_get_contents(StaticSiteBuilder::dirFor($site).'/index.html');
         preg_match('#<ul class="nav__links">(.*?)</ul>#s', $html, $nav);
-        $this->assertLessThan(strpos($nav[1], 'blog'), strpos($nav[1], 'perguntas') ?: 0);
+        $this->assertLessThan(strpos($nav[1], 'guia/'), strpos($nav[1], 'perguntas') ?: 0);
+        $this->assertStringNotContainsString('/blog/', $nav[1], 'an empty blog is not in the menu');
     }
 
     public function test_uploaded_screenshots_provide_the_palette(): void

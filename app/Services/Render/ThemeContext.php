@@ -5,9 +5,11 @@ namespace App\Services\Render;
 use App\Models\BrandProfile;
 use App\Models\Page;
 use App\Models\Site;
+use App\Services\Content\SeoRules;
 use App\Services\Theme\DefaultDesign;
 use App\Services\Theme\DesignConfigValidator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Lang;
 
 /**
  * Everything a theme view needs about the site being rendered. Built once per
@@ -24,6 +26,15 @@ class ThemeContext
     /** @var Collection<string, Page> keyed by page type */
     public readonly Collection $pages;
 
+    /** Page types left out of menus (thin or noindexed pages), and "blog" while it has too few posts. */
+    public array $hidden = [];
+
+    /** Path of the page being rendered, so links and CTAs never point to it. */
+    public string $currentPath = '';
+
+    /** Media already shown on the current page: an image appears once per page. */
+    protected array $usedImages = [];
+
     public function __construct(public readonly Site $site, public readonly MediaPublisher $media)
     {
         $this->brand = $site->brandProfile?->forDisplay() ?? new BrandProfile(['product_name' => $site->product_name]);
@@ -32,6 +43,21 @@ class ThemeContext
 
         $config = $site->design_config ?: DefaultDesign::make($site->domain_id ?? $site->id, $site->typeConfig());
         $this->design = (new DesignConfigValidator)->validate($config, $site->typeConfig());
+    }
+
+    /** Start rendering another page. */
+    public function beginPage(string $path): void
+    {
+        $this->currentPath = trim($path, '/');
+        $this->usedImages = [];
+    }
+
+    /** html lang / og:locale: the language with the target market, e.g. en + PH = en-PH. */
+    public function seoLocale(): string
+    {
+        $country = strtoupper((string) $this->site->target_country);
+
+        return $country !== '' && preg_match('/^[A-Z]{2}$/', $country) ? $this->lang.'-'.$country : $this->site->locale;
     }
 
     public function t(string $key, array $replace = []): string
@@ -81,7 +107,7 @@ class ThemeContext
     {
         $available = collect(array_keys($this->site->typeConfig()['pages']))
             ->reject(fn ($type) => in_array($type, ['home', 'privacy', 'terms'], true) || ! $this->pages->has($type))
-            ->push('blog')->values();
+            ->push('blog')->reject(fn ($type) => in_array($type, $this->hidden, true))->values();
         $menu = collect($this->design['menu'] ?? [])->intersect($available)->values();
         $submenu = collect($this->design['navigation']['submenu'] ?? [])->map(fn ($children) => collect($children)->intersect($available)->values());
 
@@ -97,11 +123,23 @@ class ThemeContext
     }
 
     /** @return array{label: string, href: string} */
-    protected function link(string $type): array
+    public function link(string $type): array
     {
-        return $type === 'blog'
-            ? ['label' => $this->t('blog'), 'href' => $this->href('blog')]
-            : ['label' => $this->pages[$type]->title, 'href' => $this->href($this->pages[$type]->slug)];
+        if ($type === 'blog') {
+            return ['label' => $this->t('blog'), 'href' => $this->href('blog')];
+        }
+        $fallback = Lang::has("theme.page_titles.{$type}", $this->lang) ? $this->t("page_titles.{$type}") : null;
+
+        // Menus get short labels; the page keeps its full SEO title.
+        return ['label' => SeoRules::navLabel($this->pages[$type]->title, $fallback), 'href' => $this->href($this->pages[$type]->slug)];
+    }
+
+    /** Pages linked from a page's "see also" list: menu order, never the page itself. */
+    public function relatedPages(string $type, int $limit = 3): array
+    {
+        return collect($this->navLinks(all: true))
+            ->reject(fn ($l) => trim($l['href'], '/') === $this->currentPath)
+            ->take($limit)->values()->all();
     }
 
     /** Header behaviour from the design (see DesignConfigValidator::navigation). */
@@ -110,11 +148,55 @@ class ThemeContext
         return ($this->design['navigation'] ?? []) + ['submenu' => [], 'buttons' => 1, 'mobile_bar' => false, 'sticky' => true, 'home_link' => false];
     }
 
-    /** @return array<int, array{label: string, url: string}> */
+    /**
+     * Brand call-to-action links, cleaned: links back to this site's home or
+     * to the current page are dropped (a CTA must lead somewhere), account
+     * wording ("Sign up", "Login") is replaced, external links get nofollow.
+     *
+     * @return array<int, array{label: string, url: string}>
+     */
     public function ctaLinks(int $limit = 2): array
     {
-        return collect($this->brand->cta_links ?? [])->filter(fn ($l) => filled($l['url'] ?? null))->take($limit)
-            ->map(fn ($l) => ['label' => $l['label'] ?? $this->t('read_more'), 'url' => $l['url']])->values()->all();
+        return collect($this->brand->cta_links ?? [])
+            ->filter(fn ($l) => filled($l['url'] ?? null) && ! $this->isSelfLink($l['url']))
+            ->map(fn ($l) => [
+                'label' => filled($l['label'] ?? null) && ! SeoRules::accountLabel($l['label']) ? $l['label'] : $this->t('get_started'),
+                'url' => $l['url'],
+            ])->take($limit)->values()->all();
+    }
+
+    /** Whether a URL points to this site's home or to the page being rendered. */
+    public function isSelfLink(string $url): bool
+    {
+        $parts = parse_url(trim($url));
+        $host = strtolower($parts['host'] ?? '');
+        if ($host !== '' && $host !== strtolower($this->site->domain?->name ?? '') && $host !== 'www.'.strtolower($this->site->domain?->name ?? '')) {
+            return false;
+        }
+        $path = trim($parts['path'] ?? '', '/');
+
+        return ! isset($parts['fragment']) && ($path === '' || $path === $this->currentPath);
+    }
+
+    /** rel for a link: external links are nofollow, internal ones need nothing. */
+    public function rel(string $url): string
+    {
+        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+
+        return $host === '' || $host === strtolower($this->site->domain?->name ?? '') ? '' : 'nofollow noopener';
+    }
+
+    /** Most useful internal page to send a visitor to when the brand has no CTA link. */
+    public function fallbackCta(): ?array
+    {
+        foreach (['product', 'guide', 'faq', 'about', 'contact'] as $type) {
+            $page = $this->pages->get($type);
+            if ($page && trim($page->slug, '/') !== $this->currentPath && ! in_array($type, $this->hidden, true)) {
+                return ['label' => $this->t('read_more'), 'url' => $this->href($page->slug)];
+            }
+        }
+
+        return null;
     }
 
     /** @return array<int, array{label: string, href: string}> */
@@ -128,9 +210,7 @@ class ThemeContext
 
     public function primaryCta(): ?array
     {
-        $link = collect($this->brand->cta_links ?? [])->first(fn ($l) => filled($l['url'] ?? null));
-
-        return $link ? ['label' => $link['label'] ?? $this->t('read_more'), 'url' => $link['url']] : null;
+        return $this->ctaLinks(1)[0] ?? $this->fallbackCta();
     }
 
     public function image(?string $source, int $maxWidth = 1600): ?array
@@ -138,16 +218,21 @@ class ThemeContext
         return $this->media->publish($source, $maxWidth);
     }
 
-    /** @return array<int, array{image: array, alt: string, caption: ?string}> */
+    /**
+     * Brand images not yet shown on this page; they count as shown from now
+     * on, so a page never repeats an image (and its alt) across blocks.
+     *
+     * @return array<int, array{image: array, alt: string, caption: ?string}>
+     */
     public function gallery(int $limit = 8): array
     {
         $items = [];
         foreach ($this->brand->media ?? [] as $item) {
-            if (($item['type'] ?? 'image') !== 'image') {
+            if (($item['type'] ?? 'image') !== 'image' || ! $this->useImage($item['path'] ?? null)) {
                 continue;
             }
             if ($img = $this->image($item['path'] ?? null, 1200)) {
-                $items[] = ['image' => $img, 'alt' => $item['alt'] ?? $this->brand->product_name, 'caption' => $item['caption'] ?? null];
+                $items[] = ['image' => $img, 'alt' => filled($item['alt'] ?? null) ? $item['alt'] : ($item['caption'] ?? $this->brand->product_name), 'caption' => $item['caption'] ?? null];
             }
             if (count($items) >= $limit) {
                 break;
@@ -155,6 +240,17 @@ class ThemeContext
         }
 
         return $items;
+    }
+
+    /** Mark an image as shown on the current page; false when it already was. */
+    public function useImage(?string $path): bool
+    {
+        if (! $path || isset($this->usedImages[$path])) {
+            return false;
+        }
+        $this->usedImages[$path] = true;
+
+        return true;
     }
 
     public function videos(): array

@@ -16,7 +16,7 @@ class PromptSeeder extends Seeder
     public const SYSTEM = 'You are a senior content strategist and SEO editor for the official website of {{product_name}} ({{site_type}}). Write natively in {{language}} for readers in {{country}}; never write in another language and never translate from another language. The BRAND PROFILE is the only source of facts: never invent features, numbers, prices, awards, reviews, release dates or company details that are not in it. Always answer with a single JSON object.';
 
     /** Templates revised after the first release ship as a new version; the highest active version wins. */
-    public const VERSIONS = [PromptType::DesignConfig->value => 4, PromptType::PageContent->value => 4];
+    public const VERSIONS = [PromptType::DesignConfig->value => 4, PromptType::PageContent->value => 5, PromptType::SiteMeta->value => 2];
 
     public function run(): void
     {
@@ -36,7 +36,7 @@ BRAND PROFILE:
 {{brand}}
 
 Write the homepage SEO title and meta description for the official site "{{site_name}}".
-Rules: title max 60 characters and must contain "{{product_name}}"; description max 155 characters, specific, no clickbait, no claims missing from the profile.
+Rules: title 35-60 characters = "{{product_name}}" plus what it is, in the words people in {{country}} search (main keyword, e.g. "{{product_name}}: free space racing game"), never the brand name alone, no season or promotion; description 120-155 characters naming the product, what it does and one concrete benefit from the profile, no clickbait, no numbers, prices, bonuses or superlatives that are not in the profile.
 Return JSON: {"title": "...", "description": "..."}
 TXT,
             PromptType::BrandExtract->value => <<<'TXT'
@@ -105,6 +105,14 @@ Write the core pages of the official site of {{product_name}}. Page types with t
 REFERENCE SITE CONTENT ("none" if not used):
 {{reference_content}}
 When reference content is given, use it as the model for topics, section ideas, page structure and level of detail, and rewrite everything originally in {{language}}: new wording, never copy a sentence or more than 6 words in a row; replace the reference's brand, product and company names with {{product_name}}; claims about {{product_name}} itself still come only from the brand profile.
+
+SEO rules for every page:
+- The home hero heading (the page's h1) names {{product_name}} and what it is; never a season, holiday, event or promotion headline.
+- When a page has "min_words", its blocks together must reach that many words of useful, specific copy. When a page has "feedback", fix exactly that.
+- No figures, prices, bonuses, percentages, payout/withdrawal times, rankings or superlatives ("best", "#1", "leading", "guaranteed") unless the brand profile states them.
+- No login, sign-up, register or account wording in any label or text: the site has no accounts.
+- Each page covers its own topic: never repeat another page's title or copy; titles of different pages must not overlap.
+- meta_title: page topic + {{product_name}}, max 60 chars; meta_description: 120-155 chars summarising this page.
 
 For every page type return a URL slug in {{language}} (lowercase, hyphens, keyword-based, max 2 segments, keep the default if fine), a visible title in {{language}} (the labels are only hints, never copy another language), an SEO meta_title (max 60 chars) and meta_description (max 155 chars), and content for each of its blocks. Write like a polished official site: every block needs real copy, never leave text fields empty, and only state facts from the profile.
 - hero: eyebrow (2-4 words), heading, subheading (one or two sentences), cta_label, points (3 benefit phrases of max 4 words each)

@@ -31,6 +31,8 @@ class Settings
             'mfa_required' => false,
             'server_ip' => null,
             'cookie_banner' => true,
+            'robots_allow_ai_search' => true,
+            'robots_block_ai_training' => true,
 
             // Publish caps per site per week, by site age
             'cap_months_0_3' => 3,
@@ -50,6 +52,8 @@ class Settings
             'min_completeness' => 60,
             'intra_site_similarity' => 0.85,
             'cross_site_similarity' => 0.80,
+            'page_similarity' => 0.6,
+            'min_list_articles' => 3,
             'cold_days' => 90,
             'drop_threshold' => 0.5,
             'articles_generated_per_run' => 1,

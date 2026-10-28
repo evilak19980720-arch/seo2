@@ -369,3 +369,9 @@ main{display:block}
 .mobile-bar__cta svg{width:46px;height:46px;padding:11px;margin-top:-22px;border-radius:50%;background:var(--c-primary);box-shadow:0 8px 20px -6px color-mix(in srgb,var(--c-primary) 80%,transparent);border:4px solid var(--c-bg)}
 .mobile-bar__cta span{color:var(--c-text)}
 }
+.footer .footer__notice{margin-top:1.5rem;font-size:.85rem;opacity:.75;max-width:none}
+.see-also{padding-top:0}
+.see-also__title{font-weight:700;margin:0 0 .75rem}
+.see-also__list{display:flex;flex-wrap:wrap;gap:.6rem;list-style:none;margin:0;padding:0}
+.see-also__list a{display:inline-flex;align-items:center;min-height:44px;padding:0 1.1rem;border-radius:var(--r-btn);border:1px solid var(--line);color:var(--c-text);text-decoration:none;font-weight:600}
+.see-also__list a:hover{border-color:var(--c-primary);color:var(--c-primary)}

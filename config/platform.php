@@ -18,6 +18,12 @@ return [
     'min_mysql_version' => '8.0.0',
 
     // Lighthouse acceptance (mobile). Set LIGHTHOUSE_BIN empty to skip.
+    // Per-site class names and asset paths (see MarkupScrambler); off only for debugging.
+    // Core pages shorter than this (home: 1.5×) are regenerated, then noindexed.
+    'page_min_words' => (int) env('PAGE_MIN_WORDS', 400),
+
+    'randomize_markup' => (bool) env('RANDOMIZE_MARKUP', true),
+
     'lighthouse' => [
         'bin' => env('LIGHTHOUSE_BIN', 'lighthouse'),
         'chrome_path' => env('CHROME_PATH'),
