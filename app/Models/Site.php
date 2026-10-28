@@ -112,6 +112,14 @@ class Site extends Model
         return strtolower(explode('-', $this->locale)[0]);
     }
 
+    /** "Filipino (Philippines) [fil-PH]": unambiguous for the AI, unlike a bare code. */
+    public function languageName(): string
+    {
+        $name = class_exists(\Locale::class) ? \Locale::getDisplayName((string) $this->locale, 'en') : '';
+
+        return $name !== '' && $name !== $this->locale ? "{$name} [{$this->locale}]" : (string) $this->locale;
+    }
+
     /** @var array<string, array> */
     protected array $typeConfigCache = [];
 

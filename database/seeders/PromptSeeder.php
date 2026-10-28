@@ -233,6 +233,13 @@ Write the detail pages of these items of the official site of {{product_name}} i
 Rules: every section is {"heading": "<h2 text about the topic, in {{language}}>", "html": "<p>…</p> (80-220 words, semantic HTML: <p>, <ul>, <h3>)"}; useful and specific to that item; facts only from the item data, the reference content or the brand profile (amounts, dates and terms exactly as stated); never invent RTP, payouts, winners or results; skip a section (leave it out) when there is nothing true to say; your own wording, never more than 6 words copied in a row; site features: {{site_features}}.
 Return JSON: {"items": {"<slug>": {"<section key>": {"heading": "", "html": ""}}}}
 TXT,
+            PromptType::UiTranslate->value => <<<'TXT'
+Translate these website interface strings from English into {{language}}, as a native speaker in {{country}} would write them on a polished website. Short labels stay short (menus, buttons); keep placeholders such as :site, :brand, :n and :name exactly as they are; keep HTML tags unchanged; translate everything else, never leave English words except product names.
+STRINGS (key => English):
+{{strings}}
+
+Return JSON with the same keys: {"<key>": "<translation>"}
+TXT,
         ];
     }
 }

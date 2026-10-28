@@ -7,6 +7,7 @@ use App\Models\Entry;
 use App\Models\GoneUrl;
 use App\Models\Site;
 use App\Services\Ai\AiManager;
+use App\Services\Content\LanguageDetector;
 use App\Services\Content\SeoRules;
 use App\Services\Render\HtmlSanitizer;
 use Illuminate\Support\Carbon;
@@ -147,9 +148,11 @@ class SiteDataGenerator
                 continue;
             }
 
+            // Titles are names and may stay as they are; copy in another language is dropped.
+            $summary = Str::limit(SeoRules::stripClaims(trim(strip_tags((string) ($item['summary'] ?? ''))), $facts), 300, '');
             $entry = $site->entries()->updateOrCreate(['collection' => $collection, 'slug' => $slug], [
                 'title' => $title,
-                'summary' => Str::limit(SeoRules::stripClaims(trim(strip_tags((string) ($item['summary'] ?? ''))), $facts), 300, '') ?: null,
+                'summary' => $summary !== '' && LanguageDetector::matches($summary, $site->language()) ? $summary : null,
                 'data' => $this->cleanData($collection, $item, $factsLower),
                 'image' => $this->image($site, $title, (string) ($item['image'] ?? ''), $tiles, $known) ?? $existing?->image,
                 'sort' => $i,
@@ -285,8 +288,9 @@ class SiteDataGenerator
                         continue;
                     }
                     $html = SeoRules::stripClaimsHtml(HtmlSanitizer::clean($section['html']), $facts);
-                    if (trim(strip_tags($html)) !== '') {
-                        $sections[$def['key']] = ['heading' => Str::limit(trim(strip_tags((string) ($section['heading'] ?? ''))), 120, '') ?: null, 'html' => $html];
+                    $heading = Str::limit(trim(strip_tags((string) ($section['heading'] ?? ''))), 120, '');
+                    if (trim(strip_tags($html)) !== '' && LanguageDetector::matches($heading.' '.strip_tags($html), $site->language())) {
+                        $sections[$def['key']] = ['heading' => $heading ?: null, 'html' => $html];
                     }
                 }
                 if ($sections !== []) {

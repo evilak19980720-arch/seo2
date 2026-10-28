@@ -33,7 +33,7 @@ class AiManager
         }
 
         $vars += $site ? [
-            'language' => $site->locale,
+            'language' => $site->languageName(),
             'country' => $site->target_country,
             'product_name' => $site->product_name,
             'site_name' => $site->name,

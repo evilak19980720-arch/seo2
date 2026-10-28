@@ -22,6 +22,7 @@ use App\Services\Render\HtmlSanitizer;
 use App\Services\Render\SchemaValidator;
 use App\Services\Render\SeoHead;
 use App\Services\Render\StaticSiteBuilder;
+use App\Services\Render\ThemeStrings;
 use App\Services\Theme\Color;
 use App\Services\Theme\CustomCssValidator;
 use App\Services\Theme\DefaultDesign;
@@ -70,6 +71,11 @@ class SiteGenerator
         $designOnly = $task->type === 'design';
 
         try {
+            // Interface strings first: titles, menus and fallbacks use them.
+            if ($note = ThemeStrings::ensure($site, $this->ai)) {
+                $task->progress($note);
+            }
+
             if (! $designOnly) {
                 $task->progress('生成标题与描述');
                 $this->ensureMeta($site);
@@ -430,6 +436,7 @@ class SiteGenerator
     {
         $types = $site->typeConfig()['pages'];
         $lang = $site->language();
+        ThemeStrings::load($lang);
         $facts = $this->facts($site);
 
         // Labels in the site language: the admin's Chinese labels would be copied into page titles.
@@ -586,6 +593,11 @@ class SiteGenerator
             $min = $this->minWords($site, $type);
             if ($min > 0 && $words < $min * 0.8) {
                 $problems[$type] = "Only {$words} words; write at least {$min} words of useful, specific copy for this page.";
+
+                continue;
+            }
+            if (! LanguageDetector::matches($this->plainText($content), $site->language())) {
+                $problems[$type] = "Not written in {$site->languageName()}; write every block, heading and button in {$site->languageName()} only.";
 
                 continue;
             }

@@ -46,6 +46,7 @@ class ThemeContext
     {
         $this->brand = $site->brandProfile?->forDisplay() ?? new BrandProfile(['product_name' => $site->product_name]);
         $this->lang = $site->language();
+        ThemeStrings::load($this->lang);
         // Pages of types the site no longer has wait for the next generation to be removed.
         $types = $site->typeConfig()['pages'];
         $this->pages = $site->pages()->get()->filter(fn (Page $p) => isset($types[$p->type]))->keyBy('type');
