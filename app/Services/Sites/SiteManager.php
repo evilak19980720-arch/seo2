@@ -16,11 +16,21 @@ class SiteManager
 
     public function generate(Site $site, string $type = 'full'): GenerationTask
     {
+        // Tasks left behind by a crashed worker are closed so the new one is the only active task.
+        $site->generationTasks()->whereIn('status', ['queued', 'running'])
+            ->update(['status' => 'failed', 'step' => '已被新的生成任务取代', 'finished_at' => now()]);
         $task = $site->generationTasks()->create(['type' => $type, 'status' => 'queued', 'step' => '排队中']);
         $site->update(['status' => SiteStatus::Generating]);
         GenerateSiteJob::dispatch($task);
 
         return $task;
+    }
+
+    /** A task is queued or running and has shown progress in the last 30 minutes (older ones are treated as dead). */
+    public function isBusy(Site $site): bool
+    {
+        return $site->generationTasks()->whereIn('status', ['queued', 'running'])
+            ->where('updated_at', '>=', now()->subMinutes(30))->exists();
     }
 
     public function rebuild(Site $site): void

@@ -6,9 +6,11 @@ use App\Enums\SiteStatus;
 use App\Models\GenerationTask;
 use App\Services\Render\StaticSiteBuilder;
 use App\Services\Sites\SiteGenerator;
+use App\Services\Sites\SiteManager;
 use App\Services\Theme\Color;
 use App\Support\Settings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class SiteGenerationTest extends TestCase
@@ -89,5 +91,36 @@ class SiteGenerationTest extends TestCase
         app(StaticSiteBuilder::class)->buildAll($site->fresh());
 
         $this->assertStringNotContainsString('hreflang', file_get_contents(StaticSiteBuilder::dirFor($site).'/index.html'));
+    }
+
+    public function test_design_only_regeneration_keeps_page_copy(): void
+    {
+        $this->fakeAi();
+        $site = $this->makeSite();
+        app(SiteGenerator::class)->run(GenerationTask::create(['site_id' => $site->id, 'type' => 'full']));
+        $site->pages()->where('type', 'product')->update(['title' => 'Editado à mão']);
+
+        $task = GenerationTask::create(['site_id' => $site->id, 'type' => 'design']);
+        app(SiteGenerator::class)->run($task);
+
+        $this->assertSame('succeeded', $task->fresh()->status);
+        $this->assertSame('Editado à mão', $site->pages()->where('type', 'product')->value('title'));
+        $this->assertSame(2, $site->designVersions()->count());
+    }
+
+    public function test_stale_tasks_do_not_block_retry(): void
+    {
+        Queue::fake();
+        $site = $this->makeSite();
+        $stuck = GenerationTask::create(['site_id' => $site->id, 'type' => 'full', 'status' => 'running']);
+        $manager = app(SiteManager::class);
+
+        $this->assertTrue($manager->isBusy($site));
+        $this->travel(31)->minutes();
+        $this->assertFalse($manager->isBusy($site));
+
+        $manager->generate($site, 'design');
+        $this->assertSame('failed', $stuck->fresh()->status);
+        $this->assertSame('design', $site->generationTasks()->latest('id')->value('type'));
     }
 }

@@ -49,9 +49,13 @@ class SiteGenerator
         $task->update(['status' => 'running', 'started_at' => now()]);
         $site->update(['status' => SiteStatus::Generating]);
 
+        $designOnly = $task->type === 'design';
+
         try {
-            $task->progress('生成标题与描述');
-            $this->ensureMeta($site);
+            if (! $designOnly) {
+                $task->progress('生成标题与描述');
+                $this->ensureMeta($site);
+            }
 
             $task->progress('生成设计配置');
             $this->generateDesign($site);
@@ -59,8 +63,10 @@ class SiteGenerator
                 $task->progress($note);
             }
 
-            $task->progress('生成核心页面文案');
-            $this->generatePages($site);
+            if (! $designOnly || $site->pages()->doesntExist()) {
+                $task->progress('生成核心页面文案');
+                $this->generatePages($site);
+            }
 
             if ($site->keywords()->doesntExist()) {
                 $task->progress('扩展关键词库');

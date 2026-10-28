@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Sites\Schemas;
 
 use App\Enums\PromptType;
+use App\Filament\Resources\Sites\SiteResource;
 use App\Models\BrandProfile;
 use App\Models\Domain;
 use App\Models\Site;
@@ -22,6 +23,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
@@ -131,9 +133,10 @@ class SiteForm
     protected static function design(): array
     {
         return [
+            Actions::make([SiteResource::generateAction()]),
             Text::make(fn (?Site $record) => blank($record?->design_config)
-                ? '这个网站还没有模版。点击页面右上角「AI 生成模版和页面」，AI 会根据品牌资料和参考网站生成专属设计（配色、字体、版式）和全部核心页面，进度在「生成任务」标签查看。'
-                : '网站模版（设计配置）由 AI 生成并自动校验（字体白名单、对比度 ≥ 4.5:1、变体必须存在），可在下面微调；想整体重做就再点一次右上角「AI 生成模版和页面」，旧版本保存在「设计版本」可回滚。保存后点击「更新」重新渲染静态页。'),
+                ? '这个网站还没有模版。点击上面的「AI 生成模版和页面」，AI 会根据品牌资料和参考网站生成专属设计（配色、字体、版式）和全部核心页面，进度在「生成任务」标签查看。'
+                : '网站模版（设计配置）由 AI 生成并自动校验（字体白名单、对比度 ≥ 4.5:1、变体必须存在），可在下面微调；想重做就点上面的「重新生成」（可选只重新生成模版），旧版本保存在「设计版本」可回滚。保存后点击「更新」重新渲染静态页。'),
             CodeEditor::make('design_config')->label('设计配置 JSON')->language(Language::Json)
                 ->formatStateUsing(fn ($state) => $state ? json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '')
                 ->dehydrateStateUsing(fn ($state) => $state ? json_decode($state, true) : null)

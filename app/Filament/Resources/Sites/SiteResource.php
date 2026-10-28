@@ -19,6 +19,7 @@ use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Radio;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -120,12 +121,25 @@ class SiteResource extends Resource
 
     public static function generateAction(): Action
     {
-        return Action::make('generate')->label('AI 生成模版和页面')->icon(Heroicon::OutlinedSparkles)->color('primary')
-            ->requiresConfirmation()
-            ->modalDescription('一次任务覆盖整站：设计配置、全部页面模板与文案、robots/sitemap/图标、Lighthouse 验收；已上线站点不会改动已有 URL。')
-            ->disabled(fn (Site $r) => $r->status === SiteStatus::Generating)
-            ->action(function (Site $r) {
-                app(SiteManager::class)->generate($r);
+        return Action::make('generate')->icon(Heroicon::OutlinedSparkles)
+            ->label(fn (Site $r) => match (true) {
+                app(SiteManager::class)->isBusy($r) => '生成中…',
+                $r->status === SiteStatus::Failed => '重试生成',
+                blank($r->design_config) => 'AI 生成模版和页面',
+                default => '重新生成',
+            })
+            ->color(fn (Site $r) => $r->status === SiteStatus::Failed ? 'danger' : 'primary')
+            ->modalHeading('生成网站')
+            ->modalDescription('已上线站点不会改动已有 URL。旧设计保存在「设计版本」，可随时回滚。')
+            ->schema([
+                Radio::make('type')->label('生成范围')->default('full')->options([
+                    'full' => '整站：模版（设计）+ 页面文案 + 渲染与验收',
+                    'design' => '只重新生成模版（配色、字体、版式），保留现有页面文案',
+                ]),
+            ])
+            ->disabled(fn (Site $r) => app(SiteManager::class)->isBusy($r))
+            ->action(function (array $data, Site $r) {
+                app(SiteManager::class)->generate($r, $data['type'] ?? 'full');
                 Notification::make()->success()->title('已加入生成队列，可在「生成任务」查看进度')
                     ->body('需要服务器上的队列进程在运行（Supervisor），否则任务会一直停在“排队中”。')->send();
             });
