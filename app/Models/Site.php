@@ -1,0 +1,124 @@
+<?php
+
+namespace App\Models;
+
+use App\Enums\SiteStatus;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class Site extends Model
+{
+    use SoftDeletes;
+
+    protected $fillable = [
+        'domain_id', 'site_type', 'product_name', 'name', 'logo_path', 'locale', 'target_country', 'title',
+        'description', 'reference_url', 'design_config', 'design_version', 'custom_css', 'status',
+        'auto_publish_paused', 'pause_reason', 'indexed_pages', 'impressions_7d', 'clicks_7d',
+        'ga4_property_id', 'ga4_measurement_id', 'launched_at', 'built_at',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'design_config' => 'array',
+            'status' => SiteStatus::class,
+            'auto_publish_paused' => 'boolean',
+            'launched_at' => 'datetime',
+            'built_at' => 'datetime',
+        ];
+    }
+
+    public function domain(): BelongsTo
+    {
+        return $this->belongsTo(Domain::class);
+    }
+
+    public function brandProfile(): HasOne
+    {
+        return $this->hasOne(BrandProfile::class);
+    }
+
+    public function keywords(): HasMany
+    {
+        return $this->hasMany(Keyword::class);
+    }
+
+    public function pages(): HasMany
+    {
+        return $this->hasMany(Page::class);
+    }
+
+    public function articles(): HasMany
+    {
+        return $this->hasMany(Article::class);
+    }
+
+    public function ads(): BelongsToMany
+    {
+        return $this->belongsToMany(Ad::class);
+    }
+
+    public function designVersions(): HasMany
+    {
+        return $this->hasMany(DesignVersion::class);
+    }
+
+    public function generationTasks(): HasMany
+    {
+        return $this->hasMany(GenerationTask::class);
+    }
+
+    public function searchStats(): HasMany
+    {
+        return $this->hasMany(SearchStat::class);
+    }
+
+    /** Other-language sites of the same product (hreflang), stored symmetrically. */
+    public function relatedSites(): BelongsToMany
+    {
+        return $this->belongsToMany(Site::class, 'site_relations', 'site_id', 'related_site_id');
+    }
+
+    public function host(): string
+    {
+        return $this->domain->name;
+    }
+
+    public function baseUrl(): string
+    {
+        return 'https://'.$this->host();
+    }
+
+    public function url(string $path = ''): string
+    {
+        $path = trim($path, '/');
+
+        return $this->baseUrl().'/'.($path === '' ? '' : $path.'/');
+    }
+
+    public function language(): string
+    {
+        return strtolower(explode('-', $this->locale)[0]);
+    }
+
+    public function typeConfig(): array
+    {
+        return config('site_types.'.$this->site_type, config('site_types.brand'));
+    }
+
+    public function ageInMonths(): float
+    {
+        $start = $this->launched_at ?? $this->created_at;
+
+        return $start ? $start->diffInDays(now()) / 30 : 0;
+    }
+
+    public function isPubliclyServed(): bool
+    {
+        return in_array($this->status, [SiteStatus::Live], true);
+    }
+}
