@@ -47,6 +47,8 @@ class ThemeContext
 
     protected ?array $slots = null;
 
+    protected ?Collection $poolCache = null;
+
     public function __construct(public readonly Site $site, public readonly MediaPublisher $media)
     {
         $this->brand = $site->brandProfile?->forDisplay() ?? new BrandProfile(['product_name' => $site->product_name]);
@@ -354,8 +356,56 @@ class ThemeContext
             return ['path' => $real[$index]['path'], 'alt' => filled($real[$index]['alt'] ?? null) ? $real[$index]['alt'] : $this->brand->product_name];
         }
         $ai = $this->site->ai_images[$slot] ?? null;
+        if (filled($ai['path'] ?? null)) {
+            return ['path' => $ai['path'], 'alt' => $ai['alt'] ?? $this->brand->product_name];
+        }
+        // No AI picture: reuse the real pictures in turn rather than leave the slot empty.
+        if ($index !== false && $real->isNotEmpty()) {
+            $pic = $real[$index % $real->count()];
 
-        return filled($ai['path'] ?? null) ? ['path' => $ai['path'], 'alt' => $ai['alt'] ?? $this->brand->product_name] : null;
+            return ['path' => $pic['path'], 'alt' => filled($pic['alt'] ?? null) ? $pic['alt'] : $this->brand->product_name];
+        }
+
+        return null;
+    }
+
+    /**
+     * Every picture the site has (brand and reference pictures, then the
+     * pictures of games, promotions and other entries), without repeats.
+     *
+     * @return Collection<int, array{path: string, alt: string}>
+     */
+    public function picturePool(): Collection
+    {
+        return $this->poolCache ??= $this->realPictures()
+            ->map(fn ($m) => ['path' => $m['path'], 'alt' => filled($m['alt'] ?? null) ? $m['alt'] : $this->brand->product_name])
+            ->merge($this->allEntries()->filter(fn (Entry $e) => filled($e->image))->map(fn (Entry $e) => ['path' => $e->image, 'alt' => $e->title]))
+            ->unique('path')->values();
+    }
+
+    /**
+     * A stand-in picture for a card or block that has none of its own: a
+     * pool picture not yet shown on this page, starting from a stable spot
+     * for the key so the same card keeps the same picture. Null once every
+     * picture is on the page: a page never shows one picture twice.
+     *
+     * @return array{image: array, alt: string}|null
+     */
+    public function fallbackImage(string $key, int $maxWidth = 800): ?array
+    {
+        $pool = $this->picturePool();
+        if ($pool->isEmpty()) {
+            return null;
+        }
+        $start = crc32($key) % $pool->count();
+        $ordered = $pool->slice($start)->merge($pool->slice(0, $start));
+        foreach ($ordered as $pick) {
+            if ($this->useImage($pick['path']) && ($image = $this->image($pick['path'], $maxWidth))) {
+                return ['image' => $image, 'alt' => $pick['alt']];
+            }
+        }
+
+        return null;
     }
 
     /** Mark an image as shown on the current page; false when it already was. */

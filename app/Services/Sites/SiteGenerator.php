@@ -119,6 +119,13 @@ class SiteGenerator
                 if ($count === 0) {
                     $task->progress('没有读到游戏、优惠等数据，相关列表页会先不收录（noindex）');
                 }
+                // Inner-page pictures join the home page's, so blocks without their own picture have more to show.
+                $inner = collect($this->referencePages)->flatMap(fn ($p) => $p['images'] ?? [])->filter(fn ($i) => filled($i['url'] ?? null))->unique('url')->values()->all();
+                if ($site->reference_import_images && $inner !== []) {
+                    $added = rescue(fn () => $this->images->import($site, $inner), 0);
+                    $task->progress('参考网站内页图片：发现 '.count($inner)." 张，新导入 {$added} 张");
+                    $site->unsetRelation('brandProfile');
+                }
             }
 
             if (! $designOnly || $site->pages()->doesntExist()) {

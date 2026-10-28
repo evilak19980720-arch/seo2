@@ -15,7 +15,7 @@ use Throwable;
  */
 class ReferenceImageImporter
 {
-    public const MAX = 12;
+    public const MAX = 36;
 
     /**
      * @param  array<int, array{url: string, alt: string}>  $images

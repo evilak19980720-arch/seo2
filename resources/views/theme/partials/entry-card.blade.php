@@ -1,6 +1,6 @@
 @php
     $href = $ctx->entryHref($entry);
-    $thumb = $entry->image ? $ctx->image($entry->image, 640) : null;
+    $thumb = ($entry->image ? $ctx->image($entry->image, 640) : null) ?? $ctx->fallbackImage('entry:'.$entry->collection.':'.$entry->slug, 640)['image'] ?? null;
     $status = $entry->status();
     $tag = collect(['hot', 'new', 'classic'])->first(fn ($t) => in_array($t, $entry->tags(), true));
     $badge = in_array($entry->collection, ['promotion', 'event'], true) ? ($status ? $ctx->t('status_'.$status) : null) : ($tag ? $ctx->t($tag) : null);
