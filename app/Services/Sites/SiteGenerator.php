@@ -59,6 +59,9 @@ class SiteGenerator
     /** Reference analysis of the current run, reused for page content. */
     protected ?array $referenceData = null;
 
+    /** Reference URL that referenceData was read from. */
+    protected ?string $analyzedUrl = null;
+
     /** Inner pages of the reference read in this run (pool sites). */
     protected array $referencePages = [];
 
@@ -73,6 +76,10 @@ class SiteGenerator
         try {
             // Interface strings first: titles, menus and fallbacks use them.
             if ($note = ThemeStrings::ensure($site, $this->ai)) {
+                $task->progress($note);
+            }
+
+            if ($note = $this->completeBrand($site)) {
                 $task->progress($note);
             }
 
@@ -97,7 +104,7 @@ class SiteGenerator
 
             $sectioned = ! empty($site->typeConfig()['sectioned']);
             if ($sectioned && ! $designOnly) {
-                if ($this->referenceData) {
+                if ($this->referenceData && $this->referencePages === []) {
                     $task->progress('读取参考网站内页');
                     $this->referencePages = $this->reference->crawl($this->referenceData);
                     $task->progress('参考网站内页：读到 '.count($this->referencePages).' 页，图块 '.collect($this->referenceSources())->sum(fn ($p) => count($p['cards'] ?? [])).' 个');
@@ -171,6 +178,79 @@ class SiteGenerator
         $names = ['accounts' => 'user accounts', 'payments' => 'payments', 'app' => 'app download', 'company' => 'company details', 'license' => 'licence details', 'certification' => 'testing/certification details'];
 
         return collect(SiteStructure::conditions($site))->map(fn ($has, $key) => $names[$key].': '.($has ? 'yes' : 'no'))->implode('; ');
+    }
+
+    /** The reference site, read once per run (a broken one never stops generation). */
+    protected function analyzeReference(Site $site): ?array
+    {
+        if (! $site->reference_url) {
+            return null;
+        }
+        if ($this->analyzedUrl !== $site->reference_url) {
+            $this->analyzedUrl = $site->reference_url;
+            $this->referencePages = [];
+            $this->referenceData = rescue(fn () => $this->reference->analyze($site->reference_url), null);
+        }
+
+        return $this->referenceData;
+    }
+
+    /**
+     * Tagline and intro left empty (or too short) in the admin are written
+     * by the AI from the reference site's home and inner pages; other empty
+     * profile facts (features, specs, FAQ) are filled the same way. Fields
+     * the admin filled are never overwritten.
+     */
+    public function completeBrand(Site $site): ?string
+    {
+        $profile = $site->brandProfile ?? $site->brandProfile()->create(['product_name' => $site->product_name]);
+        if (filled($profile->tagline) && mb_strlen((string) $profile->description) >= 200) {
+            return null;
+        }
+        if (! $site->reference_url) {
+            return '品牌资料的一句话介绍或详细介绍为空，且没有参考网站，无法自动补全';
+        }
+        if (! ($home = $this->analyzeReference($site))) {
+            return '参考网站读不到，品牌资料无法自动补全';
+        }
+        $this->referencePages = rescue(fn () => $this->reference->crawl($home), []);
+
+        try {
+            $data = app(BrandImporter::class)->normalize($this->ai->prompt(PromptType::BrandComplete, [
+                'brand' => $profile->toPromptContext(),
+                'reference' => SiteDataGenerator::digest($this->referenceSources(), 16_000),
+                'reference_name' => (string) ($home['title'] ?? '') ?: (string) parse_url($site->reference_url, PHP_URL_HOST),
+            ], $site)->json());
+        } catch (Throwable $e) {
+            return '品牌资料自动补全失败：'.Str::limit($e->getMessage(), 150);
+        }
+
+        $lang = $site->language();
+        $text = fn ($v) => is_string($v) && trim($v) !== '' && LanguageDetector::matches($v, $lang) ? trim(strip_tags($v)) : null;
+        $fill = [];
+        if (blank($profile->tagline) && ($v = $text($data['tagline'] ?? null))) {
+            $fill['tagline'] = Str::limit($v, 200, '');
+        }
+        if (mb_strlen((string) $profile->description) < 200 && ($v = $text($data['description'] ?? null)) && mb_strlen($v) > mb_strlen((string) $profile->description)) {
+            $fill['description'] = $v;
+        }
+        foreach (['selling_points', 'specs', 'faq'] as $key) {
+            if (empty($profile->{$key}) && ! empty($data[$key])) {
+                $fill[$key] = $data[$key];
+            }
+        }
+        foreach (['target_audience', 'use_cases'] as $key) {
+            if (blank($profile->{$key}) && ($v = $text($data[$key] ?? null))) {
+                $fill[$key] = $v;
+            }
+        }
+        if ($fill === []) {
+            return '参考网站上没有可用于品牌介绍的内容，品牌资料未补全';
+        }
+        $profile->update($fill);
+        $site->setRelation('brandProfile', $profile);
+
+        return '品牌资料已从参考网站补全：'.implode('、', array_map(fn ($k) => ['tagline' => '一句话介绍', 'description' => '详细介绍', 'selling_points' => '卖点', 'specs' => '参数', 'faq' => 'FAQ', 'target_audience' => '目标用户', 'use_cases' => '使用场景'][$k], array_keys($fill)));
     }
 
     /** Reference pages read in this run: home first. */
@@ -249,7 +329,7 @@ class SiteGenerator
         $this->designNotes = [];
 
         // A broken reference must never stop the site from being generated.
-        $reference = $site->reference_url ? rescue(fn () => $this->reference->analyze($site->reference_url), null) : null;
+        $reference = $this->analyzeReference($site);
         if ($site->reference_url) {
             foreach ($this->reference->report($reference) as $line) {
                 $this->designNotes[] = '参考网站 · '.$line;

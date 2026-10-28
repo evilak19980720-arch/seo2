@@ -80,6 +80,7 @@ abstract class TestCase extends BaseTestCase
                 ], 'custom_css' => '@import url(https://evil.test/x.css);'],
                 str_contains($text, 'Translate these website interface strings') => $overrides['ui'] ?? (preg_match('/^(\{.*\})$/m', $text, $m)
                     ? array_map(fn ($v) => 'Isalin '.$v, json_decode($m[1], true) ?: []) : []),
+                str_contains($text, 'is modelled on the reference site') => $overrides['brand_complete'] ?? [],
                 str_contains($text, 'List the site data') => $overrides['site_data'] ?? [],
                 str_contains($text, 'Write the detail pages') => $overrides['entry_content'] ?? ['items' => []],
                 str_contains($text, 'Write the core pages') && isset($overrides['pages']) => ['pages' => $overrides['pages']],

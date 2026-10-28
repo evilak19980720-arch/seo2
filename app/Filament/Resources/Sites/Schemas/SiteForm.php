@@ -108,9 +108,10 @@ class SiteForm
                 Text::make(fn (?BrandProfile $record) => '资料完整度：'.($record?->completeness ?? 0).'% · 低于 60% 只生成核心页面，不开启自动文章')->columnSpanFull(),
                 Grid::make(2)->schema([
                     TextInput::make('product_name')->label('产品名')->required(),
-                    TextInput::make('tagline')->label('一句话介绍')->maxLength(200),
+                    TextInput::make('tagline')->label('一句话介绍')->maxLength(200)->helperText('可留空：生成时由 AI 从参考网站提取'),
                 ]),
-                Textarea::make('description')->label('详细介绍')->rows(6)->helperText('AI 写作的唯一事实依据，至少 200 字'),
+                Textarea::make('description')->label('详细介绍')->rows(6)
+                    ->helperText('AI 写作的事实依据。留空或少于 200 字时，生成网站会由 AI 读取参考网站首页和内页自动补全；已填的内容不会被覆盖'),
             ]),
         ];
     }

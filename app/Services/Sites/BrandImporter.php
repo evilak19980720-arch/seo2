@@ -70,7 +70,7 @@ class BrandImporter
         return $this->normalize($data) + ['media' => $source->brandProfile?->media ?? []];
     }
 
-    protected function normalize(array $d): array
+    public function normalize(array $d): array
     {
         $list = fn ($v) => array_values(array_filter(is_array($v) ? $v : [], fn ($x) => filled($x)));
 

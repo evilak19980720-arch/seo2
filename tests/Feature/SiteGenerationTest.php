@@ -10,6 +10,7 @@ use App\Services\Sites\SiteManager;
 use App\Services\Theme\Color;
 use App\Support\Settings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -66,6 +67,36 @@ class SiteGenerationTest extends TestCase
 
         $this->assertStringContainsString('Sitemap: https://galaxy-run.com.br/sitemap.xml', file_get_contents("{$dir}/robots.txt"));
         $this->assertStringContainsString('<loc>https://galaxy-run.com.br/sobre-o-jogo/</loc>', file_get_contents("{$dir}/sitemap.xml"));
+    }
+
+    public function test_empty_brand_intro_is_filled_from_the_reference_site(): void
+    {
+        $text = str_repeat('Na Ref Arcade você encontra jogos de corrida, quebra-cabeça e aventura para jogar no celular. ', 6);
+        Http::fake([
+            'ref.test/sobre' => Http::response('<html><head><title>Sobre</title></head><body><main><h1>Sobre a Ref Arcade</h1><p>'.$text.'</p></main></body></html>'),
+            'ref.test/*' => Http::response('<html><head><title>Ref Arcade</title></head><body><header><nav><a href="/">Início</a><a href="/sobre">Sobre</a></nav></header><main><h1>Ref Arcade</h1><p>'.$text.'</p></main></body></html>'),
+        ]);
+        $intro = str_repeat('Galaxy Run reúne jogos de corrida, quebra-cabeça e aventura para jogar no celular, com partidas curtas para qualquer momento do dia. ', 3);
+        $this->fakeAi(['brand_complete' => [
+            'tagline' => 'Galaxy Run: jogos de corrida e aventura no celular',
+            'description' => $intro,
+            'selling_points' => ['Jogos de corrida', 'Quebra-cabeças', 'Aventura'],
+            'faq' => [['question' => 'Que jogos há?', 'answer' => 'Corrida, quebra-cabeça e aventura.']],
+        ]]);
+        $site = $this->makeSite(['reference_url' => 'https://ref.test/'], ['tagline' => null, 'description' => null, 'selling_points' => [], 'faq' => []]);
+        $site->brandProfile->update(['tagline' => null, 'description' => null, 'selling_points' => [], 'faq' => []]);
+
+        $task = GenerationTask::create(['site_id' => $site->id, 'type' => 'full']);
+        app(SiteGenerator::class)->run($task);
+
+        $profile = $site->brandProfile->fresh();
+        $this->assertSame('Galaxy Run: jogos de corrida e aventura no celular', $profile->tagline);
+        $this->assertSame(trim($intro), $profile->description);
+        $this->assertSame(['Jogos de corrida', 'Quebra-cabeças', 'Aventura'], $profile->selling_points);
+        $this->assertSame(100, $profile->completeness);
+        $this->assertTrue(collect($task->fresh()->log)->contains(fn ($l) => str_contains($l['step'], '品牌资料已从参考网站补全')));
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'ai.test') && str_contains(json_encode($r->data()), 'Sobre a Ref Arcade'));
+        $this->assertSame(1, Http::recorded(fn ($r) => $r->url() === 'https://ref.test/')->count(), 'the reference is read once per run');
     }
 
     public function test_generation_without_ai_falls_back_to_defaults(): void

@@ -240,6 +240,23 @@ STRINGS (key => English):
 
 Return JSON with the same keys: {"<key>": "<translation>"}
 TXT,
+            PromptType::BrandComplete->value => <<<'TXT'
+The official website of {{product_name}} ({{site_type}}) is modelled on the reference site below: the same kind of product, possibly under another brand name ({{reference_name}}). Write the brand profile of {{product_name}} in {{language}} from what the reference site says about its product: what it is, what you can do with it, its main features and categories, who it is for.
+- Use only facts stated in the reference text; never invent figures, licences, awards, rankings or partnerships.
+- The reference site's own brand names become {{product_name}}; keep names of games, providers and payment methods.
+- Leave out logins, sign-up, deposits and contact details.
+- Keep it consistent with what the current profile already says.
+
+CURRENT PROFILE:
+{{brand}}
+
+REFERENCE SITE:
+{{reference}}
+
+Return JSON:
+{"tagline": "one sentence, at most 120 characters, naming {{product_name}} and what it is", "description": "3-5 paragraphs, 250-600 words, plain text", "selling_points": ["3-6 short items"], "specs": [{"key": "", "value": ""}], "target_audience": "", "use_cases": "", "faq": [{"question": "", "answer": ""}]}
+Use empty strings / arrays for anything the reference does not support.
+TXT,
         ];
     }
 }

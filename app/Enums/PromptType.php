@@ -20,6 +20,7 @@ enum PromptType: string implements HasLabel
     case SiteData = 'site_data';
     case EntryContent = 'entry_content';
     case UiTranslate = 'ui_translate';
+    case BrandComplete = 'brand_complete';
 
     public function getLabel(): string
     {
@@ -38,6 +39,7 @@ enum PromptType: string implements HasLabel
             self::SiteData => '站点数据（游戏/优惠/活动…）',
             self::EntryContent => '详情页文案',
             self::UiTranslate => '界面文字翻译',
+            self::BrandComplete => '品牌资料补全（参考网站）',
         };
     }
 }
