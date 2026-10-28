@@ -31,3 +31,4 @@ Thumbs.db
 /storage/app/sites
 /storage/app/certs
 /public/theme/base.css
+/storage/installed.lock

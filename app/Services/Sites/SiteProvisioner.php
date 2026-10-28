@@ -9,6 +9,7 @@ use App\Services\Integrations\GoogleAuth;
 use App\Services\Integrations\IndexNow;
 use App\Services\Integrations\SearchConsole;
 use App\Support\Settings;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
 use Throwable;
 
@@ -79,7 +80,7 @@ class SiteProvisioner
             file_put_contents($certFile, $cert['certificate']);
             file_put_contents(substr($certFile, 0, -4).'.key', $cert['private_key']);
             chmod(substr($certFile, 0, -4).'.key', 0600);
-            $expires = $cert['expires_on'] ? \Illuminate\Support\Carbon::parse($cert['expires_on']) : now()->addYears(15);
+            $expires = $cert['expires_on'] ? Carbon::parse($cert['expires_on']) : now()->addYears(15);
             $log[] = 'Origin CA 证书已签发';
         }
 

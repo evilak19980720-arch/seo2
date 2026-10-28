@@ -27,6 +27,8 @@ class Settings
         return [
             // Site generation
             'auto_launch' => true,
+            'mfa_required' => false,
+            'server_ip' => null,
             'cookie_banner' => true,
 
             // Publish caps per site per week, by site age

@@ -4,6 +4,7 @@ namespace App\Services\Render;
 
 use App\Enums\ArticleStatus;
 use App\Models\Site;
+use Illuminate\Support\Carbon;
 
 class SitemapBuilder
 {
@@ -37,7 +38,7 @@ class SitemapBuilder
 
         $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n".'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
         foreach ($urls as [$loc, $lastmod]) {
-            $xml .= '<url><loc>'.htmlspecialchars($loc, ENT_XML1).'</loc>'.($lastmod ? '<lastmod>'.\Illuminate\Support\Carbon::parse($lastmod)->toAtomString().'</lastmod>' : '')."</url>\n";
+            $xml .= '<url><loc>'.htmlspecialchars($loc, ENT_XML1).'</loc>'.($lastmod ? '<lastmod>'.Carbon::parse($lastmod)->toAtomString().'</lastmod>' : '')."</url>\n";
         }
 
         return $xml.'</urlset>'."\n";

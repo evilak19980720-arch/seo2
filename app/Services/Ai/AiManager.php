@@ -3,9 +3,9 @@
 namespace App\Services\Ai;
 
 use App\Enums\PromptType;
-use App\Models\Alert;
 use App\Models\AiProvider;
 use App\Models\AiUsageLog;
+use App\Models\Alert;
 use App\Models\Prompt;
 use App\Models\Site;
 use Illuminate\Http\Client\PendingRequest;
@@ -106,7 +106,9 @@ class AiManager
         } catch (Throwable $e) {
             $result = 'FAIL: '.mb_substr($e->getMessage(), 0, 200);
         }
-        $provider->update(['last_tested_at' => now(), 'last_test_result' => $result]);
+        if ($provider->exists) {
+            $provider->update(['last_tested_at' => now(), 'last_test_result' => $result]);
+        }
 
         return $result;
     }

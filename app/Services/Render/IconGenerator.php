@@ -3,6 +3,7 @@
 namespace App\Services\Render;
 
 use App\Models\Site;
+use App\Services\Theme\Color;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -61,7 +62,7 @@ class IconGenerator
         $img = imagecreatetruecolor($size, $size);
         imagesavealpha($img, true);
         if ($background) {
-            [$r, $g, $b] = \App\Services\Theme\Color::rgb($background);
+            [$r, $g, $b] = Color::rgb($background);
             imagefill($img, 0, 0, imagecolorallocate($img, $r, $g, $b));
         } else {
             imagefill($img, 0, 0, imagecolorallocatealpha($img, 0, 0, 0, 127));
@@ -81,15 +82,15 @@ class IconGenerator
     {
         $size = 512;
         $img = imagecreatetruecolor($size, $size);
-        [$r, $g, $b] = \App\Services\Theme\Color::rgb($bg);
+        [$r, $g, $b] = Color::rgb($bg);
         imagefill($img, 0, 0, imagecolorallocate($img, $r, $g, $b));
-        [$r, $g, $b] = \App\Services\Theme\Color::rgb($fg);
+        [$r, $g, $b] = Color::rgb($fg);
         $color = imagecolorallocate($img, $r, $g, $b);
         $letter = mb_strtoupper(mb_substr(trim($name) ?: 'S', 0, 1));
         // Built-in GD font is tiny; draw it on a small canvas and upscale.
         $small = imagecreatetruecolor(16, 16);
-        imagefill($small, 0, 0, imagecolorallocate($small, ...\App\Services\Theme\Color::rgb($bg)));
-        imagestring($small, 5, 4, 0, preg_match('/^[A-Z0-9]$/', $letter) ? $letter : 'S', imagecolorallocate($small, ...\App\Services\Theme\Color::rgb($fg)));
+        imagefill($small, 0, 0, imagecolorallocate($small, ...Color::rgb($bg)));
+        imagestring($small, 5, 4, 0, preg_match('/^[A-Z0-9]$/', $letter) ? $letter : 'S', imagecolorallocate($small, ...Color::rgb($fg)));
         imagecopyresized($img, $small, 64, 64, 0, 0, 384, 384, 16, 16);
         unset($color);
 

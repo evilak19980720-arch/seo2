@@ -2,6 +2,9 @@
 
 namespace App\Services\Theme;
 
+use Random\Engine\Mt19937;
+use Random\Randomizer;
+
 /**
  * Deterministic, seed-based design config. Used when no AI provider is
  * configured or AI output keeps failing validation, so every site still
@@ -22,7 +25,7 @@ class DefaultDesign
 
     public static function make(int|string $seed, array $siteTypeConfig): array
     {
-        $rand = new \Random\Randomizer(new \Random\Engine\Mt19937(crc32((string) $seed)));
+        $rand = new Randomizer(new Mt19937(crc32((string) $seed)));
         $pick = fn (array $items) => $items[$rand->getInt(0, count($items) - 1)];
 
         $palette = $pick(self::PALETTES);

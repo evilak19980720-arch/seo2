@@ -59,7 +59,7 @@ class SeoHead
         $cut = mb_substr($text, 0, $max - 1);
         $space = mb_strrpos($cut, ' ');
 
-        return rtrim($space > $max * 0.6 ? mb_substr($cut, 0, $space) : $cut, " ,.;:-–—").'…';
+        return rtrim($space > $max * 0.6 ? mb_substr($cut, 0, $space) : $cut, ' ,.;:-–—').'…';
     }
 
     public function withBreadcrumbs(array $crumbs): self

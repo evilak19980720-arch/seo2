@@ -3,6 +3,7 @@
 namespace App\Services\Integrations;
 
 use App\Support\Settings;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
@@ -57,7 +58,7 @@ class GoogleAuth
         });
     }
 
-    public static function http(): \Illuminate\Http\Client\PendingRequest
+    public static function http(): PendingRequest
     {
         return Http::withToken(self::token())->acceptJson()->timeout(60);
     }

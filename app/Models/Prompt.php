@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\PromptType;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Prompt extends Model
 {
@@ -33,6 +34,11 @@ class Prompt extends Model
                 $p->version,
             ])
             ->first();
+    }
+
+    public function articles(): HasMany
+    {
+        return $this->hasMany(Article::class);
     }
 
     public function render(array $vars): string

@@ -63,9 +63,9 @@ class ArticlePipeline
         $k = $keyword->keyword;
 
         return match (true) {
+            (bool) preg_match('/\b(guia|guide|tutorial|dicas|tips|como jogar|how to|truques|estratégia|strategy|guía|consejos)\b/u', $k) => ArticleType::Guide,
             (bool) preg_match('/^(o que|como|por que|porque|quando|onde|qual|quais|é |what|how|why|when|where|which|is |can |qué|cómo|cuál|dónde)\b/u', $k) && mb_strlen($k) < 45 => ArticleType::Faq,
             (bool) preg_match('/\b(atualiza|update|novidade|news|versão|version|patch|evento|event|actualiza)/u', $k) => ArticleType::Update,
-            (bool) preg_match('/\b(guia|guide|tutorial|dicas|tips|como jogar|how to|truques|estratégia|strategy|guía|consejos)\b/u', $k) => ArticleType::Guide,
             in_array($keyword->intent, ['commercial', 'transactional'], true) => ArticleType::UseCase,
             default => ArticleType::Guide,
         };

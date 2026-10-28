@@ -3,18 +3,19 @@
 use App\Enums\ArticleStatus;
 use App\Enums\SiteStatus;
 use App\Jobs\GenerateArticleJob;
-use App\Models\AnalyticsCache;
+use App\Models\AiProvider;
 use App\Models\Alert;
+use App\Models\AnalyticsCache;
 use App\Models\Domain;
 use App\Models\Site;
 use App\Services\Content\ArticlePipeline;
 use App\Services\Content\PublishScheduler;
 use App\Services\Integrations\Analytics;
 use App\Services\Integrations\GoogleAuth;
+use App\Services\Render\StaticSiteBuilder;
 use App\Services\Stats\ContentHealth;
 use App\Services\Stats\CrawlerLogParser;
 use App\Services\Stats\SearchConsoleSync;
-use App\Support\Settings;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 
@@ -95,14 +96,14 @@ Artisan::command('alerts:check', function () {
     foreach (Domain::whereNotNull('certificate_expires_at')->where('certificate_expires_at', '<', now()->addDays(21))->get() as $d) {
         Alert::raise('certificate', "域名 {$d->name} 的源站证书将于 {$d->certificate_expires_at->toDateString()} 过期", $d->site?->id, 'danger');
     }
-    foreach (\App\Models\AiProvider::where('is_active', true)->get() as $p) {
+    foreach (AiProvider::where('is_active', true)->get() as $p) {
         if ($p->monthly_budget && $p->monthSpend() >= 0.9 * $p->monthly_budget) {
             Alert::raise('ai_budget', "AI 服务商 {$p->name} 本月已用 ".round($p->monthSpend(), 2)." / {$p->monthly_budget}", null, 'warning');
         }
     }
 })->purpose('Certificate and AI budget alerts');
 
-Artisan::command('sites:rebuild {domain?}', function (\App\Services\Render\StaticSiteBuilder $builder, ?string $domain = null) {
+Artisan::command('sites:rebuild {domain?}', function (StaticSiteBuilder $builder, ?string $domain = null) {
     $sites = Site::with(['domain', 'brandProfile'])->whereIn('status', [SiteStatus::Live->value, SiteStatus::Preview->value, SiteStatus::Paused->value])
         ->when($domain, fn ($q) => $q->whereHas('domain', fn ($d) => $d->where('name', Domain::normalize($domain))))->get();
     foreach ($sites as $site) {

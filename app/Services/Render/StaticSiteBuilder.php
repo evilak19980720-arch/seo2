@@ -85,8 +85,10 @@ class StaticSiteBuilder
         rename($tmp, $final);
         File::deleteDirectory($old);
 
-        $site->forceFill(['built_at' => now()])->saveQuietly();
-        GoneUrl::where('host', $site->domain->name)->whereNull('path')->delete();
+        if ($targetDir === null) {
+            $site->newQuery()->whereKey($site->id)->update(['built_at' => now()]);
+            GoneUrl::where('host', $site->domain->name)->whereNull('path')->delete();
+        }
 
         return $written;
     }
