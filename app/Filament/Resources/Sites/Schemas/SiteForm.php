@@ -17,9 +17,7 @@ use Filament\Forms\Components\CodeEditor;
 use Filament\Forms\Components\CodeEditor\Enums\Language;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Hidden;
-use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -113,40 +111,6 @@ class SiteForm
                     TextInput::make('tagline')->label('一句话介绍')->maxLength(200),
                 ]),
                 Textarea::make('description')->label('详细介绍')->rows(6)->helperText('AI 写作的唯一事实依据，至少 200 字'),
-                TagsInput::make('selling_points')->label('核心卖点（3–6 条）')->splitKeys(['Enter']),
-                Repeater::make('specs')->label('规格参数')->columns(2)->defaultItems(0)->addActionLabel('添加参数')
-                    ->schema([TextInput::make('key')->label('名称')->required(), TextInput::make('value')->label('值')->required()])
-                    ->helperText('游戏：类型、平台、玩法；外贸：型号、材质、起订量等'),
-                Grid::make(2)->schema([
-                    Textarea::make('target_audience')->label('目标用户')->rows(3),
-                    Textarea::make('use_cases')->label('使用场景')->rows(3),
-                ]),
-                Repeater::make('media')->label('截图 / 产品图 / 视频')->columns(4)->defaultItems(0)->reorderable()->addActionLabel('添加素材')
-                    ->schema([
-                        Select::make('type')->label('类型')->options(['image' => '图片', 'video' => '视频'])->default('image')->live(),
-                        FileUpload::make('path')->label('图片')->image()->disk(Media::DISK)->directory('brand')->maxSize(8192)
-                            ->visible(fn (Get $get) => $get('type') !== 'video'),
-                        TextInput::make('url')->label('视频链接')->url()->visible(fn (Get $get) => $get('type') === 'video'),
-                        TextInput::make('alt')->label('alt（站点语言）'),
-                        TextInput::make('caption')->label('说明'),
-                        Hidden::make('source'),
-                        Hidden::make('source_url'),
-                    ]),
-                Repeater::make('cta_links')->label('下载 / 购买 / 询盘链接')->columns(2)->defaultItems(0)->addActionLabel('添加链接')
-                    ->schema([TextInput::make('label')->label('按钮文字')->required(), TextInput::make('url')->label('链接')->url()->required()]),
-                Repeater::make('faq')->label('FAQ 素材')->defaultItems(0)->collapsible()->addActionLabel('添加问答')
-                    ->schema([TextInput::make('question')->label('问题')->required(), Textarea::make('answer')->label('回答')->rows(2)->required()]),
-                Grid::make(2)->schema([
-                    Textarea::make('license_info')->label('牌照信息')->rows(2)
-                        ->helperText('只填可核验的信息（发牌机构、牌照号）；留空则网站不出现牌照栏目'),
-                    Textarea::make('certification_info')->label('测试与认证信息')->rows(2)
-                        ->helperText('只填可核验的信息（检测机构、证书）；留空则不出现认证栏目'),
-                ]),
-                Grid::make(3)->schema([
-                    TextInput::make('company_name')->label('公司名称'),
-                    TextInput::make('company_email')->label('联系邮箱')->email(),
-                    TextInput::make('company_address')->label('地址'),
-                ]),
             ]),
         ];
     }

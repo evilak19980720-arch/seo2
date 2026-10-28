@@ -57,23 +57,16 @@ class BrandProfile extends Model
     }
 
     /**
-     * Weighted completeness score (0-100). The minimum viable profile is
-     * "an intro + some images + one download/buy link", so those weigh most.
+     * Completeness score (0-100) of what the admin fills in: name, tagline
+     * and an intro of 200+ characters. Everything else (games, offers,
+     * images, links) comes from the reference site at generation time.
      */
     public function computeCompleteness(): int
     {
         $checks = [
-            'product_name' => [10, filled($this->product_name)],
-            'tagline' => [5, filled($this->tagline)],
-            'description' => [20, mb_strlen((string) $this->description) >= 200],
-            'selling_points' => [10, count($this->selling_points ?? []) >= 3],
-            'specs' => [10, count($this->specs ?? []) >= 2],
-            'target_audience' => [5, filled($this->target_audience)],
-            'use_cases' => [5, filled($this->use_cases)],
-            'media' => [15, count($this->media ?? []) >= 2],
-            'cta_links' => [10, count($this->cta_links ?? []) >= 1],
-            'faq' => [5, count($this->faq ?? []) >= 3],
-            'company' => [5, filled($this->company_name) && filled($this->company_email)],
+            'product_name' => [30, filled($this->product_name)],
+            'tagline' => [20, filled($this->tagline)],
+            'description' => [50, mb_strlen((string) $this->description) >= 200],
         ];
 
         return (int) collect($checks)->sum(fn ($c) => $c[1] ? $c[0] : 0);
