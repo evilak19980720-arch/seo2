@@ -3,11 +3,13 @@
 namespace App\Services\Content;
 
 use App\Enums\ArticleStatus;
+use App\Enums\ArticleTaskStatus;
 use App\Enums\ArticleType;
 use App\Enums\KeywordStatus;
 use App\Enums\PromptType;
 use App\Enums\SiteStatus;
 use App\Models\Article;
+use App\Models\ArticleTask;
 use App\Models\Keyword;
 use App\Models\Site;
 use App\Services\Ai\AiManager;
@@ -48,14 +50,21 @@ class ArticlePipeline
             ->first();
     }
 
-    public function generateNext(Site $site): ?Article
+    public function generateNext(Site $site, ?ArticleTask $task = null): ?Article
     {
-        if ($this->ineligibleReason($site)) {
+        if ($reason = $this->ineligibleReason($site)) {
+            $task?->step(ArticleTaskStatus::Skipped, ['note' => $reason]);
+
             return null;
         }
         $keyword = $this->nextKeyword($site);
+        if (! $keyword) {
+            $task?->step(ArticleTaskStatus::Skipped, ['note' => '没有待写的关键词']);
 
-        return $keyword ? $this->generate($site, $keyword) : null;
+            return null;
+        }
+
+        return $this->generate($site, $keyword, null, $task);
     }
 
     public function typeFor(Keyword $keyword): ArticleType
@@ -71,8 +80,9 @@ class ArticlePipeline
         };
     }
 
-    public function generate(Site $site, Keyword $keyword, ?Article $existing = null): Article
+    public function generate(Site $site, Keyword $keyword, ?Article $existing = null, ?ArticleTask $task = null): Article
     {
+        $task?->step(ArticleTaskStatus::Generating, ['keyword' => $keyword->keyword, 'article_id' => $existing?->id]);
         $type = $existing?->type ?? $this->typeFor($keyword);
         [$min, $max] = Settings::wordRange($type->value);
         $brand = $site->brandProfile?->toPromptContext() ?? "Product: {$site->product_name}";
@@ -90,6 +100,7 @@ class ArticlePipeline
         $promptId = $draft->promptId;
 
         $html = (string) ($data['html'] ?? '');
+        $task?->step(ArticleTaskStatus::Polishing);
         try {
             $polished = $this->ai->prompt(PromptType::ArticlePolish, ['brand' => $brand, 'html' => $html, 'keyword' => $keyword->keyword], $site)->json();
             $html = (string) ($polished['html'] ?? $html);
@@ -115,6 +126,7 @@ class ArticlePipeline
 
         // AI review is the first filter; the deterministic guardrails are the real gate.
         $reasons = [];
+        $task?->step(ArticleTaskStatus::Reviewing);
         try {
             $review = $this->ai->prompt(PromptType::ArticleReview, ['brand' => $brand, 'keyword' => $keyword->keyword, 'html' => $article->body], $site)->json();
             if (($review['pass'] ?? true) === false) {
@@ -124,6 +136,7 @@ class ArticlePipeline
             $reasons[] = 'AI 审核失败：'.mb_substr($e->getMessage(), 0, 100);
         }
 
+        $task?->step(ArticleTaskStatus::Checking);
         $check = $this->guardrails->check($article, $site);
         $reasons = array_merge($reasons, $check['reasons']);
 
@@ -138,6 +151,10 @@ class ArticlePipeline
         if ($reasons === []) {
             $keyword->update(['status' => KeywordStatus::Written]);
         }
+        $task?->step($reasons === [] ? ArticleTaskStatus::Done : ArticleTaskStatus::Blocked, [
+            'article_id' => $article->id,
+            'note' => $reasons === [] ? '《'.$article->title.'》已通过，等待发布' : implode("\n", $reasons),
+        ]);
 
         return $article;
     }

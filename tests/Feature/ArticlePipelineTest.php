@@ -3,8 +3,12 @@
 namespace Tests\Feature;
 
 use App\Enums\ArticleStatus;
+use App\Enums\ArticleTaskStatus;
 use App\Enums\SiteStatus;
+use App\Jobs\GenerateArticleJob;
 use App\Models\Article;
+use App\Models\ArticleTask;
+use App\Models\User;
 use App\Services\Content\ArticlePipeline;
 use App\Services\Content\PublishScheduler;
 use App\Services\Render\StaticSiteBuilder;
@@ -50,6 +54,34 @@ class ArticlePipelineTest extends TestCase
         $this->assertStringContainsString('/blog/como-jogar-galaxy-run/', file_get_contents("{$dir}/index.html"), 'home "latest articles" is rebuilt');
         $this->assertStringContainsString('<loc>https://galaxy.com.br/blog/como-jogar-galaxy-run/</loc>', file_get_contents("{$dir}/sitemap.xml"));
         $this->assertStringContainsString('como-jogar-galaxy-run', file_get_contents("{$dir}/feed.xml"));
+    }
+
+    public function test_article_queue_shows_each_step_and_the_result(): void
+    {
+        $this->fakeAi();
+        $site = $this->liveSite();
+        $seen = [];
+        ArticleTask::updating(function ($task) use (&$seen) {
+            if ($task->isDirty('status')) {
+                $seen[] = $task->status->value;
+            }
+        });
+
+        GenerateArticleJob::dispatchSync($site);
+
+        $task = ArticleTask::sole();
+        $this->assertSame(['generating', 'polishing', 'reviewing', 'checking', 'done'], $seen);
+        $this->assertSame('como jogar galaxy run', $task->keyword);
+        $this->assertNotNull($task->article_id);
+        $this->assertNotNull($task->finished_at);
+
+        // Nothing left to write: the next run is shown as skipped, with the reason.
+        $site->keywords()->update(['status' => 'written']);
+        GenerateArticleJob::dispatchSync($site);
+        $this->assertSame(ArticleTaskStatus::Skipped, ArticleTask::latest('id')->first()->status);
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)->get('https://admin.test/admin/article-tasks')->assertOk()->assertSee('文章队列')->assertSee('已完成');
     }
 
     public function test_weekly_cap_by_site_age(): void
