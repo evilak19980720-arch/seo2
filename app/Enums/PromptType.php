@@ -17,6 +17,8 @@ enum PromptType: string implements HasLabel
     case ArticleReview = 'article_review';
     case FactCheck = 'fact_check';
     case BrandTranslate = 'brand_translate';
+    case SiteData = 'site_data';
+    case EntryContent = 'entry_content';
 
     public function getLabel(): string
     {
@@ -32,6 +34,8 @@ enum PromptType: string implements HasLabel
             self::ArticleReview => 'AI 审核',
             self::FactCheck => '事实核对',
             self::BrandTranslate => '品牌资料转语言',
+            self::SiteData => '站点数据（游戏/优惠/活动…）',
+            self::EntryContent => '详情页文案',
         };
     }
 }

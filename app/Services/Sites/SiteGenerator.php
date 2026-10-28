@@ -52,10 +52,14 @@ class SiteGenerator
         protected Screenshot $screenshot,
         protected ReferenceAnalyzer $reference,
         protected ReferenceImageImporter $images,
+        protected SiteDataGenerator $data,
     ) {}
 
     /** Reference analysis of the current run, reused for page content. */
     protected ?array $referenceData = null;
+
+    /** Inner pages of the reference read in this run (pool sites). */
+    protected array $referencePages = [];
 
     public function run(GenerationTask $task): void
     {
@@ -75,10 +79,31 @@ class SiteGenerator
                 $task->progress($note);
             }
 
+            if ($note = $this->ensureStructure($site)) {
+                $task->progress($note);
+            }
+
             $task->progress('生成设计配置');
             $this->generateDesign($site);
             foreach ($this->designNotes as $note) {
                 $task->progress($note);
+            }
+
+            $sectioned = ! empty($site->typeConfig()['sectioned']);
+            if ($sectioned && ! $designOnly) {
+                if ($this->referenceData) {
+                    $task->progress('读取参考网站内页');
+                    $this->referencePages = $this->reference->crawl($this->referenceData);
+                    $task->progress('参考网站内页：读到 '.count($this->referencePages).' 页，图块 '.collect($this->referenceSources())->sum(fn ($p) => count($p['cards'] ?? [])).' 个');
+                }
+                $task->progress('生成站点数据（游戏、优惠、活动、公告…）');
+                $count = $this->data->generate($site, $this->facts($site), $this->referenceSources(), $this->siteFeatures($site));
+                foreach ($this->data->notes as $note) {
+                    $task->progress('站点数据 · '.$note);
+                }
+                if ($count === 0) {
+                    $task->progress('没有读到游戏、优惠等数据，相关列表页会先不收录（noindex）');
+                }
             }
 
             if (! $designOnly || $site->pages()->doesntExist()) {
@@ -113,6 +138,54 @@ class SiteGenerator
 
             throw $e;
         }
+    }
+
+    /**
+     * Pool presets: the site's pages and sections, chosen once (seeded) and
+     * stored; a later run keeps every page and section it had.
+     */
+    public function ensureStructure(Site $site): ?string
+    {
+        $config = config("site_types.{$site->site_type}");
+        if (empty($config['sectioned'])) {
+            return null;
+        }
+        $structure = SiteStructure::choose($site, $config, $site->structure);
+        if ($structure === $site->structure) {
+            return null;
+        }
+        $site->forceFill(['structure' => $structure])->save();
+
+        return '站点栏目：'.count($structure['pages']).' 个页面，'.collect($structure['pages'])->flatten()->count().' 个板块';
+    }
+
+    /** What the site really has, so copy never describes missing features. */
+    public function siteFeatures(Site $site): string
+    {
+        $names = ['accounts' => 'user accounts', 'payments' => 'payments', 'app' => 'app download', 'company' => 'company details', 'license' => 'licence details', 'certification' => 'testing/certification details'];
+
+        return collect(SiteStructure::conditions($site))->map(fn ($has, $key) => $names[$key].': '.($has ? 'yes' : 'no'))->implode('; ');
+    }
+
+    /** Reference pages read in this run: home first. */
+    protected function referenceSources(): array
+    {
+        if (! $this->referenceData) {
+            return [];
+        }
+
+        return [['label' => 'home'] + $this->referenceData, ...$this->referencePages];
+    }
+
+    /**
+     * Sources a figure or claim may come from: the brand profile, and the
+     * reference site's own text (its amounts, dates and terms are kept).
+     */
+    public function facts(Site $site): string
+    {
+        $reference = collect($this->referenceSources())->map(fn ($p) => ($p['content'] ?? '')."\n".collect($p['cards'] ?? [])->pluck('name')->implode("\n"))->implode("\n");
+
+        return trim($this->brandContext($site)."\n".$reference);
     }
 
     /**
@@ -357,16 +430,17 @@ class SiteGenerator
     {
         $types = $site->typeConfig()['pages'];
         $lang = $site->language();
-        $facts = $this->brandContext($site);
+        $facts = $this->facts($site);
 
         // Labels in the site language: the admin's Chinese labels would be copied into page titles.
-        // Ask for content of the blocks the design actually uses on each page.
+        // Ask for content of the blocks the design actually uses on each page (pool pages: of each section).
         $designBlocks = fn ($type, $p) => collect($site->design_config['pages'][$type] ?? [])->pluck('block')->unique()->values()->all() ?: $p['blocks'];
         $spec = collect($types)->map(fn ($p, $type) => array_filter([
             'label' => $this->defaultTitle($type, $p, $lang),
             'default_slug' => $p['slug'][$lang] ?? $p['slug']['en'],
-            'blocks' => $designBlocks($type, $p),
-            'min_words' => SeoRules::minWords($type) ?: null,
+            'blocks' => isset($p['sections']) ? null : $designBlocks($type, $p),
+            'sections' => isset($p['sections']) ? collect($p['sections'])->mapWithKeys(fn ($s) => [$s['key'] => ['block' => $s['block'], 'topic' => $s['topic']]])->all() : null,
+            'min_words' => $this->minWords($site, $type) ?: null,
         ]))->all();
         $ai = $this->askPages($site, $spec);
 
@@ -410,7 +484,7 @@ class SiteGenerator
                 }
             }
             $titles[] = $title;
-            $content = $this->cleanBlocks($data['blocks'] ?? [], $type, $site);
+            $content = $this->cleanBlocks($data['blocks'] ?? [], $type, $site, $facts);
             if ($type === 'home') {
                 $content = $this->homeHeading($site, $content);
             }
@@ -421,7 +495,7 @@ class SiteGenerator
             }
             $metaDescription = $type === 'home' ? (string) $site->description : SeoRules::stripClaims((string) ($data['meta_description'] ?? ''), $facts);
             if (SeoRules::weakDescription($metaDescription, $site->product_name)) {
-                $metaDescription = $this->excerpt($content) ?: (string) $site->description;
+                $metaDescription = $this->excerpt($content, $this->slots($site, $type)) ?: (string) $site->description;
             }
 
             $site->pages()->updateOrCreate(['type' => $type], [
@@ -434,8 +508,8 @@ class SiteGenerator
             ]);
         }
 
-        // Extra pages the current design no longer has.
-        $site->pages()->where('type', 'like', 'extra%')->whereNotIn('type', array_keys($types))->get()->each(function (Page $page) use ($site) {
+        // Pages the site type or design no longer has (extra pages, a changed site type).
+        $site->pages()->whereNotIn('type', array_keys($types))->get()->each(function (Page $page) use ($site) {
             if ($site->launched_at) {
                 GoneUrl::firstOrCreate(['host' => $site->domain->name, 'path' => trim($page->slug, '/')]);
             }
@@ -443,18 +517,53 @@ class SiteGenerator
         });
     }
 
-    /** @return array<string, mixed> page type => AI page data */
+    /**
+     * Pool sites have many pages: they are asked for a few at a time so the
+     * answer stays complete.
+     *
+     * @return array<string, mixed> page type => AI page data
+     */
     protected function askPages(Site $site, array $spec): array
     {
-        try {
-            return $this->ai->prompt(PromptType::PageContent, [
-                'brand' => $this->brandContext($site),
-                'pages' => json_encode($spec, JSON_UNESCAPED_UNICODE),
-                'reference_content' => $this->referenceContent($site),
-            ], $site)->json()['pages'] ?? [];
-        } catch (Throwable) {
-            return [];
+        $chunks = ! empty($site->typeConfig()['sectioned']) ? array_chunk($spec, 4, true) : [$spec];
+        $pages = [];
+        foreach ($chunks as $chunk) {
+            try {
+                $pages += (array) ($this->ai->prompt(PromptType::PageContent, [
+                    'brand' => $this->brandContext($site),
+                    'pages' => json_encode($chunk, JSON_UNESCAPED_UNICODE),
+                    'reference_content' => $this->referenceContent($site),
+                    'site_features' => $this->siteFeatures($site),
+                ], $site)->json()['pages'] ?? []);
+            } catch (Throwable) {
+                // Defaults fill the pages of a failed chunk.
+            }
         }
+
+        return $pages;
+    }
+
+    /** Words a page needs; pool presets set their own per page (scaled by the global setting). */
+    public function minWords(Site $site, string $type): int
+    {
+        $def = $site->typeConfig()['pages'][$type] ?? [];
+        if (isset($def['min_words'])) {
+            return (int) round($def['min_words'] * (int) config('platform.page_min_words', 400) / 400);
+        }
+
+        return SeoRules::minWords($type);
+    }
+
+    /** @return array<string, string> content slot => block of a page type (pool presets: section key => block). */
+    protected function slots(Site $site, string $type): array
+    {
+        $def = $site->typeConfig()['pages'][$type] ?? [];
+        if (isset($def['sections'])) {
+            return array_column($def['sections'], 'block', 'key');
+        }
+        $blocks = ['hero', 'features', 'faq', 'cta', 'prose', 'gallery', 'specs', 'article_list', 'contact', 'legal', 'banner', 'card_grid', 'steps', 'stats', 'notice', 'download'];
+
+        return array_combine($blocks, $blocks);
     }
 
     /**
@@ -472,15 +581,16 @@ class SiteGenerator
             if (! is_array($data) || ! is_array($data['blocks'] ?? null)) {
                 continue;
             }
-            $content = $this->cleanBlocks($data['blocks'], $type, $site);
+            $content = $this->cleanBlocks($data['blocks'], $type, $site, $facts);
             $words = SeoRules::wordCount($content);
-            $min = SeoRules::minWords($type);
+            $min = $this->minWords($site, $type);
             if ($min > 0 && $words < $min * 0.8) {
                 $problems[$type] = "Only {$words} words; write at least {$min} words of useful, specific copy for this page.";
 
                 continue;
             }
-            if (in_array($type, SeoRules::NO_MIN_WORDS, true)) {
+            $exempt = isset($site->typeConfig()['pages'][$type]['min_words']) ? (int) $site->typeConfig()['pages'][$type]['min_words'] === 0 : in_array($type, SeoRules::NO_MIN_WORDS, true);
+            if ($exempt) {
                 continue;
             }
             $text = $this->plainText($content);
@@ -509,12 +619,15 @@ class SiteGenerator
     }
 
     /** First real sentence(s) of a page, for its meta description. */
-    protected function excerpt(array $content): string
+    protected function excerpt(array $content, array $slots): string
     {
-        foreach (['hero' => 'subheading', 'prose' => 'html', 'features' => 'intro', 'card_grid' => 'intro', 'steps' => 'intro', 'cta' => 'text', 'contact' => 'html', 'faq' => 'heading'] as $block => $field) {
-            $text = trim(preg_replace('/\s+/u', ' ', strip_tags((string) ($content[$block][$field] ?? ''))));
-            if (mb_strlen($text) >= 70) {
-                return SeoHead::limit($text, 155);
+        $fields = ['hero' => 'subheading', 'prose' => 'html', 'features' => 'intro', 'card_grid' => 'intro', 'entry_list' => 'intro', 'steps' => 'intro', 'cta' => 'text', 'contact' => 'html', 'legal' => 'html', 'faq' => 'heading'];
+        foreach ($fields as $block => $field) {
+            foreach (array_keys($slots, $block, true) as $key) {
+                $text = trim(preg_replace('/\s+/u', ' ', strip_tags((string) ($content[$key][$field] ?? ''))));
+                if (mb_strlen($text) >= 70) {
+                    return SeoHead::limit($text, 155);
+                }
             }
         }
 
@@ -527,7 +640,10 @@ class SiteGenerator
      */
     protected function homeHeading(Site $site, array $content): array
     {
-        $block = isset($content['hero']) || ! isset($content['banner']) ? 'hero' : 'banner';
+        $slots = $this->slots($site, 'home');
+        $hero = array_search('hero', $slots, true) ?: 'hero';
+        $banner = array_search('banner', $slots, true) ?: 'banner';
+        $block = isset($content[$hero]) || ! isset($content[$banner]) ? $hero : $banner;
         $heading = (string) ($content[$block]['heading'] ?? '');
         if ($heading === '' || SeoRules::seasonal($heading) || ! SeoRules::mentions($heading, $site->product_name)) {
             if ($heading !== '' && empty($content[$block]['eyebrow']) && mb_strlen($heading) <= 40) {
@@ -546,6 +662,9 @@ class SiteGenerator
             return 'none';
         }
         $this->referenceData ??= rescue(fn () => $this->reference->analyze($site->reference_url), null);
+        if ($this->referencePages !== []) {
+            return SiteDataGenerator::digest($this->referenceSources(), 12_000);
+        }
         $content = trim((string) ($this->referenceData['content'] ?? ''));
 
         return $content !== '' ? Str::limit($content, 12_000) : 'none';
@@ -691,16 +810,16 @@ class SiteGenerator
     }
 
     /** Keep only known block fields; sanitize prose HTML; legal fallback text. */
-    protected function cleanBlocks(array $blocks, string $type, Site $site): array
+    protected function cleanBlocks(array $blocks, string $type, Site $site, ?string $facts = null): array
     {
         $lang = $site->language();
-        $facts = $this->brandContext($site);
+        $facts ??= $this->facts($site);
         // Unverifiable promises (money, speed, superlatives) are dropped sentence by sentence.
         $str = fn ($v, $len = 300) => is_string($v) ? (Str::limit(SeoRules::stripClaims(trim(strip_tags($v)), $facts), $len, '') ?: null) : null;
         $label = fn ($v) => ($l = $str($v, 40)) !== null && ! SeoRules::accountLabel($l) ? $l : null;
         $out = [];
 
-        foreach (['hero', 'features', 'faq', 'cta', 'prose', 'gallery', 'specs', 'article_list', 'contact', 'legal', 'banner', 'card_grid', 'steps', 'stats', 'notice', 'download'] as $block) {
+        foreach ($this->slots($site, $type) as $block => $kind) {
             $b = is_array($blocks[$block] ?? null) ? $blocks[$block] : [];
             $clean = array_filter([
                 'heading' => $str($b['heading'] ?? null, 120),
@@ -730,8 +849,11 @@ class SiteGenerator
             }
         }
 
-        if (in_array($type, ['privacy', 'terms'], true) && empty($out['legal']['html'])) {
-            $out['legal']['html'] = __("theme.{$type}_html", ['site' => e($site->name), 'product' => e($site->product_name)], $lang);
+        // Legal pages without copy get the generic text of their kind.
+        foreach (array_keys($this->slots($site, $type), 'legal', true) as $key) {
+            if (empty($out[$key]['html']) && Lang::has("theme.{$type}_html", $lang)) {
+                $out[$key]['html'] = __("theme.{$type}_html", ['site' => e($site->name), 'product' => e($site->product_name)], $lang);
+            }
         }
 
         return $out;

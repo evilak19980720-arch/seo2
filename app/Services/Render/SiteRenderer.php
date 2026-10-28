@@ -5,6 +5,7 @@ namespace App\Services\Render;
 use App\Enums\ArticleStatus;
 use App\Enums\ArticleType;
 use App\Models\Article;
+use App\Models\Entry;
 use App\Models\Page;
 use App\Models\Site;
 use App\Services\Content\SeoRules;
@@ -51,6 +52,15 @@ class SiteRenderer
             return true;
         }
         $blocks = collect($this->ctx->blocks($page->type))->pluck('block');
+        // A page made only of lists of site data with no data to list is empty.
+        if ($page->type !== 'home' && $blocks->isNotEmpty() && $blocks->diff(['entry_list', 'game_lobby', 'cta', 'notice'])->isEmpty()) {
+            $collections = collect($this->ctx->blocks($page->type))
+                ->map(fn ($e) => $e['block'] === 'game_lobby' ? 'game' : ($this->ctx->section($page->type, $e['key'] ?? null)['collection'] ?? null))
+                ->filter()->unique();
+            if ($collections->every(fn ($c) => $this->ctx->entries($c)->isEmpty())) {
+                return true;
+            }
+        }
         if ($page->type === 'home' || ! $blocks->contains('article_list') || $blocks->diff(['article_list', 'cta', 'download', 'notice'])->isNotEmpty()) {
             return false;
         }
@@ -117,13 +127,18 @@ class SiteRenderer
             : $this->listedArticles()->take(6);
 
         $content = $page->content ?? [];
-        if (filled($content['prose']['html'] ?? null)) {
-            // Contextual links from the page copy to the site's other pages and posts.
-            $targets = array_filter($this->linkTargets(), fn ($href) => trim($href, '/') !== trim($page->slug, '/'));
-            [$content['prose']['html']] = InternalLinker::link($content['prose']['html'], $targets, 4);
+        // Contextual links from the page copy to the site's other pages and posts (4 per page).
+        $targets = array_filter($this->linkTargets(), fn ($href) => trim($href, '/') !== trim($page->slug, '/'));
+        $budget = 4;
+        foreach ($this->slots($page->type) as $key => $block) {
+            if ($block === 'prose' && $budget > 0 && filled($content[$key]['html'] ?? null)) {
+                [$content[$key]['html'], $linked] = InternalLinker::link($content[$key]['html'], $targets, $budget);
+                $budget -= count($linked);
+                $targets = array_diff_key($targets, array_flip($linked));
+            }
         }
         $body = $this->renderBlocks($page->type, $content, $page, ['articles' => $listed]);
-        if (! $isHome && ! in_array($page->type, ['privacy', 'terms'], true)) {
+        if (! $isHome && ! in_array($page->type, $ctx->legalTypes(), true)) {
             $body .= View::make('theme.partials.see-also', ['ctx' => $ctx, 'page' => $page])->render();
         }
 
@@ -152,8 +167,11 @@ class SiteRenderer
     {
         $brand = $this->site->product_name;
         $candidates = [$page->meta_description];
-        foreach (['hero' => 'subheading', 'prose' => 'html', 'features' => 'intro', 'card_grid' => 'intro', 'steps' => 'intro', 'cta' => 'text', 'contact' => 'html', 'legal' => 'html'] as $block => $field) {
-            $candidates[] = $page->content[$block][$field] ?? null;
+        $fields = ['hero' => 'subheading', 'banner' => 'subheading', 'prose' => 'html', 'features' => 'intro', 'card_grid' => 'intro', 'entry_list' => 'intro', 'steps' => 'intro', 'cta' => 'text', 'contact' => 'html', 'legal' => 'html'];
+        foreach ($this->slots($page->type) as $key => $block) {
+            if (isset($fields[$block])) {
+                $candidates[] = $page->content[$key][$fields[$block]] ?? null;
+            }
         }
         array_push($candidates, $this->site->description, $this->ctx->brand->tagline, $this->ctx->brand->description);
         foreach ($candidates as $text) {
@@ -169,10 +187,11 @@ class SiteRenderer
     /** FAQ entries shown on a page (its own or the brand's), for FAQPage data. */
     protected function faqItems(Page $page): array
     {
-        if (! collect($this->ctx->blocks($page->type))->contains('block', 'faq')) {
+        $keys = array_keys($this->slots($page->type), 'faq', true);
+        if ($keys === []) {
             return [];
         }
-        $items = $page->content['faq']['items'] ?? $this->ctx->brand->faq ?? [];
+        $items = collect($keys)->flatMap(fn ($key) => $page->content[$key]['items'] ?? [])->all() ?: ($this->ctx->brand->faq ?? []);
 
         return collect($items)->filter(fn ($i) => filled($i['question'] ?? null) && filled($i['answer'] ?? null))->values()->all();
     }
@@ -255,8 +274,14 @@ class SiteRenderer
                 $targets[$phrase] = $this->ctx->href($other->path());
             }
         }
+        // Game, provider… names mentioned in the copy link to their detail pages.
+        foreach ($this->entryPages() as $entry) {
+            if (mb_strlen($entry->title) >= 4) {
+                $targets[mb_strtolower($entry->title)] ??= $this->ctx->href($this->ctx->entryPath($entry));
+            }
+        }
         foreach ($this->ctx->pages as $page) {
-            if (in_array($page->type, ['home', 'privacy', 'terms', 'contact'], true)) {
+            if ($page->type === 'home' || $page->type === 'contact' || in_array($page->type, $this->ctx->legalTypes(), true)) {
                 continue;
             }
             $targets[mb_strtolower($page->title)] ??= $this->ctx->href($page->slug);
@@ -281,24 +306,102 @@ class SiteRenderer
             ->values();
     }
 
+    /**
+     * Content slot => block of a page type. Fixed presets store content per
+     * block name; pool presets per section key (a page can have two FAQs).
+     *
+     * @return array<string, string>
+     */
+    public function slots(string $pageType): array
+    {
+        $slots = [];
+        foreach ($this->ctx->blocks($pageType) as $entry) {
+            $slots[$entry['key'] ?? $entry['block']] = $entry['block'];
+        }
+
+        return $slots;
+    }
+
     protected function renderBlocks(string $pageType, array $content, ?Page $page, array $extra = []): string
     {
         $html = '';
         $first = $page !== null || $pageType === 'blog';
         foreach ($this->ctx->blocks($pageType) as $entry) {
-            // Strips (notice, stats) never carry the page's <h1>; the next block does.
-            $isFirst = $first && ! in_array($entry['block'], ['notice', 'stats'], true);
-            $html .= View::make('theme.blocks.'.$entry['block'], [
+            $section = isset($entry['key']) ? $this->ctx->section($pageType, $entry['key']) : [];
+            $view = View::make('theme.blocks.'.$entry['block'], [
                 'ctx' => $this->ctx,
                 'variant' => $entry['variant'],
-                'data' => $content[$entry['block']] ?? [],
+                'data' => $content[$entry['key'] ?? $entry['block']] ?? [],
+                'section' => $section,
                 'page' => $page,
-                'isFirst' => $isFirst,
+                // Strips (notice, stats) never carry the page's <h1>; the next block does.
+                'isFirst' => $isFirst = $first && ! in_array($entry['block'], ['notice', 'stats'], true),
             ] + $extra)->render();
+            // A section with nothing to show (an empty list) leaves the <h1> to the next one.
+            if (trim($view) === '' && $isFirst) {
+                continue;
+            }
+            $html .= $view;
             $first = $first && ! $isFirst;
+        }
+        if ($first && $page !== null) {
+            $html = '<section class="section"><div class="container"><h1>'.e($page->title).'</h1></div></section>'.$html;
         }
 
         return $html;
+    }
+
+    /** Detail page of a game, provider, promotion, event, notice or news item. */
+    public function renderEntry(Entry $entry): string
+    {
+        $ctx = $this->ctx;
+        $path = (string) $ctx->entryPath($entry);
+        $ctx->beginPage($path);
+        $owner = $ctx->pages[$ctx->ownerType($entry->collection)];
+        $title = SeoRules::mentions($entry->title, $this->site->product_name) ? $entry->title : $entry->title.' – '.$this->site->product_name;
+        $description = collect([$entry->summary, ...array_map(fn ($s) => strip_tags((string) ($s['html'] ?? '')), (array) $entry->sections)])
+            ->map(fn ($t) => trim(preg_replace('/\s+/u', ' ', (string) $t)))->first(fn ($t) => mb_strlen($t) >= 70) ?? (string) $entry->summary;
+        $head = SeoHead::for($ctx, $path, SeoHead::limit($title, 60), SeoHead::limit($description, 155), false);
+        $image = $entry->image ? $ctx->image($entry->image, 1400) : null;
+        $head->image = $image ? $this->site->baseUrl().$image['src'] : $this->ogImage();
+        $head->preloadImage = $image['src'] ?? null;
+        $head->withWebPage($entry->updated_at)->withBreadcrumbs([
+            ['name' => $ctx->t('home'), 'url' => $ctx->url()],
+            ['name' => $owner->title, 'url' => $ctx->url($owner->slug)],
+            ['name' => SeoHead::limit($entry->title, 70), 'url' => $ctx->url($path)],
+        ]);
+        if ($entry->collection === 'game') {
+            $head->withEntry($entry, $path);
+        }
+
+        $html = View::make('theme.entry', [
+            'ctx' => $ctx, 'entry' => $entry, 'owner' => $owner, 'image' => $image,
+            'definition' => $this->site->typeConfig()['collections'][$entry->collection] ?? [],
+            'related' => $this->relatedEntries($entry),
+        ])->render();
+
+        return $this->layout($head, $html);
+    }
+
+    /** Same provider's games for a game, a provider's games, else the newest of the collection. */
+    public function relatedEntries(Entry $entry, int $limit = 6): Collection
+    {
+        $all = $this->ctx->allEntries()->where('id', '!=', $entry->id);
+        $same = fn (?string $a, ?string $b) => $a && $b && SeoRules::normalize($a) === SeoRules::normalize($b);
+
+        return match ($entry->collection) {
+            'game' => $all->where('collection', 'game')->filter(fn (Entry $e) => $same($e->get('provider'), $entry->get('provider')))
+                ->whenEmpty(fn () => $all->where('collection', 'game')->filter(fn (Entry $e) => array_intersect((array) $e->get('themes', []), (array) $entry->get('themes', []))))
+                ->take($limit)->values(),
+            'provider' => $all->where('collection', 'game')->filter(fn (Entry $e) => $same($e->get('provider'), $entry->title))->take(12)->values(),
+            default => $this->ctx->entries($entry->collection, 'latest')->where('id', '!=', $entry->id)->take(3)->values(),
+        };
+    }
+
+    /** Entries with a detail page on this site. */
+    public function entryPages(): Collection
+    {
+        return $this->ctx->allEntries()->filter(fn (Entry $e) => $this->ctx->entryPath($e) !== null)->values();
     }
 
     public function ogImageUrl(): ?string

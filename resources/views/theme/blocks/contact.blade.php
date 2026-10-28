@@ -1,6 +1,6 @@
 <section class="section contact">
 <div class="container prose">
-<h1>{{ $data['heading'] ?? $page?->title }}</h1>
+@if ($isFirst ?? true)<h1>{{ $data['heading'] ?? $page?->title }}</h1>@else<h2>{{ $data['heading'] ?? $ctx->t('page_titles.contact') }}</h2>@endif
 {!! $data['html'] ?? '' !!}
 <dl>
 @if ($ctx->brand->company_name)<div><dt>{{ $ctx->t('company') }}</dt><dd>{{ $ctx->brand->company_name }}</dd></div>@endif

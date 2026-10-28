@@ -9,7 +9,7 @@ class BrandProfile extends Model
 {
     protected $fillable = [
         'site_id', 'product_name', 'tagline', 'description', 'selling_points', 'specs', 'target_audience',
-        'use_cases', 'media', 'cta_links', 'faq', 'company_name', 'company_email', 'company_address', 'completeness',
+        'use_cases', 'media', 'cta_links', 'faq', 'company_name', 'company_email', 'company_address', 'license_info', 'certification_info', 'completeness',
         'localized', 'localized_hash',
     ];
 
@@ -93,6 +93,8 @@ class BrandProfile extends Model
             'Links: '.collect($this->cta_links ?? [])->map(fn ($l) => ($l['label'] ?? '').' '.($l['url'] ?? ''))->implode('; '),
             'FAQ: '.collect($this->faq ?? [])->map(fn ($f) => 'Q: '.($f['question'] ?? '').' A: '.($f['answer'] ?? ''))->implode(' | '),
             'Company: '.trim($this->company_name.' '.$this->company_email.' '.$this->company_address),
+            'Licence: '.$this->license_info,
+            'Testing / certification: '.$this->certification_info,
         ];
 
         return implode("\n", array_filter($lines, fn ($l) => ! str_ends_with(trim($l), ':')));

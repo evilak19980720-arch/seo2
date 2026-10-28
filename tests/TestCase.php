@@ -42,7 +42,7 @@ abstract class TestCase extends BaseTestCase
         $domain = Domain::create(['name' => $attrs['domain'] ?? 'jogo-'.uniqid().'.com.br', 'cf_zone_id' => 'zone-'.uniqid(), 'cf_status' => 'active']);
         unset($attrs['domain']);
         $site = Site::create($attrs + [
-            'domain_id' => $domain->id, 'site_type' => 'game', 'product_name' => 'Galaxy Run', 'name' => 'Galaxy Run',
+            'domain_id' => $domain->id, 'site_type' => 'game_basic', 'product_name' => 'Galaxy Run', 'name' => 'Galaxy Run',
             'locale' => 'pt-BR', 'target_country' => 'BR', 'status' => 'draft',
         ]);
         $site->brandProfile()->create($brand + [
@@ -78,6 +78,9 @@ abstract class TestCase extends BaseTestCase
                     'radius' => 'lg', 'density' => 'normal', 'shadow' => 'soft', 'nav' => 'bar', 'footer' => 'dark',
                     'pages' => ['home' => [['block' => 'hero', 'variant' => 'split'], ['block' => 'nonsense'], ['block' => 'faq', 'variant' => 'zzz']]],
                 ], 'custom_css' => '@import url(https://evil.test/x.css);'],
+                str_contains($text, 'List the site data') => $overrides['site_data'] ?? [],
+                str_contains($text, 'Write the detail pages') => $overrides['entry_content'] ?? ['items' => []],
+                str_contains($text, 'Write the core pages') && isset($overrides['pages']) => ['pages' => $overrides['pages']],
                 str_contains($text, 'Write the core pages') => ['pages' => [
                     'product' => ['slug' => 'Sobre o Jogo!', 'title' => 'Sobre o jogo', 'meta_title' => 'Sobre Galaxy Run', 'meta_description' => 'Tudo sobre Galaxy Run', 'blocks' => ['hero' => ['heading' => 'Galaxy Run', 'subheading' => 'Corrida espacial']]],
                     'guide' => ['slug' => 'guia/como-jogar', 'title' => 'Como jogar', 'blocks' => ['prose' => ['html' => '<h2>Controles</h2><p>Deslize para desviar.</p><script>x()</script>']]],

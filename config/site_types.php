@@ -12,8 +12,12 @@ $legal = [
 ];
 
 return [
-    'game' => [
-        'label' => '游戏品牌站',
+    // Full game site: a pool of sections combined per site (config/game_site.php).
+    'game' => require __DIR__.'/game_site.php',
+
+    // The earlier fixed game preset, kept for sites created with it.
+    'game_basic' => [
+        'label' => '游戏品牌站（简版）',
         'schema' => 'VideoGame',
         // Age / play-responsibly line in the footer.
         'responsible_notice' => true,

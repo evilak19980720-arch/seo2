@@ -16,7 +16,7 @@ class PromptSeeder extends Seeder
     public const SYSTEM = 'You are a senior content strategist and SEO editor for the official website of {{product_name}} ({{site_type}}). Write natively in {{language}} for readers in {{country}}; never write in another language and never translate from another language. The BRAND PROFILE is the only source of facts: never invent features, numbers, prices, awards, reviews, release dates or company details that are not in it. Always answer with a single JSON object.';
 
     /** Templates revised after the first release ship as a new version; the highest active version wins. */
-    public const VERSIONS = [PromptType::DesignConfig->value => 4, PromptType::PageContent->value => 5, PromptType::SiteMeta->value => 2];
+    public const VERSIONS = [PromptType::DesignConfig->value => 4, PromptType::PageContent->value => 6, PromptType::SiteMeta->value => 2];
 
     public function run(): void
     {
@@ -99,18 +99,20 @@ TXT,
 BRAND PROFILE:
 {{brand}}
 
-Write the core pages of the official site of {{product_name}}. Page types with their label hint, default slug and the blocks the design uses:
+Write the core pages of the official site of {{product_name}}. Page types with their label hint, default slug and the blocks the design uses (or, for sectioned pages, "sections": section key => {block, topic}):
 {{pages}}
+
+SITE FEATURES: {{site_features}}
 
 REFERENCE SITE CONTENT ("none" if not used):
 {{reference_content}}
-When reference content is given, use it as the model for topics, section ideas, page structure and level of detail, and rewrite everything originally in {{language}}: new wording, never copy a sentence or more than 6 words in a row; replace the reference's brand, product and company names with {{product_name}}; claims about {{product_name}} itself still come only from the brand profile.
+When reference content is given, use it as the model for topics, section ideas, page structure and level of detail, and rewrite everything originally in {{language}}: new wording, never copy a sentence or more than 6 words in a row; replace the reference's brand, product and company names with {{product_name}}. Facts (games, providers, promotion and event amounts, dates, requirements and terms) may come from the brand profile or the reference content, exactly as stated there; never invent others.
 
 SEO rules for every page:
 - The home hero heading (the page's h1) names {{product_name}} and what it is; never a season, holiday, event or promotion headline.
 - When a page has "min_words", its blocks together must reach that many words of useful, specific copy. When a page has "feedback", fix exactly that.
-- No figures, prices, bonuses, percentages, payout/withdrawal times, rankings or superlatives ("best", "#1", "leading", "guaranteed") unless the brand profile states them.
-- No login, sign-up, register or account wording in any label or text: the site has no accounts.
+- No figures, prices, bonuses, percentages, payout/withdrawal times, rankings or superlatives ("best", "#1", "leading", "guaranteed") unless the brand profile or the reference content states them.
+- Never describe a feature the site does not have (see SITE FEATURES): without accounts no login, sign-up, register or account wording; without payments nothing about deposits, withdrawals or payment methods; licences and certifications only as stated in the brand profile.
 - Each page covers its own topic: never repeat another page's title or copy; titles of different pages must not overlap.
 - meta_title: page topic + {{product_name}}, max 60 chars; meta_description: 120-155 chars summarising this page.
 
@@ -128,7 +130,9 @@ For every page type return a URL slug in {{language}} (lowercase, hyphens, keywo
 - gallery / specs / article_list: heading, intro
 - contact: heading, html (short intro)
 - legal: html (privacy policy / terms appropriate for {{country}}, e.g. LGPD for Brazil; generic, no invented company data)
-Return JSON: {"pages": {"<type>": {"slug": "", "title": "", "meta_title": "", "meta_description": "", "blocks": {"<block>": {...}}}}}
+- entry_list / game_lobby / html_sitemap: heading, intro (one or two sentences introducing the list; the items come from the site data)
+For sectioned pages, "blocks" is keyed by the section keys (not block names); each section gets the fields of its block and a heading about its topic, and min_words counts all sections together.
+Return JSON: {"pages": {"<type>": {"slug": "", "title": "", "meta_title": "", "meta_description": "", "blocks": {"<block or section key>": {...}}}}}
 TXT,
             PromptType::ArticleGenerate->value => <<<'TXT'
 BRAND PROFILE:
@@ -178,6 +182,48 @@ PROFILE JSON:
 {{profile}}
 
 Return the same JSON structure.
+TXT,
+            PromptType::SiteData->value => <<<'TXT'
+BRAND PROFILE:
+{{brand}}
+
+REFERENCE SITE ({{reference_url}}; "none" if there is no reference). Its pages, then the image tiles found on them (name | image | link):
+{{reference}}
+
+List the site data of the official site of {{product_name}}, written in {{language}}, for these collections: {{collections}}.
+
+Rules:
+- Take the items from the sources above: the games, providers, promotions, events, announcements and news that the reference site or the brand profile shows. Keep the real names of games and providers.
+- Keep amounts, percentages, dates, requirements and terms exactly as the sources state them. Never invent an item, a figure, a date, a licence, a winner or a result; leave a field "" (or []) when the sources do not give it.
+- Replace the reference's own brand and company names with {{product_name}}.
+- summary: one or two sentences in your own words (never copy more than 6 words in a row).
+- image: the exact image URL of the tile whose name matches the item, else "".
+- slug: lowercase ASCII words with hyphens, unique per collection.
+- Dates as YYYY-MM-DD. A collection the sources say nothing about gets [].
+- Site features: {{site_features}}. Nothing about accounts or payments the site does not have.
+
+Fields per collection:
+- game: title, slug, summary, image, provider, themes [], mechanics [], tags (any of "hot", "new", "classic"), rtp, volatility, max_win, paylines, reels, min_bet, max_bet, release_date
+- provider: title, slug, summary, image, country, founded
+- promotion: title, slug, summary, image, tags (any of "new_user", "regular", "festival", "featured"), reward, requirement, starts_at, ends_at, status ("upcoming"|"ongoing"|"ended"|"")
+- event: title, slug, summary, image, tags, reward, requirement, starts_at, ends_at, status
+- notice: title, slug, summary, date, tags (any of "maintenance", "game_maintenance", "rules")
+- news: title, slug, summary, image, date, tags (any of "brand", "new_games", "features", "updates", "partners")
+At most {{max_items}} items per collection.
+Return JSON: {"<collection>": [{...}]}
+TXT,
+            PromptType::EntryContent->value => <<<'TXT'
+BRAND PROFILE:
+{{brand}}
+
+REFERENCE CONTENT about these items ("none" if there is none):
+{{reference}}
+
+Write the detail pages of these items of the official site of {{product_name}} in {{language}}. Each item lists its known data and the sections to write (key => topic):
+{{items}}
+
+Rules: every section is {"heading": "<h2 text about the topic, in {{language}}>", "html": "<p>…</p> (80-220 words, semantic HTML: <p>, <ul>, <h3>)"}; useful and specific to that item; facts only from the item data, the reference content or the brand profile (amounts, dates and terms exactly as stated); never invent RTP, payouts, winners or results; skip a section (leave it out) when there is nothing true to say; your own wording, never more than 6 words copied in a row; site features: {{site_features}}.
+Return JSON: {"items": {"<slug>": {"<section key>": {"heading": "", "html": ""}}}}
 TXT,
         ];
     }

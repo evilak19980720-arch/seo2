@@ -26,6 +26,10 @@ return [
         'prose' => ['default'],
         'contact' => ['default'],
         'legal' => ['default'],
+        // Site data (games, promotions…) and their tools.
+        'entry_list' => ['cards', 'list', 'compact'],
+        'game_lobby' => ['grid', 'compact'],
+        'html_sitemap' => ['default'],
     ],
 
     // Blocks every page gets from the layout, not from the page composition.

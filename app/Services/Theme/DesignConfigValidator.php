@@ -108,11 +108,29 @@ class DesignConfigValidator
             'extra_pages' => $extraPages,
             'pages' => [],
         ];
+        if (! empty($siteTypeConfig['sectioned'])) {
+            // Pool presets decide their menu: main pages in the header, the rest under their parent or in the footer.
+            $result['menu'] = $this->sectionedMenu($siteTypeConfig);
+            $noDropdown = is_array($config['navigation'] ?? null) && ($config['navigation']['submenu'] ?? null) === [];
+            $config['navigation'] = (array) ($config['navigation'] ?? []);
+            $config['navigation']['submenu'] = $noDropdown ? [] : $this->sectionedSubmenu($siteTypeConfig, $result['menu']);
+        }
         $result['navigation'] = $this->navigation($config['navigation'] ?? [], $result['menu'], $siteTypeConfig, $result['nav']);
 
         // Page compositions
         $pageTypes = array_map(fn ($p) => $p['blocks'], $siteTypeConfig['pages']) + self::SYSTEM_PAGES;
         foreach ($pageTypes as $pageType => $defaultBlocks) {
+            if (isset($siteTypeConfig['pages'][$pageType]['sections'])) {
+                // Sectioned pages: one block per chosen section, in order; the model only picks variants.
+                $variants = collect((array) ($config['pages'][$pageType] ?? []))->filter(fn ($e) => is_array($e) && isset($e['block']))->mapWithKeys(fn ($e) => [$e['block'] => $e['variant'] ?? null]);
+                $result['pages'][$pageType] = array_map(fn ($section) => [
+                    'block' => $section['block'],
+                    'variant' => $this->variant($section['block'], $section['variant'] ?? $variants[$section['block']] ?? null),
+                    'key' => $section['key'],
+                ], $siteTypeConfig['pages'][$pageType]['sections']);
+
+                continue;
+            }
             $blocks = [];
             foreach ((array) ($config['pages'][$pageType] ?? []) as $entry) {
                 $block = is_array($entry) ? ($entry['block'] ?? null) : $entry;
@@ -138,6 +156,29 @@ class DesignConfigValidator
         }
 
         return $result;
+    }
+
+    /** Main-nav pages of a pool preset, in pool order, capped. */
+    protected function sectionedMenu(array $siteTypeConfig): array
+    {
+        $main = array_keys(array_filter($siteTypeConfig['pages'], fn ($p) => ($p['nav'] ?? null) === 'main'));
+        $max = (int) ($siteTypeConfig['main_nav_max'] ?? 6);
+        // "help" (the parent of the secondary pages) is kept as the last item.
+        $help = in_array('help', $main, true) ? ['help'] : [];
+
+        return array_values(array_merge(array_slice(array_diff($main, $help), 0, $max - count($help)), $help));
+    }
+
+    protected function sectionedSubmenu(array $siteTypeConfig, array $menu): array
+    {
+        $submenu = [];
+        foreach ($siteTypeConfig['pages'] as $type => $page) {
+            if (($page['nav'] ?? null) === 'secondary' && in_array($page['parent'] ?? null, $menu, true)) {
+                $submenu[$page['parent']][] = $type;
+            }
+        }
+
+        return $submenu;
     }
 
     /** Header menu: known page types (plus "blog") in the given order, no duplicates. */

@@ -72,6 +72,28 @@ class ReferenceImageImporter
         return $added;
     }
 
+    /**
+     * One image (a game tile, a promotion banner) stored on the media disk,
+     * or null when it is not a usable raster image. Tiles may be small squares.
+     */
+    public function store(Site $site, string $url, int $minWidth = 120, int $minHeight = 90): ?string
+    {
+        $binary = $this->download($url);
+        $info = $binary !== null ? @getimagesizefromstring($binary) : false;
+        if (! $info || $info[0] < $minWidth || $info[1] < $minHeight || ! in_array($info[2], [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_WEBP], true)) {
+            return null;
+        }
+        $ext = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_WEBP => 'webp'][$info[2]];
+        $path = "brand/ref-{$site->id}/".md5($binary).".{$ext}";
+        try {
+            Storage::disk(Media::DISK)->exists($path) || Storage::disk(Media::DISK)->put($path, $binary);
+        } catch (Throwable) {
+            return null;
+        }
+
+        return $path;
+    }
+
     protected function download(string $url): ?string
     {
         try {

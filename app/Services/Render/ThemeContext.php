@@ -3,9 +3,11 @@
 namespace App\Services\Render;
 
 use App\Models\BrandProfile;
+use App\Models\Entry;
 use App\Models\Page;
 use App\Models\Site;
 use App\Services\Content\SeoRules;
+use App\Services\Sites\SiteStructure;
 use App\Services\Theme\DefaultDesign;
 use App\Services\Theme\DesignConfigValidator;
 use Illuminate\Support\Collection;
@@ -35,11 +37,18 @@ class ThemeContext
     /** Media already shown on the current page: an image appears once per page. */
     protected array $usedImages = [];
 
+    /** Entries already listed on the current page, so sections show different items where they can. */
+    protected array $shownEntries = [];
+
+    protected ?Collection $entryCache = null;
+
     public function __construct(public readonly Site $site, public readonly MediaPublisher $media)
     {
         $this->brand = $site->brandProfile?->forDisplay() ?? new BrandProfile(['product_name' => $site->product_name]);
         $this->lang = $site->language();
-        $this->pages = $site->pages()->get()->keyBy('type');
+        // Pages of types the site no longer has wait for the next generation to be removed.
+        $types = $site->typeConfig()['pages'];
+        $this->pages = $site->pages()->get()->filter(fn (Page $p) => isset($types[$p->type]))->keyBy('type');
 
         $config = $site->design_config ?: DefaultDesign::make($site->domain_id ?? $site->id, $site->typeConfig());
         $this->design = (new DesignConfigValidator)->validate($config, $site->typeConfig());
@@ -50,6 +59,7 @@ class ThemeContext
     {
         $this->currentPath = trim($path, '/');
         $this->usedImages = [];
+        $this->shownEntries = [];
     }
 
     /** html lang / og:locale: the language with the target market, e.g. en + PH = en-PH. */
@@ -106,7 +116,7 @@ class ThemeContext
     public function navLinks(bool $all = false): array
     {
         $available = collect(array_keys($this->site->typeConfig()['pages']))
-            ->reject(fn ($type) => in_array($type, ['home', 'privacy', 'terms'], true) || ! $this->pages->has($type))
+            ->reject(fn ($type) => $type === 'home' || in_array($type, $this->legalTypes(), true) || ! $this->pages->has($type))
             ->push('blog')->reject(fn ($type) => in_array($type, $this->hidden, true))->values();
         $menu = collect($this->design['menu'] ?? [])->intersect($available)->values();
         $submenu = collect($this->design['navigation']['submenu'] ?? [])->map(fn ($children) => collect($children)->intersect($available)->values());
@@ -189,7 +199,7 @@ class ThemeContext
     /** Most useful internal page to send a visitor to when the brand has no CTA link. */
     public function fallbackCta(): ?array
     {
-        foreach (['product', 'guide', 'faq', 'about', 'contact'] as $type) {
+        foreach (['product', 'games', 'guide', 'help', 'faq', 'about', 'contact'] as $type) {
             $page = $this->pages->get($type);
             if ($page && trim($page->slug, '/') !== $this->currentPath && ! in_array($type, $this->hidden, true)) {
                 return ['label' => $this->t('read_more'), 'url' => $this->href($page->slug)];
@@ -199,10 +209,19 @@ class ThemeContext
         return null;
     }
 
+    /** Page types listed under "Legal" in the footer instead of the page list. */
+    public function legalTypes(): array
+    {
+        $pages = $this->site->typeConfig()['pages'];
+        $legal = array_keys(array_filter($pages, fn ($p) => ($p['nav'] ?? null) === 'legal'));
+
+        return $legal !== [] ? $legal : ['privacy', 'terms'];
+    }
+
     /** @return array<int, array{label: string, href: string}> */
     public function legalLinks(): array
     {
-        return collect(['privacy', 'terms'])
+        return collect($this->legalTypes())
             ->filter(fn ($t) => $this->pages->has($t))
             ->map(fn ($t) => ['label' => $this->pages[$t]->title, 'href' => $this->href($this->pages[$t]->slug)])
             ->values()->all();
@@ -261,5 +280,83 @@ class ThemeContext
     public function logo(): ?array
     {
         return $this->site->logo_path ? $this->image($this->site->logo_path, 160) : null;
+    }
+
+    /** All entries of the site, in their sort order. */
+    public function allEntries(): Collection
+    {
+        return $this->entryCache ??= $this->site->exists
+            ? $this->site->entries()->orderBy('sort')->orderBy('id')->get()
+            : collect();
+    }
+
+    /**
+     * Entries of a collection matching a section filter: all, hot, new,
+     * classic, featured, active, upcoming, ongoing, ended, latest or tag:x.
+     * "hot" and "new" fall back to sort order and date when nothing is tagged.
+     */
+    public function entries(string $collection, string $filter = 'all', ?int $limit = null): Collection
+    {
+        $items = $this->allEntries()->where('collection', $collection)->values();
+        $byDate = fn (Collection $c) => $c->sortByDesc(fn (Entry $e) => $e->date()?->timestamp ?? 0)->values();
+        $tagged = fn (string $tag) => $items->filter(fn (Entry $e) => in_array($tag, $e->tags(), true))->values();
+        $live = fn () => $items->reject(fn (Entry $e) => $e->status() === 'ended');
+
+        $result = match (true) {
+            $filter === 'hot' => $tagged('hot')->whenEmpty(fn () => $items),
+            $filter === 'new' => $tagged('new')->whenEmpty(fn () => $byDate($items)),
+            $filter === 'featured' => $items->filter(fn (Entry $e) => $e->get('featured') || in_array('featured', $e->tags(), true))->whenEmpty($live),
+            $filter === 'active' => $live(),
+            $filter === 'ongoing' => $items->filter(fn (Entry $e) => in_array($e->status(), ['ongoing', null], true)),
+            in_array($filter, ['upcoming', 'ended'], true) => $items->filter(fn (Entry $e) => $e->status() === $filter),
+            $filter === 'latest' => $byDate($items),
+            str_starts_with($filter, 'tag:') => $tagged(substr($filter, 4)),
+            $filter === 'classic' => $tagged('classic'),
+            default => in_array($collection, ['news', 'notice'], true) ? $byDate($items) : $items,
+        };
+
+        return ($limit ? $result->take($limit) : $result)->values();
+    }
+
+    /** Like entries(), preferring items no other section of this page listed yet. */
+    public function pickEntries(string $collection, string $filter, int $limit): Collection
+    {
+        $all = $this->entries($collection, $filter);
+        $fresh = $all->reject(fn (Entry $e) => isset($this->shownEntries[$e->id]));
+        $chosen = ($fresh->count() >= min($limit, 3) ? $fresh : $all)->take($limit)->values();
+        foreach ($chosen as $entry) {
+            $this->shownEntries[$entry->id] = true;
+        }
+
+        return $chosen;
+    }
+
+    /** Page type hosting a collection's detail pages, when the site has it. */
+    public function ownerType(string $collection): ?string
+    {
+        $owner = SiteStructure::owner($this->site->typeConfig(), $collection);
+
+        return $owner && $this->pages->has($owner) ? $owner : null;
+    }
+
+    /** "{owner page slug}/{entry slug}", or null when the site has no page for the collection. */
+    public function entryPath(Entry $entry): ?string
+    {
+        $owner = $this->ownerType($entry->collection);
+
+        return $owner ? trim($this->pages[$owner]->slug.'/'.$entry->slug, '/') : null;
+    }
+
+    public function entryHref(Entry $entry): ?string
+    {
+        $path = $this->entryPath($entry);
+
+        return $path !== null ? $this->href($path) : null;
+    }
+
+    /** Definition of a page section (collection, filter, link…) from the site type. */
+    public function section(string $pageType, ?string $key): array
+    {
+        return collect($this->site->typeConfig()['pages'][$pageType]['sections'] ?? [])->firstWhere('key', $key) ?? [];
     }
 }

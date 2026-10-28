@@ -3,6 +3,7 @@
 namespace App\Services\Render;
 
 use App\Models\Article;
+use App\Models\Entry;
 use Illuminate\Support\Carbon;
 
 /**
@@ -106,6 +107,24 @@ class SeoHead
             ]);
         }
         $this->schema[] = $node;
+
+        return $this;
+    }
+
+    /** VideoGame node of a game detail page, from the entry's known facts only. */
+    public function withEntry(Entry $entry, string $path): self
+    {
+        $this->schema[] = array_filter([
+            '@type' => 'VideoGame',
+            'name' => $entry->title,
+            'url' => $this->ctx->url($path),
+            'description' => $entry->summary ? self::limit($entry->summary, 300) : null,
+            'image' => $this->image,
+            'genre' => array_values(array_filter((array) $entry->get('themes', []), 'is_string')) ?: null,
+            'author' => filled($entry->get('provider')) ? ['@type' => 'Organization', 'name' => (string) $entry->get('provider')] : null,
+            'inLanguage' => $this->ctx->seoLocale(),
+            'publisher' => ['@id' => $this->ctx->site->url().'#organization'],
+        ]);
 
         return $this;
     }

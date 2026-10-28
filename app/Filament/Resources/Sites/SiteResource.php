@@ -7,6 +7,7 @@ use App\Filament\Resources\Sites\Pages\CreateSite;
 use App\Filament\Resources\Sites\Pages\EditSite;
 use App\Filament\Resources\Sites\Pages\ListSites;
 use App\Filament\Resources\Sites\RelationManagers\DesignVersionsRelationManager;
+use App\Filament\Resources\Sites\RelationManagers\EntriesRelationManager;
 use App\Filament\Resources\Sites\RelationManagers\GenerationTasksRelationManager;
 use App\Filament\Resources\Sites\RelationManagers\KeywordsRelationManager;
 use App\Filament\Resources\Sites\RelationManagers\PagesRelationManager;
@@ -190,6 +191,7 @@ class SiteResource extends Resource
         return [
             KeywordsRelationManager::class,
             PagesRelationManager::class,
+            EntriesRelationManager::class,
             GenerationTasksRelationManager::class,
             DesignVersionsRelationManager::class,
         ];

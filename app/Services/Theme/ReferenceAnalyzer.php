@@ -57,6 +57,8 @@ class ReferenceAnalyzer
         $xpath = new DOMXPath($dom);
 
         $css = $this->styles($xpath, $url);
+        // Links before pruning: dropdown menus are often hidden until hovered.
+        $links = $this->links($xpath, $url);
         $this->prune($xpath);
         $content = $this->content($xpath);
 
@@ -71,7 +73,156 @@ class ReferenceAnalyzer
             'structure' => $this->structure($xpath),
             'content' => $content,
             'images' => $this->images($xpath, $css, $url),
+            'links' => $links,
+            'cards' => $this->cards($xpath, $url),
         ];
+    }
+
+    /**
+     * Read the reference's inner pages (menu links first, then other links
+     * on the home page), so site data (games, promotions, events, notices…)
+     * comes from the whole site, not only its home page. Stops at $max pages
+     * or after $seconds.
+     *
+     * @return array<int, array{url: string, label: string, title: ?string, content: string, cards: array<int, array{name: string, image: ?string, url: ?string}>}>
+     */
+    public function crawl(array $home, int $max = 12, int $seconds = 120): array
+    {
+        $saved = $this->diagnostics;
+        $started = microtime(true);
+        $seen = [rtrim((string) $home['url'], '/') => true];
+        $pages = [];
+        foreach ($home['links'] ?? [] as $link) {
+            if (count($pages) >= $max || microtime(true) - $started > $seconds) {
+                break;
+            }
+            $key = rtrim($link['url'], '/');
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $html = rescue(fn () => $this->page($link['url']), null, false);
+            if ($html === null) {
+                continue;
+            }
+            $dom = new DOMDocument;
+            @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+            $xpath = new DOMXPath($dom);
+            $this->prune($xpath);
+            $content = $this->content($xpath);
+            $cards = $this->cards($xpath, $link['url']);
+            // Same text as the home page (SPA shell, redirect to home): nothing new.
+            if (mb_strlen($content) < 80 && $cards === []) {
+                continue;
+            }
+            $pages[] = [
+                'url' => $link['url'],
+                'label' => $link['text'],
+                'title' => trim((string) $xpath->evaluate('string(//title)')) ?: null,
+                'content' => Str::limit($content, 6000, ''),
+                'cards' => $cards,
+            ];
+        }
+        $this->diagnostics = $saved;
+
+        return $pages;
+    }
+
+    /**
+     * Same-site links of a page, menu links first: no anchors, files,
+     * account or cart pages. Hash routes of single-page apps ("#/promo") are
+     * kept as distinct pages.
+     *
+     * @return array<int, array{url: string, text: string}>
+     */
+    protected function links(DOMXPath $xpath, string $base): array
+    {
+        $bare = fn (?string $host) => preg_replace('/^www\./', '', strtolower((string) $host));
+        $host = $bare(parse_url($base, PHP_URL_HOST));
+        $self = rtrim(preg_replace('/#.*$/', '', $base), '/');
+        $out = [];
+        foreach (['//nav//a | //header//a', '//body//a'] as $query) {
+            foreach ($xpath->query($query) as $a) {
+                $href = trim($a->getAttribute('href'));
+                if ($href === '' || preg_match('/^(javascript|mailto|tel|sms|whatsapp):/i', $href) || preg_match('/^#(?![\/!])/', $href)) {
+                    continue;
+                }
+                $url = $this->absolute($href, $base);
+                [$path, $fragment] = array_pad(explode('#', $url, 2), 2, null);
+                $url = $fragment !== null && preg_match('#^[/!]#', $fragment) ? $path.'#'.$fragment : $path;
+                $parts = parse_url($url);
+                if (! isset($parts['host']) || $bare($parts['host']) !== $host
+                    || preg_match('/\.(jpe?g|png|gif|webp|avif|svg|ico|pdf|zip|rar|apk|ipa|exe|dmg|css|js|xml|json|txt|mp4|mp3)(\?|$)/i', $parts['path'] ?? '')
+                    || preg_match('#/(log-?in|log-?out|sign-?(in|up)|register|cadastr\w*|account|minha-conta|cart|checkout|deposit\w*|withdraw\w*|saque|wp-admin|admin)(/|$)#i', ($parts['path'] ?? '').'/'.($parts['fragment'] ?? ''))) {
+                    continue;
+                }
+                $text = trim(preg_replace('/\s+/u', ' ', $a->textContent)) ?: trim($a->getAttribute('title').' '.$a->getAttribute('aria-label'));
+                if ($text !== '' && preg_match(self::ACCOUNT_PATTERN, $text)) {
+                    continue;
+                }
+                $key = rtrim($url, '/');
+                if ($key === $self || isset($out[$key])) {
+                    continue;
+                }
+                $out[$key] = ['url' => $url, 'text' => Str::limit($text, 60, '')];
+            }
+        }
+
+        return array_values(array_slice($out, 0, 80));
+    }
+
+    /**
+     * Image tiles of a page (game cards, promotion banners, provider logos):
+     * the image with the item's name, from its alt/title or the tile's own
+     * short text, and the tile's link.
+     *
+     * @return array<int, array{name: string, image: ?string, url: ?string}>
+     */
+    public function cards(DOMXPath $xpath, string $base): array
+    {
+        $cards = [];
+        foreach ($xpath->query('//body//img | //body//*[@data-bg or @data-background or @data-src][not(self::img)]') as $node) {
+            $src = null;
+            foreach (['data-src', 'data-original', 'data-lazy-src', 'data-lazy', 'data-bg', 'data-background', 'src'] as $attr) {
+                if (($v = trim($node->getAttribute($attr))) !== '' && ! str_starts_with($v, 'data:')) {
+                    $src = $this->absolute($v, $base);
+                    break;
+                }
+            }
+            if ($src === null || preg_match('/\.(svg|ico)(\?|$)|sprite|pixel|tracking|avatar|flag/i', $src)) {
+                continue;
+            }
+            $name = trim($node->getAttribute('alt')) ?: trim($node->getAttribute('title'));
+            $link = null;
+            for ($el = $node->parentNode, $depth = 0; $el instanceof \DOMElement && $depth < 4; $el = $el->parentNode, $depth++) {
+                if ($link === null && $el->nodeName === 'a' && ($href = trim($el->getAttribute('href'))) !== '' && ! str_starts_with($href, 'javascript:')) {
+                    $link = $this->absolute($href, $base);
+                }
+                $text = trim(preg_replace('/\s+/u', ' ', $el->textContent));
+                if (($name === '' || $this->isFileName($name)) && mb_strlen($text) >= 2 && mb_strlen($text) <= 60) {
+                    $name = $text;
+                }
+                if ($name !== '' && ! $this->isFileName($name) && $link !== null) {
+                    break;
+                }
+            }
+            if ($name === '' || $this->isFileName($name) || mb_strlen($name) > 60 || preg_match(self::ACCOUNT_PATTERN, $name)) {
+                continue;
+            }
+            $key = mb_strtolower($name);
+            $cards[$key] ??= ['name' => $name, 'image' => $src, 'url' => $link];
+            if (count($cards) >= 120) {
+                break;
+            }
+        }
+
+        return array_values($cards);
+    }
+
+    /** "banner_02.png", "img123": an alt that is a file name says nothing. */
+    protected function isFileName(string $text): bool
+    {
+        return (bool) preg_match('/^[\w-]+\.(png|jpe?g|webp|gif|avif)$|^(img|image|pic|banner|icon)[\s_-]?\d*$/i', trim($text));
     }
 
     /**
@@ -471,7 +622,17 @@ class ReferenceAnalyzer
             return $origin.$href;
         }
 
-        return $origin.rtrim(dirname($parts['path'] ?? '/'), '/').'/'.$href;
+        if (str_starts_with($href, '?') || str_starts_with($href, '#')) {
+            return $origin.($parts['path'] ?? '/').$href;
+        }
+        // Relative to the base directory ("/a/b" -> "/a/", "/a/" stays).
+        $dir = str_ends_with($parts['path'] ?? '/', '/') ? ($parts['path'] ?? '/') : rtrim(dirname($parts['path']), '/').'/';
+        $path = $dir.preg_replace('#^\./#', '', $href);
+        while (preg_match('#/(?!\.\./)[^/]+/\.\./#', $path)) {
+            $path = preg_replace('#/(?!\.\./)[^/]+/\.\./#', '/', $path, 1);
+        }
+
+        return $origin.str_replace('/../', '/', $path);
     }
 
     /** @return array{primary: ?string, background: ?string, text: ?string, palette: array<int, string>} */

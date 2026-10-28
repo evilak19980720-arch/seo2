@@ -53,9 +53,9 @@ class SiteForm
     {
         return [
             Grid::make(2)->schema([
-                Select::make('site_type')->label('站点类型')->required()->native(false)
+                Select::make('site_type')->label('站点类型')->required()->native(false)->default('game')
                     ->options(collect(config('site_types'))->map(fn ($t) => $t['label']))
-                    ->disabledOn('edit')->helperText('决定预设页面组合；创建后不可修改'),
+                    ->disabledOn('edit')->helperText('决定页面组合；「游戏品牌站」从 16 个栏目里为每个站随机组合页面和板块。创建后不可修改'),
                 TextInput::make('product_name')->label('产品名（品牌词）')->required()->maxLength(120),
                 TextInput::make('name')->label('网站名称')->required()->maxLength(120),
                 Select::make('domain_id')->label('根域名')->required()->searchable()->native(false)
@@ -83,6 +83,10 @@ class SiteForm
                     ->helperText('生成时把参考网站的内容图片下载到对象存储，用于横幅、卡片和图库。仅用于你有权使用的网站，否则有版权风险'),
                 Toggle::make('reference_rewrite_content')->label('参考网站内容二次创作')
                     ->helperText('生成页面时读取参考网站正文，由 AI 按其主题和结构重新撰写，不照抄句子；品牌名替换为本站产品'),
+                Toggle::make('has_accounts')->label('网站有用户账户')
+                    ->helperText('打开后才会出现用户中心、注册登录指南、账户安全等栏目；没有账户就不要打开，避免描述不存在的功能'),
+                Toggle::make('has_payments')->label('网站有支付 / 充值')
+                    ->helperText('打开后才会出现支付问题、金额限制等栏目'),
             ]),
             Section::make('标题与描述')->schema([
                 TextInput::make('title')->label('首页标题')->maxLength(70)
@@ -132,6 +136,12 @@ class SiteForm
                     ->schema([TextInput::make('label')->label('按钮文字')->required(), TextInput::make('url')->label('链接')->url()->required()]),
                 Repeater::make('faq')->label('FAQ 素材')->defaultItems(0)->collapsible()->addActionLabel('添加问答')
                     ->schema([TextInput::make('question')->label('问题')->required(), Textarea::make('answer')->label('回答')->rows(2)->required()]),
+                Grid::make(2)->schema([
+                    Textarea::make('license_info')->label('牌照信息')->rows(2)
+                        ->helperText('只填可核验的信息（发牌机构、牌照号）；留空则网站不出现牌照栏目'),
+                    Textarea::make('certification_info')->label('测试与认证信息')->rows(2)
+                        ->helperText('只填可核验的信息（检测机构、证书）；留空则不出现认证栏目'),
+                ]),
                 Grid::make(3)->schema([
                     TextInput::make('company_name')->label('公司名称'),
                     TextInput::make('company_email')->label('联系邮箱')->email(),

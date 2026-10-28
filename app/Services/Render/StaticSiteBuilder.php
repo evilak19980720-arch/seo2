@@ -47,7 +47,8 @@ class StaticSiteBuilder
         $renderer = new SiteRenderer($site, $tmp);
         $pages = $renderer->ctx->pages;
         $articles = $renderer->articles();
-        $total = $pages->count() + $renderer->blogPageCount() + $articles->count() + 1;
+        $entries = $renderer->entryPages();
+        $total = $pages->count() + $entries->count() + $renderer->blogPageCount() + $articles->count() + 1;
         $done = 0;
         $written = [];
         $tick = function (string $step) use (&$done, $total, $progress) {
@@ -59,6 +60,12 @@ class StaticSiteBuilder
             $this->write($tmp, $page->slug, $renderer->renderPage($page));
             $written[] = $page->slug;
             $tick("page:{$page->type}");
+        }
+        foreach ($entries as $entry) {
+            $path = $renderer->ctx->entryPath($entry);
+            $this->write($tmp, $path, $renderer->renderEntry($entry));
+            $written[] = $path;
+            $tick("entry:{$entry->collection}");
         }
         for ($n = 1; $n <= $renderer->blogPageCount(); $n++) {
             $path = $n === 1 ? 'blog' : "blog/page/{$n}";
