@@ -90,6 +90,7 @@ class DesignConfigValidator
             'shadow' => $pick('shadow', $theme['shadow'], 'soft'),
             'nav' => $this->variant('nav', $config['nav'] ?? null),
             'footer' => $this->variant('footer', $config['footer'] ?? null),
+            'menu' => $this->menu($config['menu'] ?? [], $siteTypeConfig),
             'pages' => [],
         ];
 
@@ -121,6 +122,14 @@ class DesignConfigValidator
         }
 
         return $result;
+    }
+
+    /** Header menu: known page types (plus "blog") in the given order, no duplicates. */
+    protected function menu(mixed $menu, array $siteTypeConfig): array
+    {
+        $allowed = array_merge(array_diff(array_keys($siteTypeConfig['pages']), ['home', 'privacy', 'terms']), ['blog']);
+
+        return array_values(array_unique(array_filter((array) $menu, fn ($type) => is_string($type) && in_array($type, $allowed, true))));
     }
 
     protected function variant(string $block, ?string $variant): string

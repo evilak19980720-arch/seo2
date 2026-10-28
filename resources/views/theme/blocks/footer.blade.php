@@ -3,7 +3,7 @@
 <div class="footer__cols">
 <div><strong>{{ $ctx->site->name }}</strong>@if ($ctx->brand->tagline)<p>{{ $ctx->brand->tagline }}</p>@endif</div>
 <div>@if ($variant === 'columns')<p><strong>{{ $ctx->t('pages') }}</strong></p>@endif<ul>
-@foreach ($ctx->navLinks() as $link)<li><a href="{{ $link['href'] }}">{{ $link['label'] }}</a></li>@endforeach
+@foreach ($ctx->navLinks(all: true) as $link)<li><a href="{{ $link['href'] }}">{{ $link['label'] }}</a></li>@endforeach
 </ul></div>
 <div>@if ($variant === 'columns')<p><strong>{{ $ctx->t('legal') }}</strong></p>@endif<ul>
 @foreach ($ctx->legalLinks() as $link)<li><a href="{{ $link['href'] }}">{{ $link['label'] }}</a></li>@endforeach

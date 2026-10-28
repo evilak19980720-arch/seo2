@@ -15,11 +15,14 @@ class PromptSeeder extends Seeder
 {
     public const SYSTEM = 'You are a senior content strategist and SEO editor for the official website of {{product_name}} ({{site_type}}). Write natively in {{language}} for readers in {{country}}; never write in another language and never translate from another language. The BRAND PROFILE is the only source of facts: never invent features, numbers, prices, awards, reviews, release dates or company details that are not in it. Always answer with a single JSON object.';
 
+    /** Templates revised after the first release ship as a new version; the highest active version wins. */
+    public const VERSIONS = [PromptType::DesignConfig->value => 2];
+
     public function run(): void
     {
         foreach ($this->templates() as $type => $template) {
             Prompt::firstOrCreate(
-                ['type' => $type, 'site_type' => null, 'locale' => null, 'version' => 1],
+                ['type' => $type, 'site_type' => null, 'locale' => null, 'version' => self::VERSIONS[$type] ?? 1],
                 ['system' => self::SYSTEM, 'template' => $template, 'is_active' => true],
             );
         }
@@ -60,7 +63,17 @@ BRAND PROFILE:
 {{brand}}
 
 Logo dominant colour: {{logo_color}}
-Reference site: {{reference_url}} (attached screenshots, if any, show it on desktop and mobile — take only palette mood, typography feel and layout rhythm; never copy text, logos or brand names).
+Reference site: {{reference_url}}
+Reference analysis (read from its HTML/CSS; "none" if there is no reference):
+{{reference}}
+Attached screenshots, if any, show the reference on desktop and mobile.
+
+When there is a reference, the design MUST follow it closely:
+- colors: use the reference primary, background and text colours as given; pick secondary/accent from its palette.
+- fonts: the whitelisted fonts closest to the reference fonts.
+- nav/footer variants, radius, density, shadow and block order: match the reference look and the order of its sections.
+- "menu": map the reference menu items, in their order, to the matching values of "menu_items" (skip items with no match).
+Never copy text, logos or brand names from the reference.
 Feedback from the previous attempt (may be empty): {{feedback}}
 
 You may ONLY use values from this whitelist:
@@ -70,7 +83,7 @@ For every page type in "page_types" choose an ordered list of blocks with a vari
 Optionally add "custom_css" (max 2KB, no @import, no external url(), never hide content) only for effects the config cannot express; otherwise "".
 
 Return JSON:
-{"design": {"colors": {"primary": "#", "secondary": "#", "accent": "#", "background": "#", "surface": "#", "text": "#", "muted": "#"}, "fonts": {"heading": "", "body": ""}, "radius": "", "density": "", "shadow": "", "nav": "", "footer": "", "pages": {"home": [{"block": "hero", "variant": "split"}]}}, "custom_css": ""}
+{"design": {"colors": {"primary": "#", "secondary": "#", "accent": "#", "background": "#", "surface": "#", "text": "#", "muted": "#"}, "fonts": {"heading": "", "body": ""}, "radius": "", "density": "", "shadow": "", "nav": "", "footer": "", "menu": ["product", "guide", "blog"], "pages": {"home": [{"block": "hero", "variant": "split"}]}}, "custom_css": ""}
 TXT,
             PromptType::CustomCss->value => <<<'TXT'
 Write a small CSS snippet (max 2KB) for the site of {{product_name}} that achieves: {{request}}

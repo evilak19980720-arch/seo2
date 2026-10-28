@@ -64,19 +64,23 @@ class ThemeContext
         return $this->design['pages'][$pageType] ?? [];
     }
 
-    /** @return array<int, array{label: string, href: string}> */
-    public function navLinks(): array
+    /**
+     * Header menu in the order of the design's "menu" (taken from the reference
+     * site); with $all the remaining pages follow, for the footer.
+     *
+     * @return array<int, array{label: string, href: string}>
+     */
+    public function navLinks(bool $all = false): array
     {
-        $links = [];
-        foreach ($this->site->typeConfig()['pages'] as $type => $def) {
-            if (in_array($type, ['home', 'privacy', 'terms'], true) || ! $this->pages->has($type)) {
-                continue;
-            }
-            $links[] = ['label' => $this->pages[$type]->title, 'href' => $this->href($this->pages[$type]->slug)];
-        }
-        $links[] = ['label' => $this->t('blog'), 'href' => $this->href('blog')];
+        $available = collect(array_keys($this->site->typeConfig()['pages']))
+            ->reject(fn ($type) => in_array($type, ['home', 'privacy', 'terms'], true) || ! $this->pages->has($type))
+            ->push('blog')->values();
+        $menu = collect($this->design['menu'] ?? [])->intersect($available)->values();
+        $order = $menu->isEmpty() ? $available : ($all ? $menu->merge($available->diff($menu)) : $menu);
 
-        return $links;
+        return $order->map(fn ($type) => $type === 'blog'
+            ? ['label' => $this->t('blog'), 'href' => $this->href('blog')]
+            : ['label' => $this->pages[$type]->title, 'href' => $this->href($this->pages[$type]->slug)])->all();
     }
 
     /** @return array<int, array{label: string, href: string}> */

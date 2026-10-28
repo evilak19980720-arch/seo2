@@ -19,6 +19,7 @@ use App\Services\Theme\Color;
 use App\Services\Theme\CustomCssValidator;
 use App\Services\Theme\DefaultDesign;
 use App\Services\Theme\DesignConfigValidator;
+use App\Services\Theme\ReferenceAnalyzer;
 use App\Support\Settings;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -31,11 +32,15 @@ use Throwable;
  */
 class SiteGenerator
 {
+    /** @var array<int, string> what happened during design generation, shown in the task log */
+    public array $designNotes = [];
+
     public function __construct(
         protected AiManager $ai,
         protected StaticSiteBuilder $builder,
         protected Lighthouse $lighthouse,
         protected Screenshot $screenshot,
+        protected ReferenceAnalyzer $reference,
     ) {}
 
     public function run(GenerationTask $task): void
@@ -50,6 +55,9 @@ class SiteGenerator
 
             $task->progress('生成设计配置');
             $this->generateDesign($site);
+            foreach ($this->designNotes as $note) {
+                $task->progress($note);
+            }
 
             $task->progress('生成核心页面文案');
             $this->generatePages($site);
@@ -103,12 +111,25 @@ class SiteGenerator
         $site->save();
     }
 
-    /** AI design config (with reference screenshots when given), validated; seeded default as fallback. */
+    /**
+     * AI design config, validated; seeded default as fallback. With a reference
+     * site its palette, fonts and menu are read directly and enforced on the
+     * result, screenshots are added when Chromium and a vision model exist.
+     */
     public function generateDesign(Site $site, ?string $feedback = null, ?array $onlyPages = null): array
     {
         $validator = new DesignConfigValidator;
         $config = null;
         $customCss = null;
+        $this->designNotes = [];
+
+        $reference = $site->reference_url ? $this->reference->analyze($site->reference_url) : null;
+        if ($site->reference_url) {
+            $this->designNotes[] = $reference
+                ? '参考网站：主色 '.($reference['colors']['primary'] ?? '未识别').'，背景 '.($reference['colors']['background'] ?? '未识别')
+                    .'，字体 '.(implode(' / ', $reference['fonts']) ?: '未识别').'，菜单 '.count($reference['menu']).' 项'
+                : '参考网站无法读取（可能有防护或超时），只能按品牌资料设计';
+        }
 
         try {
             $images = $site->reference_url ? $this->screenshot->capture($site->reference_url) : [];
@@ -121,14 +142,19 @@ class SiteGenerator
                 'whitelist' => json_encode($this->whitelist($site), JSON_UNESCAPED_UNICODE),
                 'feedback' => $feedback ?? '',
                 'reference_url' => $site->reference_url ?? '',
+                'reference' => $reference ? json_encode($reference, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : 'none',
             ], $site, $images)->json();
             $customCss = $res['custom_css'] ?? null;
             $config = $res['design'] ?? $res;
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            $this->designNotes[] = 'AI 设计生成失败，已用默认设计：'.Str::limit($e->getMessage(), 150);
             $config = null;
         }
 
         $config ??= DefaultDesign::make($site->domain_id.'-'.$site->design_version, $site->typeConfig());
+        if ($reference) {
+            $config = $this->applyReference($config, $reference);
+        }
         $validated = $validator->validate($config, $site->typeConfig());
 
         if ($onlyPages !== null && $site->design_config) {
@@ -146,6 +172,28 @@ class SiteGenerator
         $this->saveDesign($site, $validated, $customCss ?? $site->custom_css, 'ai');
 
         return $validator->repaired;
+    }
+
+    /** The reference's own colours and fonts win over whatever the model picked. */
+    protected function applyReference(array $config, array $reference): array
+    {
+        foreach (['primary', 'background', 'text'] as $key) {
+            if ($color = $reference['colors'][$key] ?? null) {
+                $config['colors'][$key] = $color;
+            }
+        }
+        if ($bg = $reference['colors']['background'] ?? null) {
+            if (empty($reference['colors']['text'])) {
+                $config['colors']['text'] = Color::luminance($bg) > 0.4 ? '#1a1a1a' : '#f2f2f2';
+            }
+            // Surface follows the reference background so cards don't clash with it.
+            $config['colors']['surface'] = Color::mix($bg, Color::luminance($bg) > 0.4 ? '#000000' : '#ffffff', 0.05);
+        }
+        if ($font = ReferenceAnalyzer::whitelistFont($reference['fonts'])) {
+            $config['fonts'] = ['heading' => $font, 'body' => $font];
+        }
+
+        return $config;
     }
 
     public function saveDesign(Site $site, array $config, ?string $customCss, string $source): void
@@ -280,6 +328,7 @@ class SiteGenerator
             'density' => array_keys(config('theme.density')),
             'shadow' => array_keys(config('theme.shadow')),
             'page_types' => array_keys($site->typeConfig()['pages'] + DesignConfigValidator::SYSTEM_PAGES),
+            'menu_items' => array_values(array_merge(array_diff(array_keys($site->typeConfig()['pages']), ['home', 'privacy', 'terms']), ['blog'])),
         ];
     }
 
