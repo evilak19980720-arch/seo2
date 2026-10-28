@@ -99,6 +99,8 @@ class ReferenceImportTest extends TestCase
         $this->fakeAi();
         $this->fakeReference();
         $site = $this->makeSite(['reference_url' => 'https://ref.test/']);
+        $this->assertTrue($site->fresh()->reference_import_images && $site->fresh()->reference_rewrite_content, 'both switches default to on');
+        $site->update(['reference_import_images' => false, 'reference_rewrite_content' => false]);
 
         app(SiteGenerator::class)->run(GenerationTask::create(['site_id' => $site->id, 'type' => 'full']));
 
