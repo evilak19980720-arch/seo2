@@ -90,7 +90,7 @@ class InstallController
                     if ($test) {
                         $msgs = [];
                         if (filled($services['cloudflare_api_token'] ?? null)) {
-                            $msgs[] = 'Cloudflare: '.$this->installer->testCloudflare($services['cloudflare_api_token']);
+                            $msgs[] = 'Cloudflare: '.$this->installer->testCloudflare($services['cloudflare_api_token'], $services['cloudflare_account_id'] ?? null);
                         }
                         if (filled($services['gsc_service_account'] ?? null)) {
                             $msgs[] = 'Google 服务账号: '.$this->installer->testGoogle($services['gsc_service_account']);

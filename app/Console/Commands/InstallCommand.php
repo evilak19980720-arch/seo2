@@ -94,7 +94,7 @@ class InstallCommand extends Command
             'gsc_service_account' => textarea('Google 服务账号 JSON'),
         ];
         if ($services['cloudflare_api_token']) {
-            $this->line('  Cloudflare: '.rescue(fn () => $installer->testCloudflare($services['cloudflare_api_token']), fn ($e) => '失败 '.$e->getMessage()));
+            $this->line('  Cloudflare: '.rescue(fn () => $installer->testCloudflare($services['cloudflare_api_token'], $services['cloudflare_account_id'] ?? null), fn ($e) => '失败 '.$e->getMessage()));
         }
         if ($services['gsc_service_account']) {
             $this->line('  Google: '.rescue(fn () => $installer->testGoogle($services['gsc_service_account']), fn ($e) => '失败 '.$e->getMessage()));

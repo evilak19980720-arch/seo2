@@ -107,9 +107,9 @@ class Installer
         return $_SERVER['SERVER_ADDR'] ?? null;
     }
 
-    public function testCloudflare(string $token): string
+    public function testCloudflare(string $token, ?string $accountId = null): string
     {
-        return (new Cloudflare($token))->verifyToken();
+        return (new Cloudflare($token, filled($accountId) ? $accountId : null))->verifyToken();
     }
 
     public function testGoogle(string $json): string

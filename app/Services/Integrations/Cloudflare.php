@@ -17,6 +17,10 @@ class Cloudflare
     {
         $this->token ??= Settings::get('cloudflare_api_token');
         $this->accountId ??= Settings::get('cloudflare_account_id');
+        // Pasted tokens often carry spaces, newlines or a "Bearer " prefix, which Cloudflare
+        // rejects as "Invalid request headers".
+        $this->token = $this->token === null ? null : preg_replace('/\s+/', '', preg_replace('/^\s*Bearer\s+/i', '', $this->token));
+        $this->accountId = $this->accountId === null ? null : trim($this->accountId);
     }
 
     public function configured(): bool
@@ -47,7 +51,20 @@ class Cloudflare
 
     public function verifyToken(): string
     {
-        return $this->call('GET', '/user/tokens/verify')['result']['status'] ?? 'unknown';
+        if (preg_match('/^[0-9a-f]{37}$/i', (string) $this->token)) {
+            throw new IntegrationException('这是 Global API Key，不是 API Token。请在 Cloudflare「我的个人资料 → API 令牌」创建 API Token 后填写。');
+        }
+
+        try {
+            return $this->call('GET', '/user/tokens/verify')['result']['status'] ?? 'unknown';
+        } catch (IntegrationException $e) {
+            // Account-owned tokens can only be verified under their account.
+            if (! filled($this->accountId)) {
+                throw $e;
+            }
+
+            return $this->call('GET', "/accounts/{$this->accountId}/tokens/verify")['result']['status'] ?? 'unknown';
+        }
     }
 
     public function zoneId(string $domain, bool $create = true): string
