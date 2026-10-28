@@ -2,6 +2,7 @@
 
 namespace App\Services\Integrations;
 
+use App\Support\Binary;
 use Symfony\Component\Process\Process;
 
 /**
@@ -12,14 +13,7 @@ class Lighthouse
 {
     public static function available(): bool
     {
-        $bin = config('platform.lighthouse.bin');
-        if (! $bin) {
-            return false;
-        }
-        $p = Process::fromShellCommandline('command -v '.escapeshellarg($bin));
-        $p->run();
-
-        return $p->isSuccessful();
+        return Binary::find(config('platform.lighthouse.bin')) !== null;
     }
 
     /**

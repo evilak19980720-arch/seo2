@@ -2,6 +2,7 @@
 
 namespace App\Services\Integrations;
 
+use App\Support\Binary;
 use Symfony\Component\Process\Process;
 
 /** Headless Chromium screenshots of a reference site (desktop + mobile). */
@@ -10,14 +11,15 @@ class Screenshot
     /** @return array<int, string> data URIs (PNG) */
     public function capture(string $url): array
     {
-        if (! preg_match('#^https?://#i', $url)) {
+        $bin = Binary::find(config('platform.chromium_bin'));
+        if (! $bin || ! preg_match('#^https?://#i', $url)) {
             return [];
         }
         $shots = [];
         foreach (['desktop' => '1366,900', 'mobile' => '412,915'] as $size) {
             $file = tempnam(sys_get_temp_dir(), 'shot').'.png';
             $p = new Process([
-                config('platform.chromium_bin'), '--headless=new', '--no-sandbox', '--disable-gpu', '--hide-scrollbars',
+                $bin, '--headless=new', '--no-sandbox', '--disable-gpu', '--hide-scrollbars',
                 '--window-size='.$size, '--virtual-time-budget=8000', '--screenshot='.$file, $url,
             ], null, null, null, 60);
             $p->run();

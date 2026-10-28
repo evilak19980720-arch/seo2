@@ -5,6 +5,7 @@ namespace App\Services\Sites;
 use App\Enums\PromptType;
 use App\Models\Site;
 use App\Services\Ai\AiManager;
+use App\Support\Binary;
 use App\Support\Media;
 use Illuminate\Support\Facades\Http;
 use Symfony\Component\Process\Process;
@@ -45,8 +46,8 @@ class BrandImporter
             $mime = mime_content_type($abs) ?: '';
             if (str_starts_with($mime, 'image/')) {
                 $images[] = 'data:'.$mime.';base64,'.base64_encode(file_get_contents($abs));
-            } elseif ($mime === 'application/pdf') {
-                $p = new Process(['pdftotext', '-layout', $abs, '-']);
+            } elseif ($mime === 'application/pdf' && ($pdftotext = Binary::find('pdftotext'))) {
+                $p = new Process([$pdftotext, '-layout', $abs, '-']);
                 $p->run();
                 $material .= "\nPDF:\n".mb_substr($p->getOutput(), 0, 15000);
             }

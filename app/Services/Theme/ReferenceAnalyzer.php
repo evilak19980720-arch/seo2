@@ -2,6 +2,7 @@
 
 namespace App\Services\Theme;
 
+use App\Support\Binary;
 use DOMDocument;
 use DOMXPath;
 use Illuminate\Support\Facades\Http;
@@ -75,7 +76,7 @@ class ReferenceAnalyzer
         $d = &$this->diagnostics;
         $html = null;
         try {
-            $res = Http::withHeaders(['User-Agent' => self::UA, 'Accept-Language' => 'pt-BR,pt;q=0.9,en;q=0.8'])->timeout(20)->connectTimeout(8)->get($url);
+            $res = Http::withHeaders(['User-Agent' => self::UA, 'Accept-Language' => 'pt-BR,pt;q=0.9,en;q=0.8'])->timeout(12)->connectTimeout(6)->get($url);
             $d['status'] = $res->status();
             $html = $res->successful() ? substr($res->body(), 0, 3_000_000) : null;
             $d['blocked'] = in_array($res->status(), [403, 429, 503], true) || ($html !== null && $this->isChallenge($html));
@@ -106,7 +107,9 @@ class ReferenceAnalyzer
                     $d['messages'][] = '已用无头浏览器渲染后读取';
                 }
             } else {
-                $d['messages'][] = '服务器没有安装 Chromium，无法渲染 JavaScript 页面（安装后在 .env 设置 CHROMIUM_BIN），或上传首页截图';
+                $d['messages'][] = Binary::canRun()
+                    ? '服务器没有安装 Chromium，无法渲染 JavaScript 页面（安装后在 .env 设置 CHROMIUM_BIN），或上传首页截图'
+                    : 'PHP 禁用了 proc_open，无法启动 Chromium（宝塔：PHP 设置 → 禁用函数里删除 proc_open、proc_get_status），或上传首页截图';
             }
         }
 
@@ -149,18 +152,16 @@ class ReferenceAnalyzer
 
     public function browserAvailable(): bool
     {
-        $bin = (string) config('platform.chromium_bin');
-
-        return $bin !== '' && (is_executable($bin) || trim((string) @shell_exec('command -v '.escapeshellarg($bin).' 2>/dev/null')) !== '');
+        return Binary::find(config('platform.chromium_bin')) !== null;
     }
 
     protected function render(string $url): ?string
     {
         try {
             $p = new Process([
-                config('platform.chromium_bin'), '--headless=new', '--no-sandbox', '--disable-gpu', '--hide-scrollbars',
-                '--window-size=1366,900', '--virtual-time-budget=10000', '--user-agent='.self::UA, '--dump-dom', $url,
-            ], null, null, null, 60);
+                Binary::find(config('platform.chromium_bin')), '--headless=new', '--no-sandbox', '--disable-gpu', '--hide-scrollbars',
+                '--window-size=1366,900', '--virtual-time-budget=8000', '--user-agent='.self::UA, '--dump-dom', $url,
+            ], null, null, null, 35);
             $p->run();
             $out = $p->getOutput();
 
@@ -367,7 +368,7 @@ class ReferenceAnalyzer
     {
         try {
             $res = Http::withHeaders(['User-Agent' => self::UA, 'Accept-Language' => 'en,pt;q=0.8'])
-                ->timeout(15)->connectTimeout(8)->get($url);
+                ->timeout(6)->connectTimeout(4)->get($url);
 
             return $res->successful() ? substr($res->body(), 0, $maxBytes) : null;
         } catch (Throwable) {

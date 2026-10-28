@@ -31,6 +31,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\HtmlString;
+use Throwable;
 use UnitEnum;
 
 class SiteResource extends Resource
@@ -132,8 +133,15 @@ class SiteResource extends Resource
 
                     return;
                 }
+                @set_time_limit(120);
                 $analyzer = app(ReferenceAnalyzer::class);
-                $ref = $analyzer->analyze($state);
+                try {
+                    $ref = $analyzer->analyze($state);
+                } catch (Throwable $e) {
+                    Notification::make()->danger()->title('检测出错')->body($e->getMessage())->persistent()->send();
+
+                    return;
+                }
                 $vision = AiProvider::where('is_active', true)->where('supports_vision', true)->exists();
                 $lines = array_merge($analyzer->report($ref), [
                     '截图：'.($analyzer->browserAvailable() ? '可自动截图' : '服务器无 Chromium，无法自动截图').'；'.($vision ? '有支持视觉的 AI 接口' : '没有勾选"支持视觉"的 AI 接口，AI 看不到截图'),
