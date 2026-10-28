@@ -164,6 +164,31 @@ class ArticleResource extends Resource
             });
     }
 
+    /** A published article without a date is published now (unpublished ones are not listed). */
+    public static function withPublishDate(array $data): array
+    {
+        if (($data['status'] ?? null) instanceof ArticleStatus ? $data['status'] === ArticleStatus::Published : ($data['status'] ?? null) === ArticleStatus::Published->value) {
+            $data['published_at'] = filled($data['published_at'] ?? null) ? $data['published_at'] : now();
+        }
+
+        return $data;
+    }
+
+    /**
+     * After an admin save: update the site's pages when the article is (or
+     * just stopped being) on the site, then say what was updated.
+     */
+    public static function syncSite(Article $article, bool $statusChanged): void
+    {
+        $article->refresh();
+        if (! $article->site?->built_at || (! $article->status->isRendered() && ! $statusChanged)) {
+            return;
+        }
+        $scheduler = app(PublishScheduler::class);
+        $scheduler->afterChange($article);
+        Notification::make()->success()->title('前台已更新')->body(implode('；', $scheduler->log))->send();
+    }
+
     public static function changeStatus(Article $article, ArticleStatus $status): void
     {
         $article->update([
