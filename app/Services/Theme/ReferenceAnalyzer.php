@@ -92,9 +92,17 @@ class ReferenceAnalyzer
         $started = microtime(true);
         $seen = [rtrim((string) $home['url'], '/') => true];
         $pages = [];
-        foreach ($home['links'] ?? [] as $link) {
-            if (count($pages) >= $max || microtime(true) - $started > $seconds) {
+        $queue = array_values($home['links'] ?? []);
+        $host = preg_replace('/^www\./', '', strtolower((string) parse_url((string) $home['url'], PHP_URL_HOST)));
+        // Detail pages behind the cards (one promotion, one event…) carry their own pictures and terms.
+        $details = 0;
+        for ($i = 0; $i < count($queue); $i++) {
+            $link = $queue[$i];
+            if (microtime(true) - $started > $seconds) {
                 break;
+            }
+            if (empty($link['detail']) && count(array_filter($pages, fn ($p) => empty($p['detail']))) >= $max) {
+                continue;
             }
             $key = rtrim($link['url'], '/');
             if (isset($seen[$key])) {
@@ -115,13 +123,29 @@ class ReferenceAnalyzer
             if (mb_strlen($content) < 80 && $cards === []) {
                 continue;
             }
+            // A detail page's main picture belongs to the item it is about.
+            if (! empty($link['detail']) && ($main = $this->images($xpath, '', $link['url'])[0]['url'] ?? null)) {
+                array_unshift($cards, ['name' => $link['text'], 'image' => $main, 'url' => $link['url']]);
+                $cards = array_values(collect($cards)->unique(fn ($c) => mb_strtolower($c['name']))->all());
+            }
             $pages[] = [
                 'url' => $link['url'],
                 'label' => $link['text'],
                 'title' => trim((string) $xpath->evaluate('string(//title)')) ?: null,
                 'content' => Str::limit($content, 6000, ''),
                 'cards' => $cards,
+                'detail' => ! empty($link['detail']),
             ];
+            if (empty($link['detail'])) {
+                foreach ($cards as $card) {
+                    $url = (string) ($card['url'] ?? '');
+                    if ($details < 8 && $url !== '' && preg_replace('/^www\./', '', strtolower((string) parse_url($url, PHP_URL_HOST))) === $host
+                        && ! isset($seen[rtrim($url, '/')]) && ! preg_match(self::ACCOUNT_PATTERN, $card['name'])) {
+                        $queue[] = ['url' => $url, 'text' => $card['name'], 'detail' => true];
+                        $details++;
+                    }
+                }
+            }
         }
         $this->diagnostics = $saved;
 
@@ -194,15 +218,30 @@ class ReferenceAnalyzer
             }
             $name = trim($node->getAttribute('alt')) ?: trim($node->getAttribute('title'));
             $link = null;
-            for ($el = $node->parentNode, $depth = 0; $el instanceof \DOMElement && $depth < 4; $el = $el->parentNode, $depth++) {
+            $blurb = '';
+            for ($el = $node->parentNode, $depth = 0; $el instanceof \DOMElement && $depth < 5; $el = $el->parentNode, $depth++) {
                 if ($link === null && $el->nodeName === 'a' && ($href = trim($el->getAttribute('href'))) !== '' && ! str_starts_with($href, 'javascript:')) {
                     $link = $this->absolute($href, $base);
                 }
-                $text = trim(preg_replace('/\s+/u', ' ', $el->textContent));
+                $text = $this->blockText($xpath, $el);
+                // A block with several pictures is a list, not this picture's card.
+                $own = $xpath->evaluate('count(.//img)', $el) <= 1;
+                // "Ver mais" / "Saiba mais" links next to the picture, not around it.
+                if ($link === null && $own && mb_strlen($text) <= 600 && ($a = $xpath->query('.//a[@href]', $el)->item(0)) instanceof \DOMElement
+                    && ($href = trim($a->getAttribute('href'))) !== '' && ! preg_match('/^(#|javascript:)/i', $href)) {
+                    $link = $this->absolute($href, $base);
+                }
                 if (($name === '' || $this->isFileName($name)) && mb_strlen($text) >= 2 && mb_strlen($text) <= 60) {
                     $name = $text;
+                } elseif (($name === '' || $this->isFileName($name)) && $own && mb_strlen($text) > 60 && ($title = $this->blockTitle($xpath, $el)) !== null) {
+                    // Promotion / news cards: picture + heading + text in one block.
+                    $name = $title;
                 }
-                if ($name !== '' && ! $this->isFileName($name) && $link !== null) {
+                if ($blurb === '' && $own && mb_strlen($text) > mb_strlen($name) + 20 && mb_strlen($text) <= 600) {
+                    $rest = $name !== '' && str_starts_with($text, $name) ? ltrim(mb_substr($text, mb_strlen($name)), " \t:-–|") : $text;
+                    $blurb = Str::limit($rest, 220);
+                }
+                if ($name !== '' && ! $this->isFileName($name) && $link !== null && $depth >= 2) {
                     break;
                 }
             }
@@ -210,13 +249,42 @@ class ReferenceAnalyzer
                 continue;
             }
             $key = mb_strtolower($name);
-            $cards[$key] ??= ['name' => $name, 'image' => $src, 'url' => $link];
+            $cards[$key] ??= array_filter(['name' => $name, 'image' => $src, 'url' => $link, 'text' => $blurb], fn ($v) => $v !== null && $v !== '') + ['url' => null];
             if (count($cards) >= 120) {
                 break;
             }
         }
 
         return array_values($cards);
+    }
+
+    /** A block's visible text with its pieces kept apart ("Title" + "Body", not "TitleBody"). */
+    protected function blockText(DOMXPath $xpath, \DOMElement $block): string
+    {
+        $parts = [];
+        foreach ($xpath->query('.//text()', $block) as $node) {
+            if (($t = trim($node->textContent)) !== '') {
+                $parts[] = $t;
+            }
+        }
+
+        return trim(preg_replace('/\s+/u', ' ', implode(' ', $parts)));
+    }
+
+    /** The heading of a content block: its first h1-h6, title-like element or bold line. */
+    protected function blockTitle(DOMXPath $xpath, \DOMElement $block): ?string
+    {
+        $query = './/*[self::h1 or self::h2 or self::h3 or self::h4 or self::h5 or self::h6]'
+            .' | .//*[contains(translate(@class, "TITLENAM", "titlenam"), "title") or contains(translate(@class, "TITLENAM", "titlenam"), "name")]'
+            .' | .//strong | .//b';
+        foreach ($xpath->query($query, $block) as $el) {
+            $text = trim(preg_replace('/\s+/u', ' ', $el->textContent));
+            if (mb_strlen($text) >= 3 && mb_strlen($text) <= 80 && ! $this->isFileName($text)) {
+                return $text;
+            }
+        }
+
+        return null;
     }
 
     /** "banner_02.png", "img123": an alt that is a file name says nothing. */

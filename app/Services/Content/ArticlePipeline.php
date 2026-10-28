@@ -15,6 +15,7 @@ use App\Models\Site;
 use App\Services\Ai\AiManager;
 use App\Services\Render\HtmlSanitizer;
 use App\Services\Render\SeoHead;
+use App\Support\Media;
 use App\Support\Settings;
 use Illuminate\Support\Str;
 
@@ -108,6 +109,11 @@ class ArticlePipeline
             // Polishing is best-effort; guardrails still run on the draft.
         }
 
+        if (str_contains($html, 'data-illustration')) {
+            $task?->step(ArticleTaskStatus::Illustrating);
+            $html = $this->illustrate($site, $keyword, $html);
+        }
+
         $title = Str::limit(trim(strip_tags((string) ($data['title'] ?? $keyword->keyword))), 110, '');
         $article = $existing ?? new Article(['site_id' => $site->id, 'keyword_id' => $keyword->id]);
         $article->fill([
@@ -161,6 +167,40 @@ class ArticlePipeline
     }
 
     /** Rotate brand images as featured images (never invent imagery). */
+    /**
+     * Replace the model's <figure data-illustration="…"> placeholders with
+     * AI-generated pictures stored on the media disk (OSS). Without an image
+     * model, or when generation fails, a brand / reference image not yet used
+     * in the article takes the place, else the placeholder is dropped.
+     */
+    public function illustrate(Site $site, Keyword $keyword, string $html): string
+    {
+        $spare = collect($site->brandProfile?->media ?? [])->where('type', 'image')->pluck('path')->filter()->shuffle()->values();
+        $made = 0;
+
+        return preg_replace_callback('/<figure\b[^>]*data-illustration\s*=\s*(["\'])(.*?)\1[^>]*>.*?<\/figure>/is', function ($m) use ($site, $keyword, &$spare, &$made) {
+            $what = trim(html_entity_decode(strip_tags($m[2])));
+            if ($what === '' || $made >= 3) {
+                return '';
+            }
+            $path = null;
+            $binary = $this->ai->image("Editorial illustration for a website article about \"{$keyword->keyword}\" ({$site->product_name}, {$site->typeConfig()['label']}). Picture: {$what}. Clean modern digital illustration, vivid colours, no text, letters, logos, watermarks or real people.", $site);
+            if ($binary !== null) {
+                $info = @getimagesizefromstring($binary);
+                $ext = [IMAGETYPE_PNG => 'png', IMAGETYPE_JPEG => 'jpg', IMAGETYPE_WEBP => 'webp'][$info[2] ?? 0] ?? 'png';
+                $candidate = "articles/{$site->id}/".md5($binary).".{$ext}";
+                $path = Media::put($candidate, $binary) ? $candidate : null;
+            }
+            $path ??= $spare->shift();
+            if ($path === null) {
+                return '';
+            }
+            $made++;
+
+            return '<figure><img src="media:'.e($path).'" alt="'.e(Str::limit($what, 120, '')).'"></figure>';
+        }, $html) ?? $html;
+    }
+
     protected function pickImage(Site $site): ?string
     {
         $images = collect($site->brandProfile?->media ?? [])->where('type', 'image')->pluck('path')->filter()->values();

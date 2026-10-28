@@ -72,6 +72,38 @@ class AiManager
         });
     }
 
+    /**
+     * Generate one image (OpenAI-compatible /images/generations), as binary,
+     * or null when no active provider has an image model or the call fails.
+     */
+    public function image(string $prompt, ?Site $site = null, string $size = '1536x1024'): ?string
+    {
+        $provider = AiProvider::where('is_active', true)->whereNotNull('image_model')->where('image_model', '!=', '')
+            ->whereNotIn('driver', ['anthropic'])->orderByDesc('is_default')->first();
+        if (! $provider) {
+            return null;
+        }
+
+        try {
+            $payload = ['model' => $provider->image_model, 'prompt' => mb_substr($prompt, 0, 3000), 'n' => 1, 'size' => $provider->options['image_size'] ?? $size];
+            $res = $this->http($provider)->timeout(240)->post('/images/generations', $payload);
+            // Providers differ in the sizes they accept: fall back to their default.
+            if ($res->status() === 400) {
+                unset($payload['size']);
+                $res = $this->http($provider)->timeout(240)->post('/images/generations', $payload);
+            }
+            $data = $res->throw()->json('data.0') ?? [];
+            $binary = isset($data['b64_json']) ? base64_decode((string) $data['b64_json'], true) : (isset($data['url']) ? Http::timeout(60)->get($data['url'])->throw()->body() : null);
+            $this->log($provider, $site, 'image', 0, 0);
+
+            return is_string($binary) && $binary !== '' && @getimagesizefromstring($binary) ? $binary : null;
+        } catch (Throwable $e) {
+            $this->log($provider, $site, 'image', 0, 0, $e->getMessage());
+
+            return null;
+        }
+    }
+
     /** Embedding vector for dedup, or null when the provider has no embedding model. */
     public function embed(string $text, ?Site $site = null): ?array
     {

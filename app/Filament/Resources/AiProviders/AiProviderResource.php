@@ -79,6 +79,8 @@ class AiProviderResource extends Resource
                     ->helperText('下拉为推荐模型，也可以直接输入服务商支持的其他模型名'),
                 TextInput::make('embedding_model')->label('Embedding 模型')->default('text-embedding-3-small')
                     ->helperText('用于语义去重；留空则用本地文本指纹'),
+                TextInput::make('image_model')->label('图片生成模型（可空）')->placeholder('gpt-image-1')
+                    ->helperText('用于给文章生成插图（OpenAI 兼容的 /images/generations 接口），留空则不生成插图'),
                 Toggle::make('supports_vision')->label('支持图片输入（视觉）')->default(true),
                 Toggle::make('is_default')->label('默认服务商'),
                 Toggle::make('is_active')->label('启用')->default(true),

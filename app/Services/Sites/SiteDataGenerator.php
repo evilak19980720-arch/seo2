@@ -76,7 +76,7 @@ class SiteDataGenerator
         }
         $tiles = collect($pages)->flatMap(fn ($p) => $p['cards'] ?? [])->unique(fn ($c) => mb_strtolower($c['name']))->take(150);
         if ($tiles->isNotEmpty()) {
-            $out .= "### TILES\n".$tiles->map(fn ($c) => $c['name'].' | '.($c['image'] ?? '').' | '.($c['url'] ?? ''))->implode("\n");
+            $out .= "### TILES (name | image | link | text next to the picture)\n".$tiles->map(fn ($c) => $c['name'].' | '.($c['image'] ?? '').' | '.($c['url'] ?? '').(empty($c['text']) ? '' : ' | '.Str::limit($c['text'], 160)))->implode("\n");
         }
 
         return Str::limit(trim($out), $limit) ?: 'none';
@@ -173,6 +173,39 @@ class SiteDataGenerator
         return $kept;
     }
 
+    /**
+     * The reference picture of an item: same name, one name inside the other
+     * ("Bônus de boas-vindas" / "Bônus de boas-vindas 100%"), or most words in
+     * common (names and the text next to the picture both count).
+     */
+    public function matchTile(string $title, Collection $tiles): ?array
+    {
+        $norm = SeoRules::normalize($title);
+        $words = fn (string $s) => collect(preg_split('/[^\p{L}\p{N}]+/u', SeoRules::normalize($s)))->filter(fn ($w) => mb_strlen($w) >= 3)->unique();
+        $mine = $words($title);
+        $best = null;
+        $bestScore = 0.0;
+        foreach ($tiles as $tile) {
+            if (empty($tile['image'])) {
+                continue;
+            }
+            $name = SeoRules::normalize((string) $tile['name']);
+            if ($name === $norm) {
+                return $tile;
+            }
+            $score = mb_strlen($norm) >= 4 && mb_strlen($name) >= 4 && (str_contains($name, $norm) || str_contains($norm, $name)) ? 0.9 : 0.0;
+            if ($mine->isNotEmpty()) {
+                $theirs = $words($tile['name'].' '.($tile['text'] ?? ''));
+                $score = max($score, $mine->intersect($theirs)->count() / $mine->count() * 0.85);
+            }
+            if ($score > $bestScore) {
+                [$best, $bestScore] = [$tile, $score];
+            }
+        }
+
+        return $bestScore >= 0.6 ? $best : null;
+    }
+
     public function cleanData(string $collection, array $item, string $factsLower): array
     {
         $data = [];
@@ -245,8 +278,7 @@ class SiteDataGenerator
             return null;
         }
         if ($url === '' || ! $known->has($url)) {
-            $name = SeoRules::normalize($title);
-            $url = (string) ($tiles->first(fn ($t) => SeoRules::normalize($t['name']) === $name)['image'] ?? '');
+            $url = (string) ($this->matchTile($title, $tiles)['image'] ?? '');
         }
 
         return $url !== '' ? rescue(fn () => $this->images->store($site, $url), null, false) : null;

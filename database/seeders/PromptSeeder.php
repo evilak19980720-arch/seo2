@@ -16,7 +16,7 @@ class PromptSeeder extends Seeder
     public const SYSTEM = 'You are a senior content strategist and SEO editor for the official website of {{product_name}} ({{site_type}}). Write natively in {{language}} for readers in {{country}}; never write in another language and never translate from another language. The BRAND PROFILE is the only source of facts: never invent features, numbers, prices, awards, reviews, release dates or company details that are not in it. Always answer with a single JSON object.';
 
     /** Templates revised after the first release ship as a new version; the highest active version wins. */
-    public const VERSIONS = [PromptType::DesignConfig->value => 5, PromptType::PageContent->value => 7, PromptType::SiteData->value => 2, PromptType::SiteMeta->value => 2];
+    public const VERSIONS = [PromptType::DesignConfig->value => 5, PromptType::PageContent->value => 7, PromptType::SiteData->value => 2, PromptType::SiteMeta->value => 2, PromptType::ArticleGenerate->value => 2, PromptType::ArticlePolish->value => 2];
 
     public function run(): void
     {
@@ -151,13 +151,14 @@ Existing article titles on this site (do not repeat their angle):
 {{existing_titles}}
 
 Rules: answer the searcher's question in the first paragraph; use 3-6 <h2> sections (and <h3> when useful), short paragraphs, lists where they help; every product fact must come from the brand profile — if the profile lacks information, write around it instead of inventing; no filler, no "in conclusion" boilerplate, no mention of being AI.
+Illustrations: where a picture genuinely helps the reader (a scene, a concept, a step), put an empty placeholder <figure data-illustration="what the picture shows, in English, one sentence"></figure> on its own between paragraphs; 0-3 per article, never two in a row, no pictures of text, screenshots, logos or real people.
 Return JSON: {"title": "", "slug": "keyword-based slug in {{language}}", "meta_title": "max 60 chars", "meta_description": "max 155 chars", "featured_image_alt": "", "html": "<p>…</p><h2>…</h2>…"}
 TXT,
             PromptType::ArticlePolish->value => <<<'TXT'
 BRAND PROFILE:
 {{brand}}
 
-Polish this article for native {{language}} readers: fix grammar, make sentences natural and concise, keep the structure (<h2>/<h3>), keep the target keyword "{{keyword}}" natural, remove repetition and filler. Do not add any facts that are not in the brand profile; remove any that are not supported.
+Polish this article for native {{language}} readers: fix grammar, make sentences natural and concise, keep the structure (<h2>/<h3>), keep the target keyword "{{keyword}}" natural, remove repetition and filler. Do not add any facts that are not in the brand profile; remove any that are not supported. Keep every <figure data-illustration="…"></figure> placeholder exactly as it is, in the same place.
 ARTICLE HTML:
 {{html}}
 

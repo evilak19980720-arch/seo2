@@ -10,6 +10,7 @@ enum ArticleTaskStatus: string implements HasColor, HasLabel
     case Waiting = 'waiting';
     case Generating = 'generating';
     case Polishing = 'polishing';
+    case Illustrating = 'illustrating';
     case Reviewing = 'reviewing';
     case Checking = 'checking';
     case Done = 'done';
@@ -23,6 +24,7 @@ enum ArticleTaskStatus: string implements HasColor, HasLabel
             self::Waiting => '排队中',
             self::Generating => '生成中',
             self::Polishing => '润色中',
+            self::Illustrating => '配图生成中',
             self::Reviewing => 'AI 审核中',
             self::Checking => '重复度检测中',
             self::Done => '已完成',
@@ -36,7 +38,7 @@ enum ArticleTaskStatus: string implements HasColor, HasLabel
     {
         return match ($this) {
             self::Waiting, self::Skipped => 'gray',
-            self::Generating, self::Polishing, self::Reviewing, self::Checking => 'info',
+            self::Generating, self::Polishing, self::Illustrating, self::Reviewing, self::Checking => 'info',
             self::Done => 'success',
             self::Blocked => 'warning',
             self::Failed => 'danger',
@@ -45,6 +47,6 @@ enum ArticleTaskStatus: string implements HasColor, HasLabel
 
     public function isRunning(): bool
     {
-        return in_array($this, [self::Generating, self::Polishing, self::Reviewing, self::Checking], true);
+        return in_array($this, [self::Generating, self::Polishing, self::Illustrating, self::Reviewing, self::Checking], true);
     }
 }

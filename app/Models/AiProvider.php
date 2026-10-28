@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class AiProvider extends Model
 {
     protected $fillable = [
-        'name', 'preset', 'driver', 'base_url', 'options', 'api_key', 'model', 'embedding_model', 'supports_vision', 'is_default',
+        'name', 'preset', 'driver', 'base_url', 'options', 'api_key', 'model', 'embedding_model', 'image_model', 'supports_vision', 'is_default',
         'is_active', 'max_concurrency', 'monthly_budget', 'input_price_per_million', 'output_price_per_million',
         'last_tested_at', 'last_test_result',
     ];

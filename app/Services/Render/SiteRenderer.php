@@ -240,6 +240,7 @@ class SiteRenderer
         ])->withArticle($article);
 
         [$bodyHtml] = InternalLinker::link(HtmlSanitizer::clean($article->body), $this->linkTargets($article));
+        $bodyHtml = $this->bodyImages($bodyHtml);
 
         $html = View::make('theme.article', [
             'ctx' => $ctx, 'article' => $article, 'bodyHtml' => $bodyHtml, 'related' => $this->related($article),
@@ -247,6 +248,20 @@ class SiteRenderer
         $html .= $this->renderBlocks('article', [], null, ['articles' => collect()]);
 
         return $this->layout($head, $html);
+    }
+
+    /** Article images stored as "media:path" become published WebP (OSS when configured) with real sizes. */
+    protected function bodyImages(string $html): string
+    {
+        return preg_replace_callback('/<img\b([^>]*?)\ssrc="media:([^"]+)"([^>]*)>/i', function ($m) {
+            $img = $this->ctx->image(html_entity_decode($m[2]), 1000);
+            if (! $img) {
+                return '';
+            }
+            $rest = preg_replace('/\s(width|height)="[^"]*"/i', '', $m[1].$m[3]);
+
+            return '<img'.$rest.' src="'.e($img['src']).'" width="'.$img['width'].'" height="'.$img['height'].'">';
+        }, $html) ?? $html;
     }
 
     public function renderNotFound(): string
