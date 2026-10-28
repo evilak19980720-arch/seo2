@@ -51,7 +51,7 @@ class Installer
         $checks[] = ['label' => 'gd 或 imagick（支持 WebP）', 'ok' => $imageOk, 'required' => true, 'hint' => '安装 php-gd（带 libwebp）或 php-imagick'];
         $checks[] = ['label' => 'AVIF 输出（可选）', 'ok' => function_exists('imageavif') && (bool) (imagetypes() & IMG_AVIF), 'required' => false, 'hint' => 'GD 编译 libavif 后可额外输出 AVIF'];
 
-        foreach (['storage' => storage_path(), 'bootstrap/cache' => base_path('bootstrap/cache'), '静态页输出目录' => config('platform.output_path'), 'public/theme' => public_path('theme')] as $label => $path) {
+        foreach (['storage' => storage_path(), 'bootstrap/cache' => base_path('bootstrap/cache'), '静态页输出目录' => config('platform.output_path'), '证书目录' => config('platform.certs_path'), 'public/theme' => public_path('theme')] as $label => $path) {
             @mkdir($path, 0775, true);
             $checks[] = ['label' => "{$label} 可写", 'ok' => is_writable($path), 'required' => true, 'hint' => "chown/chmod 使 PHP 进程可写：{$path}"];
         }

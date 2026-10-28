@@ -10,7 +10,6 @@ use App\Services\Integrations\IndexNow;
 use App\Services\Integrations\SearchConsole;
 use App\Support\Settings;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\File;
 use Throwable;
 
 /**
@@ -75,8 +74,13 @@ class SiteProvisioner
         $certFile = rtrim(config('platform.certs_path'), '/')."/{$domain->name}.pem";
         $expires = $domain->certificate_expires_at;
         if (! is_file($certFile)) {
+            // Check before issuing so a permission problem doesn't waste a certificate.
+            $dir = dirname($certFile);
+            @mkdir($dir, 0750, true);
+            if (! is_writable($dir)) {
+                throw new \RuntimeException("证书目录不可写：{$dir}。请执行 chown -R <PHP 运行用户> {$dir}（宝塔一般是 www），解析和 SSL 设置已完成，修复后重新点「一键接入」即可签发证书");
+            }
             $cert = $this->cf->createOriginCertificate($domain->name);
-            File::ensureDirectoryExists(dirname($certFile), 0750);
             file_put_contents($certFile, $cert['certificate']);
             file_put_contents(substr($certFile, 0, -4).'.key', $cert['private_key']);
             chmod(substr($certFile, 0, -4).'.key', 0600);
