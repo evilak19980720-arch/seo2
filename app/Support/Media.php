@@ -34,34 +34,44 @@ class Media
 
     public static function ossConfig(): array
     {
-        $driver = Settings::get('oss_driver') ?: 's3';
-        $region = Settings::get('oss_region') ?: ($driver === 'oss' ? 'oss-cn-hangzhou' : 'us-east-1');
-        $endpoint = Settings::get('oss_endpoint');
+        $get = fn (string $key) => trim(preg_replace('/\s+/', '', (string) Settings::get($key)));
+        $driver = $get('oss_driver') ?: 's3';
+        $region = $get('oss_region');
+        $endpoint = preg_replace('#^https?://#i', '', rtrim($get('oss_endpoint'), '/'));
+
         if ($driver === 'oss') {
-            // Aliyun accepts "cn-hangzhou" or "oss-cn-hangzhou"; its S3 API wants the bare region id.
-            $region = preg_replace('/^oss-/', '', $region);
-            $endpoint = $endpoint ?: "https://oss-{$region}.aliyuncs.com";
+            // Accept "cn-hangzhou", "oss-cn-hangzhou" or a whole endpoint host pasted into either field.
+            foreach ([$region, $endpoint] as $value) {
+                if (preg_match('/(?:^|\.)oss-([a-z0-9-]+?)(?:-internal)?\.aliyuncs\.com/i', $value, $m)) {
+                    $region = $m[1];
+                    break;
+                }
+            }
+            $region = preg_replace('/^oss-/', '', $region ?: 'cn-hangzhou');
+            $endpoint = "oss-{$region}.aliyuncs.com";
         }
-        if ($endpoint && ! preg_match('#^https?://#i', $endpoint)) {
-            $endpoint = 'https://'.$endpoint;
+        $region = $region ?: 'us-east-1';
+        if ($endpoint !== '' && ! filter_var('https://'.$endpoint, FILTER_VALIDATE_URL)) {
+            throw new \InvalidArgumentException("对象存储 Endpoint 格式不正确：{$endpoint}");
         }
 
         return array_filter([
             'driver' => 's3',
-            'key' => Settings::get('oss_key'),
-            'secret' => Settings::get('oss_secret'),
+            'key' => $get('oss_key'),
+            'secret' => $get('oss_secret'),
             'region' => $region,
-            'bucket' => Settings::get('oss_bucket'),
-            'endpoint' => $endpoint ?: null,
-            'url' => Settings::get('oss_cdn_url') ?: null,
+            'bucket' => $get('oss_bucket'),
+            'endpoint' => $endpoint !== '' ? 'https://'.$endpoint : null,
+            'url' => $get('oss_cdn_url') ?: null,
             // Aliyun OSS only supports virtual-hosted style; most S3 clones accept it too.
             'use_path_style_endpoint' => false,
             // Newer AWS SDKs add CRC checksums that S3-compatible services may reject.
             'request_checksum_calculation' => 'when_required',
             'response_checksum_validation' => 'when_required',
             'visibility' => 'private',
-            'throw' => true,
-            'report' => false,
+            // A storage outage must not break admin pages; reads fall back to the public disk.
+            'throw' => false,
+            'report' => true,
         ], fn ($v) => $v !== null);
     }
 
@@ -112,7 +122,7 @@ class Media
     public static function test(): ?string
     {
         try {
-            $disk = Storage::build(self::ossConfig());
+            $disk = Storage::build(['throw' => true] + self::ossConfig());
             $key = '.connection-test-'.uniqid();
             $disk->put($key, 'ok');
             $disk->delete($key);

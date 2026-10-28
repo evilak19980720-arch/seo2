@@ -43,4 +43,21 @@ class MediaDiskTest extends TestCase
         $this->assertNull(Media::get('logos/missing.png'));
         $this->assertFileExists(Media::localPath('logos/old.png'));
     }
+
+    public function test_aliyun_endpoint_pasted_into_region_field_is_understood(): void
+    {
+        Settings::setMany(['oss_driver' => 'oss', 'oss_key' => 'k', 'oss_secret' => 's', 'oss_bucket' => 'b', 'oss_region' => 'oss-ap-northeast-2.aliyuncs.com ', 'oss_endpoint' => null]);
+        Media::configure();
+
+        $this->assertSame('ap-northeast-2', config('filesystems.disks.media.region'));
+        $this->assertSame('https://oss-ap-northeast-2.aliyuncs.com', config('filesystems.disks.media.endpoint'));
+    }
+
+    public function test_broken_endpoint_falls_back_to_local_disk(): void
+    {
+        Settings::setMany(['oss_driver' => 's3', 'oss_key' => 'k', 'oss_secret' => 's', 'oss_bucket' => 'b', 'oss_endpoint' => 'oss..example']);
+        Media::configure();
+
+        $this->assertSame('local', config('filesystems.disks.media.driver'));
+    }
 }
