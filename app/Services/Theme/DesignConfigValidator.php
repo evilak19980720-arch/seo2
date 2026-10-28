@@ -64,6 +64,7 @@ class DesignConfigValidator
         $fonts = [];
         foreach (['heading', 'body'] as $role) {
             $font = $config['fonts'][$role] ?? 'system';
+            $font = $theme['font_aliases'][$font] ?? $font;
             if (! isset($theme['fonts'][$font])) {
                 $this->repaired[] = "fonts.{$role} [{$font}] not in whitelist, using system";
                 $font = 'system';
@@ -115,7 +116,7 @@ class DesignConfigValidator
             $config['navigation'] = (array) ($config['navigation'] ?? []);
             $config['navigation']['submenu'] = $noDropdown ? [] : $this->sectionedSubmenu($siteTypeConfig, $result['menu']);
         }
-        $result['navigation'] = $this->navigation($config['navigation'] ?? [], $result['menu'], $siteTypeConfig, $result['nav']);
+        $result['navigation'] = $this->navigation($config['navigation'] ?? [], $result['menu'], $siteTypeConfig, $result['nav'], crc32(json_encode($colors).implode(',', $result['menu'])));
 
         // Page compositions
         $pageTypes = array_map(fn ($p) => $p['blocks'], $siteTypeConfig['pages']) + self::SYSTEM_PAGES;
@@ -197,7 +198,14 @@ class DesignConfigValidator
      * Header behaviour: dropdown children per top-level menu item, number of
      * CTA buttons, mobile bottom bar, sticky header, leading home link.
      */
-    protected function navigation(mixed $nav, array $menu, array $siteTypeConfig, string $variant): array
+    /** Phone header, menu and bottom bar looks; sites without a choice get a stable mix of them. */
+    public const MOBILE = [
+        'mobile_header' => ['standard', 'center', 'cta', 'tabs'],
+        'mobile_menu' => ['dropdown', 'drawer', 'drawer-left', 'fullscreen', 'sheet'],
+        'mobile_bar_style' => ['raised', 'flat', 'pill', 'cta'],
+    ];
+
+    protected function navigation(mixed $nav, array $menu, array $siteTypeConfig, string $variant, int $seed = 0): array
     {
         $nav = is_array($nav) ? $nav : [];
         $allowed = $this->menu(array_keys($siteTypeConfig['pages'] + ['blog' => 1]), $siteTypeConfig);
@@ -221,7 +229,11 @@ class DesignConfigValidator
             'mobile_bar' => (bool) ($nav['mobile_bar'] ?? false) || ! empty($siteTypeConfig['mobile_bar']),
             'sticky' => (bool) ($nav['sticky'] ?? true),
             'home_link' => (bool) ($nav['home_link'] ?? $variant === 'portal'),
-        ];
+        ] + collect(self::MOBILE)->map(function (array $allowed, string $key) use ($nav, $seed) {
+            $value = $nav[$key] ?? null;
+
+            return in_array($value, $allowed, true) ? $value : $allowed[intdiv($seed, 7 ** array_search($key, array_keys(self::MOBILE))) % count($allowed)];
+        })->all();
     }
 
     protected function variant(string $block, ?string $variant): string

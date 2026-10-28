@@ -184,7 +184,8 @@ class ThemeContext
     /** Header behaviour from the design (see DesignConfigValidator::navigation). */
     public function navigation(): array
     {
-        return ($this->design['navigation'] ?? []) + ['submenu' => [], 'buttons' => 1, 'mobile_bar' => false, 'sticky' => true, 'home_link' => false];
+        return ($this->design['navigation'] ?? []) + ['submenu' => [], 'buttons' => 1, 'mobile_bar' => false, 'sticky' => true, 'home_link' => false,
+            'mobile_header' => 'standard', 'mobile_menu' => 'dropdown', 'mobile_bar_style' => 'raised'];
     }
 
     /**

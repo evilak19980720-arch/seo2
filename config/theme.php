@@ -46,17 +46,27 @@ return [
     // Blocks every page gets from the layout, not from the page composition.
     'layout_blocks' => ['nav', 'footer'],
 
-    // Self-hosted fonts (public/fonts/{slug}/), latin subset only.
+    // Self-hosted variable fonts (public/theme/fonts, latin subset, SIL OFL 1.1 from Fontsource), weights 300-800.
     'fonts' => [
         'system' => ['family' => 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif', 'file' => null],
         'inter' => ['family' => '"Inter", system-ui, sans-serif', 'file' => 'inter-latin.woff2'],
-        'poppins' => ['family' => '"Poppins", system-ui, sans-serif', 'file' => 'poppins-latin.woff2'],
         'montserrat' => ['family' => '"Montserrat", system-ui, sans-serif', 'file' => 'montserrat-latin.woff2'],
         'nunito' => ['family' => '"Nunito", system-ui, sans-serif', 'file' => 'nunito-latin.woff2'],
         'roboto-slab' => ['family' => '"Roboto Slab", Georgia, serif', 'file' => 'roboto-slab-latin.woff2'],
-        'playfair' => ['family' => '"Playfair Display", Georgia, serif', 'file' => 'playfair-latin.woff2'],
+        'playfair' => ['family' => '"Playfair Display", Georgia, serif', 'file' => 'playfair-display-latin.woff2'],
         'space-grotesk' => ['family' => '"Space Grotesk", system-ui, sans-serif', 'file' => 'space-grotesk-latin.woff2'],
+        'outfit' => ['family' => '"Outfit", system-ui, sans-serif', 'file' => 'outfit-latin.woff2'],
+        'plus-jakarta' => ['family' => '"Plus Jakarta Sans", system-ui, sans-serif', 'file' => 'plus-jakarta-sans-latin.woff2'],
+        'sora' => ['family' => '"Sora", system-ui, sans-serif', 'file' => 'sora-latin.woff2'],
+        'manrope' => ['family' => '"Manrope", system-ui, sans-serif', 'file' => 'manrope-latin.woff2'],
+        'dm-sans' => ['family' => '"DM Sans", system-ui, sans-serif', 'file' => 'dm-sans-latin.woff2'],
+        'oswald' => ['family' => '"Oswald", "Arial Narrow", sans-serif', 'file' => 'oswald-latin.woff2'],
+        'exo' => ['family' => '"Exo 2", system-ui, sans-serif', 'file' => 'exo-2-latin.woff2'],
+        'rubik' => ['family' => '"Rubik", system-ui, sans-serif', 'file' => 'rubik-latin.woff2'],
     ],
+
+    // Retired font names still found in stored designs.
+    'font_aliases' => ['poppins' => 'outfit'],
 
     // Global style switches, rendered as body classes (st-{key}-{value}).
     'styles' => [

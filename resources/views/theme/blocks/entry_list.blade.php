@@ -3,6 +3,8 @@
 @php($onOwner = $owner !== null && $page?->type === $owner)
 @php($items = $collection ? $ctx->pickEntries($collection, $section['filter'] ?? 'all', $onOwner ? 48 : ($variant === 'compact' ? 8 : 6)) : collect())
 @if ($items->isNotEmpty())
+{{-- A spotlight or carousel of one or two items is just an oversized card. --}}
+@php($variant = $items->count() < 3 && in_array($variant, ['featured', 'carousel'], true) ? 'cards' : $variant)
 <section class="section entry-list entry-list--{{ $variant }}" @if (! empty($section['key'])) id="{{ $section['key'] }}" @endif>
 <div class="container">
 <div class="section__head">@if (! empty($data['eyebrow']))<span class="section__eyebrow">{{ $data['eyebrow'] }}</span>@endif @if ($isFirst ?? false)<h1>{{ $data['heading'] ?? $page?->title }}</h1>@else<h2>{{ $data['heading'] ?? $ctx->t('collections.'.$collection) }}</h2>@endif @if (! empty($data['intro']))<p>{{ $data['intro'] }}</p>@endif</div>

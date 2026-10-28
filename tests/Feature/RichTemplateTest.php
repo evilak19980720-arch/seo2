@@ -119,7 +119,7 @@ class RichTemplateTest extends TestCase
         $this->assertStringContainsString('<ul class="nav__sub"><li><a href="/perguntas-frequentes/">', $home);
         $this->assertStringContainsString('nav--static', $home);
         $this->assertSame(2, substr_count($home, 'btn nav__cta'));
-        $this->assertStringContainsString('class="mobile-bar"', $home);
+        $this->assertMatchesRegularExpression('#class="mobile-bar mobile-bar--[a-z]+"#', $home);
         $this->assertStringContainsString('has-mobile-bar', $home);
         $this->assertStringContainsString('<li><a href="/">Início</a></li>', $home);
         // The footer still lists every page.

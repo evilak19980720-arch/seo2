@@ -92,6 +92,19 @@ class GameSiteTest extends TestCase
         $this->assertFalse($validator->validate([], $this->makeSite()->typeConfig())['navigation']['mobile_bar']);
     }
 
+    public function test_sites_get_different_phone_header_menu_and_bar_combinations(): void
+    {
+        $validator = new DesignConfigValidator;
+        $type = $this->gameSite()->typeConfig();
+        $combos = collect(['#e11d48', '#2563eb', '#16a34a', '#9333ea', '#ea580c', '#0891b2', '#ca8a04', '#db2777'])
+            ->map(fn ($c) => collect($validator->validate(['colors' => ['primary' => $c]], $type)['navigation'])->only(array_keys(DesignConfigValidator::MOBILE))->implode('/'));
+        $this->assertGreaterThan(4, $combos->unique()->count());
+        $this->assertSame($combos[0], collect($validator->validate(['colors' => ['primary' => '#e11d48']], $type)['navigation'])->only(array_keys(DesignConfigValidator::MOBILE))->implode('/'), 'stable per site');
+
+        $chosen = $validator->validate(['navigation' => ['mobile_header' => 'tabs', 'mobile_menu' => 'sheet', 'mobile_bar_style' => 'pill']], $type)['navigation'];
+        $this->assertSame(['tabs', 'sheet', 'pill'], [$chosen['mobile_header'], $chosen['mobile_menu'], $chosen['mobile_bar_style']]);
+    }
+
     public function test_structure_is_stable_random_and_respects_conditions(): void
     {
         $type = config('site_types.game');
