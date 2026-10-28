@@ -44,6 +44,7 @@ class ReferenceAnalyzer
         if ($html === null) {
             return null;
         }
+        $this->keepCopy($url, $html);
 
         $dom = new DOMDocument;
         @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
@@ -151,6 +152,7 @@ class ReferenceAnalyzer
             '版块：'.(implode(' → ', $ref['structure'] ?? []) ?: '未识别'),
             '正文：'.mb_strlen($ref['content'] ?? '').' 字',
             '图片：'.count($ref['images'] ?? []).' 张',
+            isset($d['saved']) ? '读到的页面源码：'.$d['saved'] : null,
         ]));
     }
 
@@ -193,6 +195,19 @@ class ReferenceAnalyzer
             $length += mb_strlen($line);
             if ($length > 12_000) {
                 break;
+            }
+        }
+
+        if ($length < 300) {
+            // Apps built from <div>s only (common with Vue/React casino and shop sites).
+            foreach ($this->looseTexts($xpath) as $text) {
+                if (! in_array($text, $out, true)) {
+                    $out[] = $text;
+                    $length += mb_strlen($text);
+                }
+                if ($length > 12_000) {
+                    break;
+                }
             }
         }
 
@@ -272,7 +287,7 @@ class ReferenceAnalyzer
             if ($node->nodeName === 'marquee') {
                 $kind = 'notice';
             } else {
-                $name = strtolower($node->getAttribute('class').' '.$node->getAttribute('id'));
+                $name = strtolower($node->nodeName.' '.$node->getAttribute('class').' '.$node->getAttribute('id'));
                 $kind = null;
                 foreach (self::STRUCTURE_HINTS as $block => $pattern) {
                     if (preg_match('/(^|[\s_-])('.$pattern.')([\s_-]|$)/', $name)) {
@@ -513,7 +528,7 @@ class ReferenceAnalyzer
             }
         }
 
-        return [];
+        return $this->looseMenu($xpath);
     }
 
     /**
@@ -588,6 +603,98 @@ class ReferenceAnalyzer
             'sticky' => (bool) preg_match('/(header|\.header|#header|\.navbar|\.nav|\.top-?bar)[\w.#-]*\s*\{[^}]*position\s*:\s*(fixed|sticky)/i', $css),
             'home_link' => isset($items[0]) && (bool) preg_match('/^(home|in[ií]cio|inicio|首页|página inicial|accueil|start)$/iu', $items[0]['label']),
         ];
+    }
+
+    protected const SKIP = 'self::script or self::style or self::noscript or self::template or self::svg or self::iframe';
+
+    /** Text written directly inside any element (not only <p>/<h2>), outside header, nav and footer. */
+    protected function looseTexts(DOMXPath $xpath): array
+    {
+        $out = [];
+        $query = '//body//*[not('.self::SKIP.') and not(ancestor-or-self::header) and not(ancestor-or-self::nav) and not(ancestor-or-self::footer) and not(ancestor::*['.self::SKIP.'])]';
+        foreach ($xpath->query($query) as $node) {
+            if ($this->isChrome($node)) {
+                continue;
+            }
+            $text = '';
+            foreach ($node->childNodes as $child) {
+                if ($child->nodeType === XML_TEXT_NODE || in_array($child->nodeName, ['b', 'strong', 'em', 'i', 'br', 'font', 'small'], true)) {
+                    $text .= ' '.$child->textContent;
+                }
+            }
+            $text = trim(preg_replace('/\s+/u', ' ', $text));
+            // A sentence or a heading, not a button label or a price.
+            if (mb_strlen($text) < 12 || ! preg_match('/\p{L}{2,}.*\s.*\p{L}{2,}|\p{Han}{6,}/u', $text) || in_array($text, $out, true)) {
+                continue;
+            }
+            $heading = preg_match('/(^|[\s_-])(title|tit|heading|headline|h[1-3])([\s_-]|$)/', strtolower($node->getAttribute('class')));
+            $out[] = $heading && mb_strlen($text) <= 90 ? '## '.$text : $text;
+            if (count($out) >= 200) {
+                break;
+            }
+        }
+
+        return $out;
+    }
+
+    /** Inside a header/menu-like container that has no semantic <header>/<nav> tag. */
+    protected function isChrome(\DOMElement $node): bool
+    {
+        for ($n = $node; $n instanceof \DOMElement && $n->nodeName !== 'body'; $n = $n->parentNode) {
+            if (preg_match('/(^|[\s_-])('.self::CHROME_PATTERN.')([\s_-]|$)/', strtolower($n->nodeName.' '.$n->getAttribute('class').' '.$n->getAttribute('id')))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected const CHROME_PATTERN = 'header|navbar|nav|menu|topbar|top-?nav|tab-?bar|footer|sidebar|side-?menu|drawer';
+
+    /**
+     * Menu labels from a header/nav-like <div> when the page has no <nav>:
+     * short texts of its leaf items, in document order.
+     *
+     * @return array<int, string>
+     */
+    protected function looseMenu(DOMXPath $xpath): array
+    {
+        $containers = $xpath->query('//body//*[not('.self::SKIP.')][contains(translate(concat(@class," ",@id," ",local-name()),"NAVMEUHDR","navmeuhdr"),"nav") or contains(translate(concat(@class," ",@id," ",local-name()),"NAVMEUHDR","navmeuhdr"),"menu") or contains(translate(concat(@class," ",@id," ",local-name()),"NAVMEUHDR","navmeuhdr"),"header")]');
+        foreach ($containers as $box) {
+            if (preg_match('/footer|bottom|tab-?bar|sidebar|drawer/', strtolower($box->getAttribute('class').' '.$box->getAttribute('id')))) {
+                continue;
+            }
+            $items = [];
+            foreach ($xpath->query('.//*[not(*) or self::a or self::li][not('.self::SKIP.')]', $box) as $leaf) {
+                $text = trim(preg_replace('/\s+/u', ' ', $leaf->textContent));
+                if (mb_strlen($text) < 2 || mb_strlen($text) > 30 || preg_match(self::ACCOUNT_PATTERN, $text) || preg_match('/^[\d\W_]+$/u', $text) || in_array($text, $items, true)) {
+                    continue;
+                }
+                $items[] = $text;
+                if (count($items) >= 12) {
+                    break;
+                }
+            }
+            if (count($items) >= 3) {
+                return $items;
+            }
+        }
+
+        return [];
+    }
+
+    /** The HTML that was analysed, kept for troubleshooting (one file per host). */
+    protected function keepCopy(string $url, string $html): void
+    {
+        try {
+            $file = storage_path('app/reference/'.preg_replace('/[^a-z0-9.-]/', '_', strtolower((string) parse_url($url, PHP_URL_HOST))).'.html');
+            @mkdir(dirname($file), 0775, true);
+            if (@file_put_contents($file, $html) !== false) {
+                $this->diagnostics['saved'] = $file;
+            }
+        } catch (Throwable) {
+            // Troubleshooting copy only.
+        }
     }
 
     /** @return array<int, string> */
