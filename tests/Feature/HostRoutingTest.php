@@ -27,6 +27,11 @@ class HostRoutingTest extends TestCase
         $this->get('https://marca.com.br/admin/login')->assertNotFound();
         $this->get('https://marca.com.br/install')->assertNotFound();
         $this->get('https://marca.com.br/')->assertOk()->assertSee('Galaxy Run');
+        $this->assertFileDoesNotExist(public_path('favicon.ico'), 'Nginx would serve it to every brand domain');
+        $this->assertFileDoesNotExist(public_path('robots.txt'));
+        $this->get('https://marca.com.br/favicon.ico')->assertOk()->assertHeader('Content-Type', 'image/x-icon');
+        $this->assertStringContainsString('Sitemap:', file_get_contents($this->get('https://marca.com.br/robots.txt')->assertOk()->baseResponse->getFile()->getPathname()));
+        $this->get('https://admin.test/robots.txt')->assertOk()->assertSee('Disallow: /');
         $this->get('https://www.marca.com.br/x')->assertRedirect('https://marca.com.br/x');
         $this->get('https://marca.com.br/_theme/base.css?v=1')->assertOk()->assertHeader('Content-Type', 'text/css; charset=utf-8');
         $this->get('https://marca.com.br/_theme/../.env')->assertNotFound();

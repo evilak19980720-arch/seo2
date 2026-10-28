@@ -9,6 +9,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/admin');
 
+// The admin host is never indexed. (No public/robots.txt or favicon.ico: on panel-managed
+// servers Nginx would serve those files to every brand domain instead of the site's own.)
+Route::get('/robots.txt', fn () => response("User-agent: *\nDisallow: /\n", 200, ['Content-Type' => 'text/plain']));
+
 Route::get('/install/{step?}', [InstallController::class, 'show']);
 Route::post('/install/{step}', [InstallController::class, 'store']);
 
