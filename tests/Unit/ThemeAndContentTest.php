@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Services\Ai\AiResponse;
 use App\Services\Content\LanguageDetector;
 use App\Services\Content\Similarity;
 use App\Services\Render\HtmlSanitizer;
@@ -71,5 +72,16 @@ class ThemeAndContentTest extends TestCase
         $fixed = CustomCssValidator::mobileSafe('.a{width:1200px;min-width:480px}.b{width:300px}@media (min-width:900px){.c{width:1100px}}');
         $this->assertSame('.a{width:min(1200px,100%);min-width:min(480px,100%)}.b{width:300px}@media (min-width:900px){.c{width:1100px}}', $fixed);
         $this->assertSame([], CustomCssValidator::errors($fixed));
+    }
+
+    public function test_broken_or_cut_off_ai_json_is_repaired(): void
+    {
+        $json = fn (string $text, bool $cut = false) => (new AiResponse($text, truncated: $cut))->json();
+
+        $this->assertSame(['css' => ".a{\n color:red }"], $json("{\"css\":\".a{\n color:red }\"}"));
+        $this->assertSame(['a' => [1, 2], 'b' => ['c' => 3]], $json('{"a":[1,2,],"b":{"c":3,}}'));
+        $this->assertSame(['design' => ['colors' => ['primary' => '#b01010', 'surface' => '#3a']]], $json('{"design":{"colors":{"primary":"#b01010","surface":"#3a', true));
+        $this->assertSame(['design' => ['nav' => 'bar']], $json('{"design":{"nav":"bar","footer":', true));
+        $this->assertSame(['ok' => true], $json("Here you go:\n```json\n{\"ok\":true}\n```"));
     }
 }

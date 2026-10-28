@@ -48,7 +48,7 @@ class AiManager
 
         $response = $this->chat($messages, $type->value, $site, $images, $json);
 
-        return new AiResponse($response->text, $response->inputTokens, $response->outputTokens, $prompt->id);
+        return new AiResponse($response->text, $response->inputTokens, $response->outputTokens, $prompt->id, $response->truncated);
     }
 
     /**
@@ -179,15 +179,16 @@ class AiManager
             $messages[] = ['role' => $last['role'], 'content' => $content];
         }
 
-        $payload = ['model' => $provider->model, 'messages' => $messages];
+        // Long answers (design config with CSS) must not stop at a provider's small default limit.
+        $payload = ['model' => $provider->model, 'messages' => $messages, 'max_tokens' => 16000];
         if ($json) {
             $payload['response_format'] = ['type' => 'json_object'];
         }
 
         $response = $this->http($provider)->post('/chat/completions', $payload);
-        // Not every compatible provider accepts response_format; the prompts already ask for JSON.
-        if ($json && $response->status() === 400) {
-            unset($payload['response_format']);
+        // Not every compatible provider accepts response_format or that many tokens; the prompts already ask for JSON.
+        if ($response->status() === 400) {
+            unset($payload['response_format'], $payload['max_tokens']);
             $response = $this->http($provider)->post('/chat/completions', $payload);
         }
         $res = $response->throw()->json();
@@ -196,6 +197,7 @@ class AiManager
             (string) ($res['choices'][0]['message']['content'] ?? ''),
             (int) ($res['usage']['prompt_tokens'] ?? 0),
             (int) ($res['usage']['completion_tokens'] ?? 0),
+            truncated: ($res['choices'][0]['finish_reason'] ?? null) === 'length',
         );
     }
 
@@ -220,20 +222,26 @@ class AiManager
             $system = trim($system."\n\nRespond with a single valid JSON object only.");
         }
 
-        $res = Http::baseUrl(preg_replace('#/v1$#', '', rtrim($provider->base_url, '/')))
+        $post = fn (int $maxTokens) => Http::baseUrl(preg_replace('#/v1$#', '', rtrim($provider->base_url, '/')))
             ->withHeaders(['x-api-key' => $provider->api_key, 'anthropic-version' => '2023-06-01'])
             ->acceptJson()
-            ->timeout(180)
+            ->timeout(300)
             ->post('/v1/messages', array_filter([
                 'model' => $provider->model,
-                'max_tokens' => 8192,
+                'max_tokens' => $maxTokens,
                 'system' => $system ?: null,
                 'messages' => $messages,
-            ]))->throw()->json();
+            ]));
+        $response = $post(16000);
+        // Older models allow fewer output tokens.
+        if ($response->status() === 400 && str_contains($response->body(), 'max_tokens')) {
+            $response = $post(8192);
+        }
+        $res = $response->throw()->json();
 
         $text = collect($res['content'] ?? [])->where('type', 'text')->pluck('text')->implode('');
 
-        return new AiResponse($text, (int) ($res['usage']['input_tokens'] ?? 0), (int) ($res['usage']['output_tokens'] ?? 0));
+        return new AiResponse($text, (int) ($res['usage']['input_tokens'] ?? 0), (int) ($res['usage']['output_tokens'] ?? 0), truncated: ($res['stop_reason'] ?? null) === 'max_tokens');
     }
 
     protected function log(AiProvider $provider, ?Site $site, string $purpose, int $in, int $out, ?string $error = null): void

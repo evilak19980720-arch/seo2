@@ -12,6 +12,7 @@ use App\Models\GenerationTask;
 use App\Models\GoneUrl;
 use App\Models\Page;
 use App\Models\Site;
+use App\Services\Ai\AiException;
 use App\Services\Ai\AiManager;
 use App\Services\Content\LanguageDetector;
 use App\Services\Content\SeoRules;
@@ -382,15 +383,33 @@ class SiteGenerator
             }
             // The design prompt gets the structure, not the full text and image list.
             $forDesign = $reference ? array_merge(Arr::except($reference, ['images', 'content']), ['content_excerpt' => Str::limit((string) ($reference['content'] ?? ''), 1500)]) : null;
-            $res = $this->ai->prompt(PromptType::DesignConfig, [
+            $vars = [
                 'brand' => $this->brandContext($site),
                 'logo_color' => $this->logoColor($site) ?? 'unknown',
                 'whitelist' => json_encode($this->whitelist($site), JSON_UNESCAPED_UNICODE),
                 'feedback' => $feedback ?? '',
                 'reference_url' => $site->reference_url ?? '',
                 'reference' => $forDesign ? json_encode($forDesign, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : 'none',
-            ], $site, $images)->json();
-            $customCss = $res['custom_css'] ?? null;
+            ];
+            // A cut-off or malformed answer is asked again once, shorter.
+            for ($attempt = 1; ; $attempt++) {
+                try {
+                    $response = $this->ai->prompt(PromptType::DesignConfig, $vars, $site, $images);
+                    $res = $response->json();
+                    break;
+                } catch (AiException $e) {
+                    if ($attempt >= 2) {
+                        throw $e;
+                    }
+                    $this->designNotes[] = 'AI 设计返回的 JSON 不完整或格式有误，已要求精简后重试';
+                    $vars['feedback'] = trim($vars['feedback'].' Your previous answer was cut off or was not valid JSON. Return one compact JSON object: keep custom_css under 3000 characters and escape line breaks and quotes inside strings.');
+                }
+            }
+            // CSS cut off mid-rule is worse than none.
+            $customCss = $response->truncated ? null : ($res['custom_css'] ?? null);
+            if ($response->truncated) {
+                $this->designNotes[] = 'AI 设计输出被截断，已保留配色和版式，丢弃不完整的自定义 CSS';
+            }
             $config = $res['design'] ?? $res;
         } catch (Throwable $e) {
             $this->designNotes[] = 'AI 设计生成失败，已用默认设计：'.Str::limit($e->getMessage(), 150);
@@ -857,7 +876,8 @@ class SiteGenerator
             'density' => array_keys(config('theme.density')),
             'shadow' => array_keys(config('theme.shadow')),
             'style' => config('theme.styles'),
-            'page_types' => array_keys($pages + DesignConfigValidator::SYSTEM_PAGES),
+            // Pool pages take their blocks from the site's structure: only the other page types need a layout.
+            'page_types' => array_keys(array_filter($pages, fn ($p) => ! isset($p['sections'])) + DesignConfigValidator::SYSTEM_PAGES),
             'menu_items' => array_values(array_merge(array_diff(array_keys($pages), ['home', 'privacy', 'terms']), ['blog'])),
             'extra_pages' => 'up to '.ExtraPages::MAX.' pages named extra_1…extra_'.ExtraPages::MAX.' in the order of "extra_pages"; usable in "menu" and "pages" (blocks: '.implode(', ', ExtraPages::BLOCKS).')',
         ];
