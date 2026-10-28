@@ -56,7 +56,6 @@ class AiProviderResource extends Resource
                         $set('driver', $preset['driver']);
                         $set('base_url', $preset['base_url']);
                         $set('model', $preset['models'][0] ?? null);
-                        $set('embedding_model', $preset['embedding'] ?? null);
                         $set('supports_vision', (bool) $preset['vision']);
                         if (blank($get('name')) || collect(AiProvider::presets())->pluck('label')->contains($get('name'))) {
                             $set('name', $preset['label']);
@@ -76,11 +75,7 @@ class AiProviderResource extends Resource
                     ->helperText(fn (?AiProvider $record) => $record ? '留空则不修改' : '加密存储'),
                 TextInput::make('model')->label('模型')->required()->default('gpt-5')
                     ->datalist(fn (Get $get) => AiProvider::presets()[$get('preset')]['models'] ?? [])
-                    ->helperText('下拉为推荐模型，也可以直接输入服务商支持的其他模型名'),
-                TextInput::make('embedding_model')->label('Embedding 模型')->default('text-embedding-3-small')
-                    ->helperText('用于语义去重；留空则用本地文本指纹'),
-                TextInput::make('image_model')->label('图片生成模型（可空）')->placeholder('gpt-image-1')
-                    ->helperText('用于给文章生成插图（OpenAI 兼容的 /images/generations 接口），留空则不生成插图'),
+                    ->helperText('对话模型。下拉为推荐模型，也可以直接输入。图片生成和查重向量的模型在「AI 用途分配」里填'),
                 Toggle::make('supports_vision')->label('支持图片输入（视觉）')->default(true),
                 Toggle::make('is_default')->label('默认服务商')->helperText('「AI 用途分配」里没指定接口的用途用它'),
                 Toggle::make('is_active')->label('启用')->default(true),

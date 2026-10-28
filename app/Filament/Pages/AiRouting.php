@@ -51,20 +51,23 @@ class AiRouting extends Page
         $spend = $this->monthSpend();
 
         return $schema->statePath('data')->components(collect(AiPurpose::cases())->map(function (AiPurpose $purpose) use ($providers, $options, $spend) {
-            $field = $purpose->modelField();
-            $hint = fn (?string $id) => ($p = $providers->firstWhere('id', (int) $id)) && filled($p->{$field}) ? '留空用接口里的 '.$p->{$field} : '留空用接口里的模型';
+            // Chat purposes may keep the provider's model; image and embedding models are set only here.
+            $own = $purpose->modelField() !== 'model';
+            $example = [AiPurpose::Image->value => 'gpt-image-1', AiPurpose::Embedding->value => 'text-embedding-3-small'][$purpose->value] ?? null;
+            $hint = fn (?string $id) => $own ? '例如 '.$example : (($p = $providers->firstWhere('id', (int) $id)) && filled($p->model) ? '留空用接口里的 '.$p->model : '留空用接口里的模型');
+            $model = fn (string $which) => TextInput::make("routes.{$purpose->value}.{$which}_model")->label($own ? '模型' : '模型（可空）')
+                ->placeholder(fn (Get $get) => $hint($get("routes.{$purpose->value}.{$which}")))
+                ->required(fn (Get $get) => $own && filled($get("routes.{$purpose->value}.{$which}")));
 
             return Section::make($purpose->getLabel())
                 ->description($purpose->description().'　本月花费 $'.number_format($spend[$purpose->value] ?? 0, 2))
                 ->columns(2)
                 ->schema([
                     Select::make("routes.{$purpose->value}.primary")->label('主接口')->options($options)->placeholder('未分配（用默认接口）')->live(),
-                    TextInput::make("routes.{$purpose->value}.primary_model")->label('模型（可空）')
-                        ->placeholder(fn (Get $get) => $hint($get("routes.{$purpose->value}.primary"))),
+                    $model('primary'),
                     Select::make("routes.{$purpose->value}.fallback")->label('备用接口')->options($options)->placeholder('无')->live()
                         ->helperText('主接口出错、超时或超出月预算时自动改用'),
-                    TextInput::make("routes.{$purpose->value}.fallback_model")->label('模型（可空）')
-                        ->placeholder(fn (Get $get) => $hint($get("routes.{$purpose->value}.fallback"))),
+                    $model('fallback'),
                 ]);
         })->all());
     }

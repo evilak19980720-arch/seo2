@@ -120,10 +120,14 @@ class AiRoutingTest extends TestCase
             'openai.test/*' => Http::response(['error' => 'busy'], 500),
             'img2.test/*' => Http::response(['data' => [['b64_json' => base64_encode($png)]]]),
         ]);
-        $this->route(['image' => ['primary' => $this->openai->id, 'fallback' => $other->id]]);
+        $this->route(['image' => ['primary' => $this->openai->id, 'primary_model' => 'gpt-image-1', 'fallback' => $other->id, 'fallback_model' => 'flux-2']]);
 
         $this->assertSame($png, app(AiManager::class)->image('a cat'));
-        Http::assertSent(fn (Request $r) => str_contains($r->url(), 'img2.test') && $r['model'] === 'flux');
+        Http::assertSent(fn (Request $r) => str_contains($r->url(), 'img2.test') && $r['model'] === 'flux-2');
+
+        // The image model is set on the assignment only.
+        $this->route(['image' => ['primary' => $other->id]]);
+        $this->assertNull(app(AiManager::class)->image('a cat'));
     }
 
     public function test_routing_page_saves_the_assignment(): void
@@ -153,5 +157,15 @@ class AiRoutingTest extends TestCase
         $this->assertSame($this->openai->id, $routes['image']['primary']);
         $this->assertNull($routes['site']['fallback'], 'DeepSeek cannot read screenshots');
         $this->assertNull($routes['embedding']['primary']);
+    }
+
+    public function test_upgrade_moves_image_models_to_the_assignment(): void
+    {
+        $this->route(['image' => ['primary' => $this->openai->id], 'embedding' => ['primary' => $this->deepseek->id]]);
+        (require database_path('migrations/2026_10_28_000028_move_image_and_embedding_models_to_routes.php'))->up();
+
+        $routes = Settings::get('ai_routes');
+        $this->assertSame('gpt-image-1', $routes['image']['primary_model']);
+        $this->assertNull($routes['embedding']['primary_model']);
     }
 }

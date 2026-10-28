@@ -139,7 +139,7 @@ class AiManager
 
     /**
      * Providers to try for a purpose, in order: the assigned main and backup
-     * provider (with their model overrides), or, while nothing is assigned,
+     * provider (with their models), or, while nothing is assigned,
      * every active provider with the default first. Providers that cannot do
      * the job (no vision, no image / embedding model) or are over budget are
      * left out.
@@ -153,8 +153,9 @@ class AiManager
         $assigned = collect([['primary', 'primary_model'], ['fallback', 'fallback_model']])
             ->map(function ($keys) use ($route, $field) {
                 $provider = filled($route[$keys[0]] ?? null) ? AiProvider::where('is_active', true)->find($route[$keys[0]]) : null;
-                if ($provider && filled($route[$keys[1]] ?? null)) {
-                    $provider->{$field} = trim((string) $route[$keys[1]]);
+                // Chat models default to the provider's own; image and embedding models are set here only.
+                if ($provider && (filled($route[$keys[1]] ?? null) || $field !== 'model')) {
+                    $provider->{$field} = trim((string) ($route[$keys[1]] ?? ''));
                 }
 
                 return $provider;

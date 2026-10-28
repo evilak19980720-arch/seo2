@@ -30,8 +30,8 @@ enum AiPurpose: string implements HasLabel
         return match ($this) {
             self::Site => '设计、页面内容、站点数据、品牌补全、界面翻译。要读参考网站截图，需选支持图片输入（视觉）的模型。',
             self::Article => '关键词扩展、写文章、润色。',
-            self::Image => '文章插图。需选有图片生成模型的接口（OpenAI 兼容 /images/generations）。',
-            self::Embedding => '文章查重用的向量。不配置时只用文字相似度查重。',
+            self::Image => '文章插图、首页大图、内页封面。接口需支持 OpenAI 兼容的 /images/generations，模型在这里填。',
+            self::Embedding => '文章查重用的向量，模型在这里填。不配置时只用文字相似度查重。',
         };
     }
 
