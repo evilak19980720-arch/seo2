@@ -205,6 +205,9 @@ class Installer
 
         $progress('发布前台共享资源');
         StaticSiteBuilder::publishSharedAssets();
+        // Serve Livewire's JS as a real file: many Nginx setups answer *.js
+        // from disk only, which 404s the /livewire-xxx/livewire.min.js route.
+        Artisan::call('vendor:publish', ['--tag' => 'livewire:assets', '--force' => true]);
         Artisan::call('storage:link');
 
         $progress('写入安装锁文件');
