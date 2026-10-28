@@ -183,7 +183,7 @@ class ReferenceAnalyzer
         $max = max($r, $g, $b);
         $min = min($r, $g, $b);
 
-        return $max === 0.0 ? 0.0 : ($max - $min) / $max;
+        return $max <= 0 ? 0.0 : ($max - $min) / $max;
     }
 
     /** @return array<int, string> */

@@ -16,7 +16,7 @@ class ReferenceDesignTest extends TestCase
     private function fakeReference(): void
     {
         Http::fake([
-            'ref.test/style.css' => Http::response('body{background:#0b0f1a;color:#e6e9f2;font-family:"Montserrat",sans-serif} .btn{background:#ff3366} .btn:hover{background:#ff3366} a{color:#ff3366} .card{border:1px solid rgba(255,255,255,.1)}'),
+            'ref.test/style.css' => Http::response('body{background:#0b0f1a;color:#e6e9f2;font-family:"Montserrat",sans-serif} .btn{background:#ff3366} .btn:hover{background:#ff3366} a{color:#ff3366} .card{border:1px solid rgba(255,255,255,.1)} .shadow{color:#000} hr{border-color:#000000}'),
             'ref.test/*' => Http::response('<html><head><title>Ref</title><link rel="stylesheet" href="/style.css">
                 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700" rel="stylesheet"></head>
                 <body><header><nav><a href="/">Home</a><a href="/guide">Guide</a><a href="/news">News</a><a href="/faq">FAQ</a></nav></header>

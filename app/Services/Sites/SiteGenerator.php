@@ -123,7 +123,8 @@ class SiteGenerator
         $customCss = null;
         $this->designNotes = [];
 
-        $reference = $site->reference_url ? $this->reference->analyze($site->reference_url) : null;
+        // A broken reference must never stop the site from being generated.
+        $reference = $site->reference_url ? rescue(fn () => $this->reference->analyze($site->reference_url), null) : null;
         if ($site->reference_url) {
             $this->designNotes[] = $reference
                 ? '参考网站：主色 '.($reference['colors']['primary'] ?? '未识别').'，背景 '.($reference['colors']['background'] ?? '未识别')
