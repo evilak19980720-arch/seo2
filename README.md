@@ -27,7 +27,7 @@ cp .env.example .env && php artisan key:generate
 | 组件 | 说明 |
 | --- | --- |
 | Nginx | 后台域名走 PHP；品牌域名直接读 `storage/app/sites/{host}`，屏蔽 `/admin` `/install` |
-| 队列 | `php artisan queue:work redis --queue=generation,content,default`（Supervisor 常驻） |
+| 队列 | 两组 Supervisor 进程：`generation` 队列（建站）与 `content,default` 队列（文章、重建），配置由安装器输出 |
 | 计划任务 | `* * * * * php artisan schedule:run` |
 | 证书 | Cloudflare Origin CA（ECC），`php artisan app:issue-cert {domain}` |
 
