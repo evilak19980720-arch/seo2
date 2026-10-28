@@ -82,10 +82,10 @@ class AiProviderResource extends Resource
                 TextInput::make('image_model')->label('图片生成模型（可空）')->placeholder('gpt-image-1')
                     ->helperText('用于给文章生成插图（OpenAI 兼容的 /images/generations 接口），留空则不生成插图'),
                 Toggle::make('supports_vision')->label('支持图片输入（视觉）')->default(true),
-                Toggle::make('is_default')->label('默认服务商'),
+                Toggle::make('is_default')->label('默认服务商')->helperText('「AI 用途分配」里没指定接口的用途用它'),
                 Toggle::make('is_active')->label('启用')->default(true),
                 TextInput::make('max_concurrency')->label('并发上限')->numeric()->default(4)->minValue(1),
-                TextInput::make('monthly_budget')->label('月预算')->numeric()->prefix('$')->helperText('超出后自动切换到下一个服务商并告警'),
+                TextInput::make('monthly_budget')->label('月预算')->numeric()->prefix('$')->helperText('超出后改用「AI 用途分配」里的备用接口并告警'),
                 TextInput::make('input_price_per_million')->label('输入单价 / 百万 token')->numeric()->prefix('$')->default(0),
                 TextInput::make('output_price_per_million')->label('输出单价 / 百万 token')->numeric()->prefix('$')->default(0),
             ]),

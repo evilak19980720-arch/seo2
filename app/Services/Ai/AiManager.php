@@ -2,13 +2,16 @@
 
 namespace App\Services\Ai;
 
+use App\Enums\AiPurpose;
 use App\Enums\PromptType;
 use App\Models\AiProvider;
 use App\Models\AiUsageLog;
 use App\Models\Alert;
 use App\Models\Prompt;
 use App\Models\Site;
+use App\Support\Settings;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -52,77 +55,131 @@ class AiManager
     }
 
     /**
+     * Send the messages to the provider assigned to this call's purpose
+     * (AI 用途分配), switching to the backup provider when the first fails.
+     *
      * @param  array<int, array{role: string, content: string}>  $messages
      */
     public function chat(array $messages, string $purpose, ?Site $site = null, array $images = [], bool $json = false): AiResponse
     {
-        $provider = $this->provider(vision: $images !== []);
-
-        return $this->withSlot($provider, function () use ($provider, $messages, $purpose, $site, $images, $json) {
+        $candidates = $this->candidates(AiPurpose::forCall($purpose), vision: $images !== []);
+        $last = null;
+        foreach ($candidates as $provider) {
             try {
-                $response = $this->send($provider, $messages, $images, $json);
-            } catch (Throwable $e) {
-                $this->log($provider, $site, $purpose, 0, 0, $e->getMessage());
-                throw $e instanceof AiException ? $e : new AiException($e->getMessage(), 0, $e);
+                return $this->withSlot($provider, function () use ($provider, $messages, $purpose, $site, $images, $json) {
+                    try {
+                        $response = $this->send($provider, $messages, $images, $json);
+                    } catch (Throwable $e) {
+                        $this->log($provider, $site, $purpose, 0, 0, $e->getMessage());
+                        throw $e instanceof AiException ? $e : new AiException($e->getMessage(), 0, $e);
+                    }
+                    $this->log($provider, $site, $purpose, $response->inputTokens, $response->outputTokens);
+
+                    return $response;
+                });
+            } catch (AiException $e) {
+                $last = $e;
             }
+        }
 
-            $this->log($provider, $site, $purpose, $response->inputTokens, $response->outputTokens);
-
-            return $response;
-        });
+        throw $last ?? new AiException($images !== [] ? 'No active AI provider with vision support within budget.' : 'No active AI provider within budget.');
     }
 
     /**
      * Generate one image (OpenAI-compatible /images/generations), as binary,
-     * or null when no active provider has an image model or the call fails.
+     * or null when no provider has an image model or every one fails.
      */
     public function image(string $prompt, ?Site $site = null, string $size = '1536x1024'): ?string
     {
-        $provider = AiProvider::where('is_active', true)->whereNotNull('image_model')->where('image_model', '!=', '')
-            ->whereNotIn('driver', ['anthropic'])->orderByDesc('is_default')->first();
-        if (! $provider) {
-            return null;
-        }
-
-        try {
-            $payload = ['model' => $provider->image_model, 'prompt' => mb_substr($prompt, 0, 3000), 'n' => 1, 'size' => $provider->options['image_size'] ?? $size];
-            $res = $this->http($provider)->timeout(240)->post('/images/generations', $payload);
-            // Providers differ in the sizes they accept: fall back to their default.
-            if ($res->status() === 400) {
-                unset($payload['size']);
+        foreach ($this->candidates(AiPurpose::Image) as $provider) {
+            try {
+                $payload = ['model' => $provider->image_model, 'prompt' => mb_substr($prompt, 0, 3000), 'n' => 1, 'size' => $provider->options['image_size'] ?? $size];
                 $res = $this->http($provider)->timeout(240)->post('/images/generations', $payload);
+                // Providers differ in the sizes they accept: fall back to their default.
+                if ($res->status() === 400) {
+                    unset($payload['size']);
+                    $res = $this->http($provider)->timeout(240)->post('/images/generations', $payload);
+                }
+                $data = $res->throw()->json('data.0') ?? [];
+                $binary = isset($data['b64_json']) ? base64_decode((string) $data['b64_json'], true) : (isset($data['url']) ? Http::timeout(60)->get($data['url'])->throw()->body() : null);
+                if (! is_string($binary) || $binary === '' || ! @getimagesizefromstring($binary)) {
+                    throw new AiException('The image API returned no picture.');
+                }
+                $this->log($provider, $site, 'image', 0, 0);
+
+                return $binary;
+            } catch (Throwable $e) {
+                $this->log($provider, $site, 'image', 0, 0, $e->getMessage());
             }
-            $data = $res->throw()->json('data.0') ?? [];
-            $binary = isset($data['b64_json']) ? base64_decode((string) $data['b64_json'], true) : (isset($data['url']) ? Http::timeout(60)->get($data['url'])->throw()->body() : null);
-            $this->log($provider, $site, 'image', 0, 0);
-
-            return is_string($binary) && $binary !== '' && @getimagesizefromstring($binary) ? $binary : null;
-        } catch (Throwable $e) {
-            $this->log($provider, $site, 'image', 0, 0, $e->getMessage());
-
-            return null;
         }
+
+        return null;
     }
 
-    /** Embedding vector for dedup, or null when the provider has no embedding model. */
+    /** Embedding vector for dedup, or null when no provider has an embedding model. */
     public function embed(string $text, ?Site $site = null): ?array
     {
-        $provider = AiProvider::where('is_active', true)->whereNotNull('embedding_model')->orderByDesc('is_default')->first();
-        if (! $provider || in_array($provider->driver, ['anthropic', 'azure'], true)) {
-            return null;
+        foreach ($this->candidates(AiPurpose::Embedding) as $provider) {
+            try {
+                $res = $this->http($provider)->post('/embeddings', [
+                    'model' => $provider->embedding_model,
+                    'input' => mb_substr($text, 0, 8000),
+                ])->throw()->json();
+                $this->log($provider, $site, 'embedding', (int) ($res['usage']['prompt_tokens'] ?? 0), 0);
+                if ($vector = $res['data'][0]['embedding'] ?? null) {
+                    return $vector;
+                }
+            } catch (Throwable) {
+                // Try the backup provider.
+            }
         }
 
-        try {
-            $res = $this->http($provider)->post('/embeddings', [
-                'model' => $provider->embedding_model,
-                'input' => mb_substr($text, 0, 8000),
-            ])->throw()->json();
-            $this->log($provider, $site, 'embedding', (int) ($res['usage']['prompt_tokens'] ?? 0), 0);
+        return null;
+    }
 
-            return $res['data'][0]['embedding'] ?? null;
-        } catch (Throwable) {
-            return null;
+    /**
+     * Providers to try for a purpose, in order: the assigned main and backup
+     * provider (with their model overrides), or, while nothing is assigned,
+     * every active provider with the default first. Providers that cannot do
+     * the job (no vision, no image / embedding model) or are over budget are
+     * left out.
+     *
+     * @return Collection<int, AiProvider>
+     */
+    public function candidates(AiPurpose $purpose, bool $vision = false): Collection
+    {
+        $field = $purpose->modelField();
+        $route = (array) (Settings::get('ai_routes', [])[$purpose->value] ?? []);
+        $assigned = collect([['primary', 'primary_model'], ['fallback', 'fallback_model']])
+            ->map(function ($keys) use ($route, $field) {
+                $provider = filled($route[$keys[0]] ?? null) ? AiProvider::where('is_active', true)->find($route[$keys[0]]) : null;
+                if ($provider && filled($route[$keys[1]] ?? null)) {
+                    $provider->{$field} = trim((string) $route[$keys[1]]);
+                }
+
+                return $provider;
+            })
+            ->filter()->unique(fn ($p) => $p->id.'|'.$p->{$field});
+
+        $usable = fn (AiProvider $p) => filled($p->{$field})
+            && ! ($vision && ! $p->supports_vision)
+            && ! (in_array($purpose, [AiPurpose::Image, AiPurpose::Embedding], true) && $p->driver === 'anthropic')
+            && ! ($purpose === AiPurpose::Embedding && $p->driver === 'azure');
+
+        $list = $assigned->filter($usable);
+        // Nothing assigned yet, or the assigned ones cannot read screenshots: any capable provider.
+        if ($list->isEmpty() && ($assigned->isEmpty() || $vision)) {
+            $list = AiProvider::where('is_active', true)->orderByDesc('is_default')->orderBy('id')->get()->filter($usable);
         }
+
+        return $list->filter(function (AiProvider $p) {
+            if (! $p->overBudget()) {
+                return true;
+            }
+            Alert::raise('ai_budget', "AI 服务商 {$p->name} 本月预算已用完", null, 'danger');
+
+            return false;
+        })->values();
     }
 
     public function test(AiProvider $provider): string
@@ -138,23 +195,6 @@ class AiManager
         }
 
         return $result;
-    }
-
-    public function provider(bool $vision = false): AiProvider
-    {
-        $candidates = AiProvider::where('is_active', true)
-            ->when($vision, fn ($q) => $q->where('supports_vision', true))
-            ->orderByDesc('is_default')
-            ->get();
-
-        foreach ($candidates as $provider) {
-            if (! $provider->overBudget()) {
-                return $provider;
-            }
-            Alert::raise('ai_budget', "AI 服务商 {$provider->name} 本月预算已用完", null, 'danger');
-        }
-
-        throw new AiException($vision ? 'No active AI provider with vision support within budget.' : 'No active AI provider within budget.');
     }
 
     protected function withSlot(AiProvider $provider, callable $callback): mixed
@@ -202,6 +242,11 @@ class AiManager
 
     protected function callOpenAi(AiProvider $provider, array $messages, array $images, bool $json): AiResponse
     {
+        // Codex and other newer OpenAI models only answer on the Responses API.
+        if (($provider->options['api'] ?? null) === 'responses' || str_contains(strtolower((string) $provider->model), 'codex')) {
+            return $this->callResponses($provider, $messages, $images, $json);
+        }
+        $original = $messages;
         if ($images !== []) {
             $last = array_pop($messages);
             $content = [['type' => 'text', 'text' => $last['content']]];
@@ -218,6 +263,9 @@ class AiManager
         }
 
         $response = $this->http($provider)->post('/chat/completions', $payload);
+        if (in_array($response->status(), [400, 404], true) && str_contains(strtolower($response->body()), 'v1/responses')) {
+            return $this->callResponses($provider, $original, $images, $json);
+        }
         // Not every compatible provider accepts response_format or that many tokens; the prompts already ask for JSON.
         if ($response->status() === 400) {
             unset($payload['response_format'], $payload['max_tokens']);
@@ -230,6 +278,41 @@ class AiManager
             (int) ($res['usage']['prompt_tokens'] ?? 0),
             (int) ($res['usage']['completion_tokens'] ?? 0),
             truncated: ($res['choices'][0]['finish_reason'] ?? null) === 'length',
+        );
+    }
+
+    /** OpenAI Responses API (/responses): instructions + input, text output items. */
+    protected function callResponses(AiProvider $provider, array $messages, array $images, bool $json): AiResponse
+    {
+        $instructions = collect($messages)->where('role', 'system')->pluck('content')->implode("\n\n");
+        $input = collect($messages)->where('role', '!=', 'system')->values()->map(fn ($m) => ['role' => $m['role'], 'content' => [['type' => $m['role'] === 'assistant' ? 'output_text' : 'input_text', 'text' => $m['content']]]])->all();
+        if ($images !== [] && $input !== []) {
+            foreach ($images as $url) {
+                $input[count($input) - 1]['content'][] = ['type' => 'input_image', 'image_url' => $url];
+            }
+        }
+        $payload = array_filter([
+            'model' => $provider->model,
+            'instructions' => $instructions ?: null,
+            'input' => $input,
+            'max_output_tokens' => 16000,
+            'text' => $json ? ['format' => ['type' => 'json_object']] : null,
+        ]);
+
+        $response = $this->http($provider)->timeout(300)->post('/responses', $payload);
+        if ($response->status() === 400) {
+            unset($payload['text'], $payload['max_output_tokens']);
+            $response = $this->http($provider)->timeout(300)->post('/responses', $payload);
+        }
+        $res = $response->throw()->json();
+        $text = collect($res['output'] ?? [])->where('type', 'message')->flatMap(fn ($item) => $item['content'] ?? [])
+            ->where('type', 'output_text')->pluck('text')->implode('');
+
+        return new AiResponse(
+            $text !== '' ? $text : (string) ($res['output_text'] ?? ''),
+            (int) ($res['usage']['input_tokens'] ?? 0),
+            (int) ($res['usage']['output_tokens'] ?? 0),
+            truncated: ($res['incomplete_details']['reason'] ?? null) === 'max_output_tokens',
         );
     }
 

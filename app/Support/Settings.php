@@ -75,6 +75,9 @@ class Settings
             'gsc_service_account' => null,
             'bing_api_key' => null,
             'indexnow_key' => null,
+
+            // AI provider per purpose: [purpose => [primary, primary_model, fallback, fallback_model]]
+            'ai_routes' => [],
         ];
     }
 
