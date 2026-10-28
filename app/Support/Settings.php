@@ -6,6 +6,7 @@ use App\Models\Setting;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Schema;
+use RuntimeException;
 use Throwable;
 
 /**
@@ -75,23 +76,31 @@ class Settings
 
     public static function all(): array
     {
-        return Cache::rememberForever(self::CACHE_KEY, function () {
-            $values = self::defaults();
+        try {
+            return Cache::rememberForever(self::CACHE_KEY, fn () => self::load() ?? throw new RuntimeException('settings unavailable'));
+        } catch (Throwable) {
+            // Database or cache not configured yet (installer, package:discover) — use defaults, cache nothing.
+            return self::defaults();
+        }
+    }
 
-            try {
-                if (! Schema::hasTable('settings')) {
-                    return $values;
-                }
-                foreach (Setting::all() as $row) {
-                    $raw = $row->encrypted && $row->value !== null ? Crypt::decryptString($row->value) : $row->value;
-                    $values[$row->key] = json_decode((string) $raw, true);
-                }
-            } catch (Throwable) {
-                // Database not configured yet (installer) — fall back to defaults.
+    /** Stored settings merged over defaults, or null when the settings table is unreachable. */
+    protected static function load(): ?array
+    {
+        try {
+            if (! Schema::hasTable('settings')) {
+                return null;
+            }
+            $values = self::defaults();
+            foreach (Setting::all() as $row) {
+                $raw = $row->encrypted && $row->value !== null ? Crypt::decryptString($row->value) : $row->value;
+                $values[$row->key] = json_decode((string) $raw, true);
             }
 
             return $values;
-        });
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     public static function get(string $key, mixed $default = null): mixed
