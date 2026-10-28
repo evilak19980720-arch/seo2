@@ -124,18 +124,8 @@ class ArticlePipeline
         ]);
         $article->setRelation('keyword', $keyword);
 
-        // AI review is the first filter; the deterministic guardrails are the real gate.
+        // Only duplication can stop an article (user decision); everything else passes.
         $reasons = [];
-        $task?->step(ArticleTaskStatus::Reviewing);
-        try {
-            $review = $this->ai->prompt(PromptType::ArticleReview, ['brand' => $brand, 'keyword' => $keyword->keyword, 'html' => $article->body], $site)->json();
-            if (($review['pass'] ?? true) === false) {
-                $reasons[] = 'AI 审核未通过：'.collect($review['issues'] ?? [])->take(3)->implode('；');
-            }
-        } catch (\Throwable $e) {
-            $reasons[] = 'AI 审核失败：'.mb_substr($e->getMessage(), 0, 100);
-        }
-
         $task?->step(ArticleTaskStatus::Checking);
         $check = $this->guardrails->check($article, $site);
         $reasons = array_merge($reasons, $check['reasons']);

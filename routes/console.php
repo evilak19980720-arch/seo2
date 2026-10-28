@@ -24,9 +24,10 @@ $liveSites = fn () => Site::with(['domain', 'brandProfile'])->where('status', Si
 
 Artisan::command('content:generate', function (ArticlePipeline $pipeline, PublishScheduler $scheduler) use ($liveSites) {
     foreach ($liveSites() as $site) {
-        // Keep roughly one week of buffer in the queue; never more.
+        // Articles publish as soon as they pass; the weekly cap limits how many are written.
         $queued = $site->articles()->where('status', ArticleStatus::Queued->value)->count();
-        if ($pipeline->ineligibleReason($site) === null && $queued < $scheduler->weeklyCap($site) && $pipeline->nextKeyword($site)) {
+        $busy = ArticleTask::where('site_id', $site->id)->whereIn('status', ['waiting', 'generating', 'polishing', 'reviewing', 'checking'])->where('created_at', '>', now()->subHour())->exists();
+        if ($pipeline->ineligibleReason($site) === null && ! $busy && $queued + $scheduler->publishedThisWeek($site) < $scheduler->weeklyCap($site) && $pipeline->nextKeyword($site)) {
             GenerateArticleJob::dispatch($site);
             $this->line("queued generation for {$site->domain->name}");
         }

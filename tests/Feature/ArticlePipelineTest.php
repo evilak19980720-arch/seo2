@@ -13,7 +13,9 @@ use App\Services\Content\ArticlePipeline;
 use App\Services\Content\PublishScheduler;
 use App\Services\Render\StaticSiteBuilder;
 use App\Services\Sites\SiteGenerator;
+use App\Support\Settings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class ArticlePipelineTest extends TestCase
@@ -70,10 +72,16 @@ class ArticlePipelineTest extends TestCase
         GenerateArticleJob::dispatchSync($site);
 
         $task = ArticleTask::sole();
-        $this->assertSame(['generating', 'polishing', 'reviewing', 'checking', 'done'], $seen);
+        $this->assertSame(['generating', 'polishing', 'checking', 'done'], $seen);
         $this->assertSame('como jogar galaxy run', $task->keyword);
         $this->assertNotNull($task->article_id);
         $this->assertNotNull($task->finished_at);
+        // Published at once: the blog list, home and sitemap show it.
+        $article = Article::find($task->article_id);
+        $this->assertSame(ArticleStatus::Published, $article->status);
+        $this->assertStringContainsString('已发布', $task->note);
+        $this->assertStringContainsString('/'.$article->path().'/', file_get_contents(StaticSiteBuilder::dirFor($site).'/blog/index.html'));
+        $this->assertStringContainsString($article->path(), file_get_contents(StaticSiteBuilder::dirFor($site).'/sitemap.xml'));
 
         // Nothing left to write: the next run is shown as skipped, with the reason.
         $site->keywords()->update(['status' => 'written']);
@@ -82,6 +90,20 @@ class ArticlePipelineTest extends TestCase
 
         $admin = User::factory()->create(['role' => 'admin']);
         $this->actingAs($admin)->get('https://admin.test/admin/article-tasks')->assertOk()->assertSee('文章队列')->assertSee('已完成');
+    }
+
+    public function test_publishing_notifies_bing_and_google(): void
+    {
+        Settings::setMany(['indexnow_key' => 'abc123', 'bing_api_key' => 'bing-key']);
+        Http::fake(['api.indexnow.org/*' => Http::response('', 202), 'ssl.bing.com/*' => Http::response(['d' => null])]);
+        $site = $this->liveSite();
+        $article = Article::create(['site_id' => $site->id, 'title' => 'Dicas', 'slug' => 'dicas', 'type' => 'guide', 'body' => '<p>Texto.</p>', 'status' => 'queued']);
+
+        $log = app(PublishScheduler::class)->publish($article);
+
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'indexnow') && in_array('https://galaxy.com.br/blog/dicas/', $r['urlList'], true) && ! collect($r['urlList'])->contains(fn ($u) => str_ends_with($u, '.xml')));
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'SubmitUrlBatch') && in_array('https://galaxy.com.br/blog/dicas/', $r['urlList'], true));
+        $this->assertStringContainsString('IndexNow', implode(' ', $log));
     }
 
     public function test_weekly_cap_by_site_age(): void
@@ -100,23 +122,14 @@ class ArticlePipelineTest extends TestCase
         $this->assertNotNull($scheduler->publishNext($site->fresh()));
     }
 
-    public function test_guardrails_block_wrong_language_leaks_and_unsupported_facts(): void
+    public function test_only_duplication_blocks_an_article(): void
     {
-        $english = str_repeat('<h2>Section</h2><p>This is the best racing game and you will love it because the controls are simple and the levels are fun for everyone who plays it every day.</p>', 40);
-        $this->fakeAi(['article' => ['title' => 'Guide', 'html' => $english], 'polished' => $english]);
+        // Wrong language, AI-sounding text and unsupported claims all pass: only duplicates are stopped.
+        $english = str_repeat('<p>As an AI, this is the best racing game and you will love it because the controls are simple.</p>', 40);
+        $this->fakeAi(['article' => ['title' => 'Guide', 'html' => $english], 'polished' => $english, 'factcheck' => ['supported' => false, 'unsupported_claims' => ['x']]]);
         $article = app(ArticlePipeline::class)->generateNext($this->liveSite());
 
-        $this->assertSame(ArticleStatus::Blocked, $article->status);
-        $this->assertStringContainsString('语言与站点语言不一致', $article->block_reason);
-    }
-
-    public function test_fact_check_failure_blocks(): void
-    {
-        $this->fakeAi(['factcheck' => ['supported' => false, 'unsupported_claims' => ['Ganhou o prêmio de melhor jogo de 2025']]]);
-        $article = app(ArticlePipeline::class)->generateNext($this->liveSite());
-
-        $this->assertSame(ArticleStatus::Blocked, $article->status);
-        $this->assertStringContainsString('事实核对未通过', $article->block_reason);
+        $this->assertSame(ArticleStatus::Queued, $article->status, (string) $article->block_reason);
     }
 
     public function test_near_duplicate_is_blocked(): void

@@ -140,9 +140,9 @@ class StaticSiteBuilder
             File::deleteDirectory("{$dir}/blog/page/{$n}");
         }
 
-        // Pages with an article list block (home "latest", updates page).
+        // Pages that list articles: article lists (home "latest", news) and the HTML sitemap.
         foreach ($renderer->ctx->pages as $page) {
-            if (collect($renderer->ctx->blocks($page->type))->contains('block', 'article_list')) {
+            if (collect($renderer->ctx->blocks($page->type))->contains(fn ($b) => in_array($b['block'] ?? null, ['article_list', 'html_sitemap'], true))) {
                 $this->write($dir, $page->slug, $renderer->renderPage($page));
                 $paths[] = $page->slug;
             }
@@ -166,6 +166,9 @@ class StaticSiteBuilder
         $this->writeSupportFiles($site, $renderer, $dir, iconsAndCss: false);
         $paths[] = 'sitemap.xml';
         $paths[] = 'feed.xml';
+        if (is_file("{$dir}/search.json")) {
+            $paths[] = 'search.json';
+        }
 
         return array_values(array_unique(array_map(
             fn ($p) => str_contains($p, '.') ? $site->baseUrl().'/'.$p : $site->url($p),

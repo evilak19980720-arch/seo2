@@ -11,7 +11,7 @@ class IndexNow
     public function submit(string $host, array $urls): bool
     {
         $key = Settings::get('indexnow_key');
-        $urls = array_values(array_filter($urls, fn ($u) => ! str_ends_with($u, '.xml')));
+        $urls = array_values(array_filter($urls, fn ($u) => ! preg_match('#\.(xml|json|txt)$#', $u)));
         if (! $key || $urls === []) {
             return false;
         }
@@ -24,6 +24,20 @@ class IndexNow
         ]);
 
         return $res->successful() || $res->status() === 202;
+    }
+
+    /** Bing Webmaster URL submission (needs the Bing API key; IndexNow covers Bing without it). */
+    public function bingSubmitUrls(string $siteUrl, array $urls): bool
+    {
+        $apiKey = Settings::get('bing_api_key');
+        $urls = array_values(array_filter($urls, fn ($u) => ! preg_match('#\.(xml|json|txt)$#', $u)));
+        if (! $apiKey || $urls === []) {
+            return false;
+        }
+
+        return Http::timeout(20)
+            ->post('https://ssl.bing.com/webmaster/api.svc/json/SubmitUrlBatch?apikey='.urlencode($apiKey), ['siteUrl' => $siteUrl, 'urlList' => array_slice($urls, 0, 500)])
+            ->successful();
     }
 
     public function bingSubmitSitemap(string $siteUrl, string $sitemapUrl): bool

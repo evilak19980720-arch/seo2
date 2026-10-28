@@ -24,7 +24,7 @@ enum ArticleTaskStatus: string implements HasColor, HasLabel
             self::Generating => '生成中',
             self::Polishing => '润色中',
             self::Reviewing => 'AI 审核中',
-            self::Checking => '质量检查中',
+            self::Checking => '重复度检测中',
             self::Done => '已完成',
             self::Blocked => '未通过',
             self::Skipped => '已跳过',

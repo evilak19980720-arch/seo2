@@ -6,14 +6,17 @@ use App\Enums\ArticleStatus;
 use App\Models\Article;
 use App\Models\Site;
 use App\Services\Integrations\Cloudflare;
+use App\Services\Integrations\GoogleAuth;
 use App\Services\Integrations\IndexNow;
+use App\Services\Integrations\SearchConsole;
 use App\Services\Render\StaticSiteBuilder;
 use App\Support\Settings;
 use Throwable;
 
 /**
- * Weekly per-site caps by site age, then: publish → incremental rebuild →
- * Cloudflare purge of the changed URLs → IndexNow.
+ * Weekly per-site caps by site age, then: publish → incremental rebuild of
+ * every page that lists articles → Cloudflare purge of the changed URLs →
+ * search engines (IndexNow / Bing, Google via the Search Console sitemap).
  */
 class PublishScheduler
 {
@@ -45,6 +48,18 @@ class PublishScheduler
         return $site->articles()->whereNotNull('published_at')->where('published_at', '>=', now()->subDays(7))->count();
     }
 
+    /** @var array<int, string> what the last afterChange() did, for logs */
+    public array $log = [];
+
+    /** Publish one article now: rebuild its listings and notify search engines. */
+    public function publish(Article $article): array
+    {
+        $article->update(['status' => ArticleStatus::Published, 'published_at' => now()]);
+        $this->afterChange($article);
+
+        return $this->log;
+    }
+
     /** Publish at most one queued article for the site if under its cap. */
     public function publishNext(Site $site): ?Article
     {
@@ -56,17 +71,17 @@ class PublishScheduler
             return null;
         }
 
-        $article->update(['status' => ArticleStatus::Published, 'published_at' => now()]);
-        $this->afterChange($article);
+        $this->publish($article);
 
         return $article;
     }
 
-    /** Rebuild affected pages, purge CDN cache and notify IndexNow. */
+    /** Rebuild affected pages, purge CDN cache and notify search engines. */
     public function afterChange(Article $article): array
     {
         $urls = $this->builder->rebuildForArticle($article);
         $site = $article->site;
+        $this->log = ['已更新 '.count($urls).' 个页面（文章页、博客列表、首页、站点地图、RSS）'];
 
         try {
             $cf = new Cloudflare;
@@ -77,11 +92,25 @@ class PublishScheduler
             report($e);
         }
 
-        try {
-            (new IndexNow)->submit($site->domain->name, $urls);
-        } catch (Throwable $e) {
-            report($e);
+        $indexNow = new IndexNow;
+        $notify = [
+            'IndexNow（Bing 等）' => fn () => $indexNow->submit($site->domain->name, $urls),
+            'Bing 站长平台' => fn () => $indexNow->bingSubmitUrls($site->url(), $urls),
+            // Google has no ping for ordinary pages: resubmitting the sitemap makes it re-read it.
+            'Google（Search Console 站点地图）' => fn () => GoogleAuth::configured() && $site->domain->gsc_status === 'verified'
+                && (app(SearchConsole::class)->submitSitemap($site->domain->name, $site->baseUrl().'/sitemap.xml') ?? true),
+        ];
+        $sent = [];
+        foreach ($notify as $name => $call) {
+            try {
+                if ($call()) {
+                    $sent[] = $name;
+                }
+            } catch (Throwable $e) {
+                report($e);
+            }
         }
+        $this->log[] = $sent !== [] ? '已推送：'.implode('、', $sent) : '未推送搜索引擎（未配置 IndexNow Key / Bing API Key / 未验证 Search Console）';
 
         return $urls;
     }
