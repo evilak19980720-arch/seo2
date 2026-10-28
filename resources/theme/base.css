@@ -54,6 +54,10 @@ main{display:block}
 .hero--stacked .hero__media,.hero--stacked .hero__art{order:-1;max-width:960px;margin:0 auto;width:100%}
 .hero--stacked .hero__art{aspect-ratio:21/8}
 
+/* cover picture of content pages without a hero (phones first) */
+.page-cover{margin-top:1rem}
+.page-cover img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:var(--r-box)}
+@media (min-width:860px){.page-cover{margin-top:1.75rem}.page-cover img{aspect-ratio:21/8}}
 /* stats strip under the hero */
 .stats{margin-top:calc(-2.25rem*var(--space));position:relative;z-index:2}
 .stats__grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border-radius:var(--r-box);overflow:hidden;box-shadow:0 20px 40px -24px rgba(0,0,0,.35);border:1px solid var(--line)}

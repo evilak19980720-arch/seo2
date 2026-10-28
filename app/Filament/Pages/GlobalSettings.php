@@ -95,6 +95,8 @@ class GlobalSettings extends Page
                         Toggle::make('robots_block_ai_training')->label('robots.txt 屏蔽 AI 训练爬虫')->helperText('GPTBot、Google-Extended、CCBot 等，不影响 Google 搜索'),
                         Toggle::make('mfa_required')->label('后台强制两步验证'),
                         TextInput::make('server_ip')->label('服务器公网 IP')->ip(),
+                        TextInput::make('ai_images_per_site')->label('每站最多 AI 配图数')->numeric()->minValue(0)->required()
+                            ->helperText('首页大图和内页封面没有真实图片时，由「AI 用途分配」里的图片接口生成；每张只生成一次。填 0 关闭'),
                     ]),
                 ]),
                 Tab::make('Cloudflare')->schema([
@@ -157,7 +159,7 @@ class GlobalSettings extends Page
                 unset($data[$key]);
             }
         }
-        foreach (['cap_months_0_3', 'cap_months_3_6', 'cap_after_6', 'cap_step', 'cap_max', 'min_completeness', 'cold_days', 'min_list_articles'] as $int) {
+        foreach (['cap_months_0_3', 'cap_months_3_6', 'cap_after_6', 'cap_step', 'cap_max', 'min_completeness', 'cold_days', 'min_list_articles', 'ai_images_per_site'] as $int) {
             $data[$int] = (int) $data[$int];
         }
         foreach (['cap_raise_ratio', 'intra_site_similarity', 'cross_site_similarity', 'page_similarity', 'drop_threshold'] as $float) {

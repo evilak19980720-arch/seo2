@@ -57,6 +57,7 @@ class Settings
             'cold_days' => 90,
             'drop_threshold' => 0.5,
             'articles_generated_per_run' => 1,
+            'ai_images_per_site' => 8,
 
             // Cloudflare
             'cloudflare_api_token' => null,

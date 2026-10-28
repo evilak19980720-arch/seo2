@@ -1,4 +1,6 @@
-@php($images = $ctx->gallery(3))
+@php($slotPic = $ctx->slotPicture('banner', $page?->type))
+@php($slotImg = $slotPic && $ctx->useImage($slotPic['path']) ? $ctx->image($slotPic['path'], 1600) : null)
+@php($images = array_merge($slotImg ? [['image' => $slotImg, 'alt' => $slotPic['alt']]] : [], $ctx->gallery($slotImg ? 2 : 3)))
 @php($cta = $ctx->primaryCta())
 @php($slides = collect($data['items'] ?? [])->filter(fn ($s) => ! empty($s['title']))->values()->all() ?: [['title' => $data['heading'] ?? $ctx->brand->product_name, 'text' => $data['text'] ?? $ctx->brand->tagline]])
 @php($slides = array_slice($slides, 0, max(1, $variant === 'slider' ? 3 : 1)))

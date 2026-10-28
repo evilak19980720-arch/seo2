@@ -344,6 +344,10 @@ class SiteRenderer
     {
         $html = '';
         $first = $page !== null || $pageType === 'blog';
+        // Content pages without a hero open with their cover picture.
+        if ($page && ($cover = $this->ctx->slotPicture('cover', $page->type)) && $this->ctx->useImage($cover['path']) && ($img = $this->ctx->image($cover['path'], 1600))) {
+            $html .= View::make('theme.partials.page-cover', ['ctx' => $this->ctx, 'img' => $img, 'alt' => $cover['alt']])->render();
+        }
         foreach ($this->ctx->blocks($pageType) as $entry) {
             $section = isset($entry['key']) ? $this->ctx->section($pageType, $entry['key']) : [];
             // A pool section with no copy is left out (no brand-profile filler repeated across sections).
@@ -462,7 +466,9 @@ class SiteRenderer
     protected function ogImage(): ?string
     {
         $first = collect($this->ctx->brand->media ?? [])->firstWhere('type', 'image') ?? ($this->ctx->brand->media[0] ?? null);
-        $img = $first ? $this->ctx->image($first['path'] ?? null, 1200) : null;
+        // Without brand pictures, the home page's AI picture is the share image.
+        $path = $first['path'] ?? ($this->site->ai_images[$this->ctx->pictureSlots()[0] ?? ''] ?? collect($this->site->ai_images ?? [])->first())['path'] ?? null;
+        $img = $path ? $this->ctx->image($path, 1200) : null;
 
         return $img ? MediaPublisher::absolute($this->site, $img['src']) : null;
     }

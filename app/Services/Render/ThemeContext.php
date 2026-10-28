@@ -42,6 +42,11 @@ class ThemeContext
 
     protected ?Collection $entryCache = null;
 
+    /** Blocks whose picture is a page's main visual (a picture slot). */
+    public const PICTURE_BLOCKS = ['hero', 'banner'];
+
+    protected ?array $slots = null;
+
     public function __construct(public readonly Site $site, public readonly MediaPublisher $media)
     {
         $this->brand = $site->brandProfile?->forDisplay() ?? new BrandProfile(['product_name' => $site->product_name]);
@@ -260,6 +265,73 @@ class ThemeContext
         }
 
         return $items;
+    }
+
+    /**
+     * Picture slots of the site in priority order: the first hero or banner
+     * of each page, home first.
+     *
+     * @return array<int, string> e.g. ["hero:home", "banner:promotions"]
+     */
+    public function pictureSlots(): array
+    {
+        if ($this->slots !== null) {
+            return $this->slots;
+        }
+        // Site type order (home, then the main pages), not database order.
+        $order = array_flip(array_keys($this->site->typeConfig()['pages']));
+        $types = collect($this->pages->keys())->sortBy(fn ($t) => [$t === 'home' ? 0 : 1, $order[$t] ?? PHP_INT_MAX])->values();
+        $slots = [];
+        foreach ($types as $type) {
+            $blocks = array_column($this->blocks($type), 'block');
+            $visual = collect($blocks)->first(fn ($b) => in_array($b, self::PICTURE_BLOCKS, true));
+            if ($visual) {
+                $slots[] = $visual.':'.$type;
+            } elseif ($this->wantsCover($type, $blocks)) {
+                $slots[] = 'cover:'.$type;
+            }
+        }
+
+        return $this->slots = $slots;
+    }
+
+    /** Content pages without a hero get a cover picture; legal, utility and form pages do not. */
+    protected function wantsCover(string $type, array $blocks): bool
+    {
+        if ($blocks === [] || in_array($type, $this->legalTypes(), true) || in_array($type, ['blog', 'article', 'not_found'], true)) {
+            return false;
+        }
+
+        return ! in_array($blocks[0], ['legal', 'html_sitemap', 'site_search', 'contact', 'cookie_settings', 'glossary'], true);
+    }
+
+    /** Brand and reference pictures, in their order. */
+    public function realPictures(): Collection
+    {
+        return collect($this->brand->media ?? [])
+            ->filter(fn ($m) => ($m['type'] ?? 'image') === 'image' && filled($m['path'] ?? null))->values();
+    }
+
+    /**
+     * The picture of a page's hero / banner: real pictures are shared out
+     * first, one per slot; slots past them get the site's AI picture.
+     *
+     * @return array{path: string, alt: string}|null
+     */
+    public function slotPicture(string $block, ?string $pageType): ?array
+    {
+        if ($pageType === null) {
+            return null;
+        }
+        $slot = $block.':'.$pageType;
+        $index = array_search($slot, $this->pictureSlots(), true);
+        $real = $this->realPictures();
+        if ($index !== false && isset($real[$index])) {
+            return ['path' => $real[$index]['path'], 'alt' => filled($real[$index]['alt'] ?? null) ? $real[$index]['alt'] : $this->brand->product_name];
+        }
+        $ai = $this->site->ai_images[$slot] ?? null;
+
+        return filled($ai['path'] ?? null) ? ['path' => $ai['path'], 'alt' => $ai['alt'] ?? $this->brand->product_name] : null;
     }
 
     /** Mark an image as shown on the current page; false when it already was. */

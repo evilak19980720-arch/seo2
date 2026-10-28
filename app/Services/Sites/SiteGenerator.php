@@ -4,6 +4,7 @@ namespace App\Services\Sites;
 
 use App\Enums\PromptType;
 use App\Enums\SiteStatus;
+use App\Jobs\GenerateSiteArtJob;
 use App\Models\AiProvider;
 use App\Models\Alert;
 use App\Models\BrandProfile;
@@ -143,6 +144,7 @@ class SiteGenerator
             ]);
             $task->progress($launch ? '生成成功，已上线' : '生成成功，等待手动上线');
             $task->update(['status' => 'succeeded', 'finished_at' => now()]);
+            $this->queueArt($site->fresh(['domain', 'brandProfile']), $task);
         } catch (Throwable $e) {
             report($e);
             $site->update(['status' => SiteStatus::Failed]);
@@ -884,6 +886,23 @@ class SiteGenerator
     }
 
     /** Dominant non-neutral colour of the logo, if any. */
+    /** Pages whose hero / banner has no real picture get an AI one, drawn in the background. */
+    protected function queueArt(Site $site, GenerationTask $task): void
+    {
+        try {
+            $art = app(SiteArt::class);
+            if (! $art->canDraw()) {
+                return;
+            }
+            if ($count = count($art->missing($site))) {
+                $task->progress("后台生成 {$count} 张 AI 配图，画好后自动更新页面");
+                GenerateSiteArtJob::dispatch($site, $task);
+            }
+        } catch (Throwable $e) {
+            report($e);
+        }
+    }
+
     protected function logoColor(Site $site): ?string
     {
         if (! $site->logo_path || ! ($logo = Media::get($site->logo_path))) {
