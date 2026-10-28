@@ -39,6 +39,17 @@ cp .env.example .env && php artisan key:generate
 location ^~ /_theme/ { alias /www/wwwroot/<项目目录>/public/theme/; expires 30d; access_log off; }
 ```
 
+## 参考网站读取（可选：安装 Chromium）
+
+很多参考网站是 JavaScript 渲染的，直接请求只能拿到空壳。服务器装上 Chromium 后，会自动用无头浏览器渲染读取，并截图交给视觉模型：
+
+```
+apt install -y chromium || apt install -y chromium-browser
+# .env 中设置实际路径，例如：CHROMIUM_BIN=/usr/bin/chromium
+```
+
+站点编辑页「参考网站」右侧的放大镜按钮可以检测能否读取，以及读到了什么。有人机验证（如 Cloudflare 防护）的网站无法自动读取，请上传首页截图，并在 AI 接口里勾选「支持视觉」。
+
 ## 使用流程
 
 1. 全局配置：Cloudflare Token、Google 服务账号、AI 服务商、发布配额。

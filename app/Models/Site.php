@@ -17,7 +17,7 @@ class Site extends Model
 
     protected $fillable = [
         'domain_id', 'site_type', 'product_name', 'name', 'logo_path', 'locale', 'target_country', 'title',
-        'description', 'reference_url', 'reference_images', 'design_config', 'design_version', 'custom_css', 'status',
+        'description', 'reference_url', 'reference_images', 'reference_import_images', 'reference_rewrite_content', 'design_config', 'design_version', 'custom_css', 'status',
         'auto_publish_paused', 'pause_reason', 'indexed_pages', 'impressions_7d', 'clicks_7d',
         'ga4_property_id', 'ga4_measurement_id', 'launched_at', 'built_at',
     ];
@@ -27,6 +27,8 @@ class Site extends Model
         return [
             'design_config' => 'array',
             'reference_images' => 'array',
+            'reference_import_images' => 'boolean',
+            'reference_rewrite_content' => 'boolean',
             'status' => SiteStatus::class,
             'auto_publish_paused' => 'boolean',
             'launched_at' => 'datetime',

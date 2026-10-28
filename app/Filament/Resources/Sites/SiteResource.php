@@ -11,8 +11,10 @@ use App\Filament\Resources\Sites\RelationManagers\GenerationTasksRelationManager
 use App\Filament\Resources\Sites\RelationManagers\KeywordsRelationManager;
 use App\Filament\Resources\Sites\RelationManagers\PagesRelationManager;
 use App\Filament\Resources\Sites\Schemas\SiteForm;
+use App\Models\AiProvider;
 use App\Models\Site;
 use App\Services\Sites\SiteManager;
+use App\Services\Theme\ReferenceAnalyzer;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -28,6 +30,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\HtmlString;
 use UnitEnum;
 
 class SiteResource extends Resource
@@ -117,6 +120,27 @@ class SiteResource extends Resource
                         ->action(fn (Collection $records) => $records->each(fn (Site $s) => app(SiteManager::class)->delete($s))),
                 ]),
             ]);
+    }
+
+    /** Reads the reference site right away and reports what generation will get from it. */
+    public static function referenceCheckAction(): Action
+    {
+        return Action::make('checkReference')->icon(Heroicon::OutlinedMagnifyingGlass)->tooltip('检测能否读取参考网站')
+            ->action(function (?string $state) {
+                if (blank($state)) {
+                    Notification::make()->warning()->title('请先填写参考网站')->send();
+
+                    return;
+                }
+                $analyzer = app(ReferenceAnalyzer::class);
+                $ref = $analyzer->analyze($state);
+                $vision = AiProvider::where('is_active', true)->where('supports_vision', true)->exists();
+                $lines = array_merge($analyzer->report($ref), [
+                    '截图：'.($analyzer->browserAvailable() ? '可自动截图' : '服务器无 Chromium，无法自动截图').'；'.($vision ? '有支持视觉的 AI 接口' : '没有勾选"支持视觉"的 AI 接口，AI 看不到截图'),
+                ]);
+                Notification::make()->{$ref ? 'success' : 'danger'}()->title($ref ? '参考网站可以读取' : '参考网站读取失败')
+                    ->body(new HtmlString(collect($lines)->map(fn ($l) => e($l))->implode('<br>')))->persistent()->send();
+            });
     }
 
     public static function generateAction(): Action

@@ -48,7 +48,11 @@ class SiteGenerator
         protected Lighthouse $lighthouse,
         protected Screenshot $screenshot,
         protected ReferenceAnalyzer $reference,
+        protected ReferenceImageImporter $images,
     ) {}
+
+    /** Reference analysis of the current run, reused for page content. */
+    protected ?array $referenceData = null;
 
     public function run(GenerationTask $task): void
     {
@@ -142,9 +146,15 @@ class SiteGenerator
 
         // A broken reference must never stop the site from being generated.
         $reference = $site->reference_url ? rescue(fn () => $this->reference->analyze($site->reference_url), null) : null;
-        if ($site->reference_url && ! $reference) {
-            $this->designNotes[] = '参考网站无法读取（可能有防护或超时）'.($site->reference_images ? '，改用上传的参考截图' : '，可在「参考截图」上传几张截图代替');
+        if ($site->reference_url) {
+            foreach ($this->reference->report($reference) as $line) {
+                $this->designNotes[] = '参考网站 · '.$line;
+            }
+            if (! $reference) {
+                $this->designNotes[] = $site->reference_images ? '参考网站读不到，改用上传的参考截图' : '参考网站读不到，可在「参考截图」上传几张首页截图代替';
+            }
         }
+        $this->referenceData = $reference;
 
         // Uploaded screenshots: their colours fill whatever the HTML/CSS analysis could not find.
         $shotPaths = collect($site->reference_images ?? [])->map(fn ($p) => Media::localPath($p))->filter(fn ($p) => $p && is_file($p))->values()->all();
@@ -155,33 +165,44 @@ class SiteGenerator
             }
             $reference['colors']['palette'] = array_values(array_unique(array_merge($reference['colors']['palette'] ?? [], $fromImages['palette'])));
         }
-        if ($reference) {
-            $this->designNotes[] = '参考网站：主色 '.($reference['colors']['primary'] ?? '未识别').'，背景 '.($reference['colors']['background'] ?? '未识别')
-                .'，字体 '.(implode(' / ', $reference['fonts']) ?: '未识别').'，菜单 '.count($reference['menu']).' 项'
-                .($reference['structure'] ?? [] ? '，版块 '.implode(' → ', $reference['structure']) : '')
-                .(isset($reference['navigation']) ? '，导航：'.collect([
-                    $reference['navigation']['dropdown'] ? '下拉子菜单' : null,
-                    $reference['navigation']['mobile_bar'] ? '手机底部栏' : null,
-                    $reference['navigation']['sticky'] ? '吸顶' : null,
-                    $reference['navigation']['buttons'] ? $reference['navigation']['buttons'].' 个按钮' : null,
-                ])->filter()->implode('、') : '');
+
+        if ($site->reference_import_images && ! empty($this->referenceData['images'])) {
+            $count = rescue(fn () => $this->images->import($site, $this->referenceData['images']), 0);
+            $this->designNotes[] = '参考网站图片：发现 '.count($this->referenceData['images'])." 张，新导入 {$count} 张到".(Media::configured() ? '对象存储' : '本地存储');
+            $site->unsetRelation('brandProfile');
+        }
+
+        if ($site->reference_rewrite_content) {
+            $chars = mb_strlen((string) ($this->referenceData['content'] ?? ''));
+            $this->designNotes[] = $chars > 0 ? "参考网站正文 {$chars} 字，将交给 AI 二次创作页面内容" : '参考网站没有读到正文，页面内容只按品牌资料生成';
         }
 
         try {
-            $images = $site->reference_url ? $this->screenshot->capture($site->reference_url) : [];
+            $images = $site->reference_url && $this->reference->browserAvailable() ? $this->screenshot->capture($site->reference_url) : [];
+            $captured = count($images);
             foreach (array_slice(array_filter($shotPaths, fn ($p) => filesize($p) < 4_000_000), 0, 3) as $path) {
                 $images[] = 'data:'.(mime_content_type($path) ?: 'image/png').';base64,'.base64_encode((string) file_get_contents($path));
             }
-            if ($images !== [] && ! AiProvider::where('is_active', true)->where('supports_vision', true)->exists()) {
+            $vision = AiProvider::where('is_active', true)->where('supports_vision', true)->exists();
+            if ($images !== []) {
+                $this->designNotes[] = $vision
+                    ? '发给 AI 的截图：自动截图 '.$captured.' 张，上传 '.(count($images) - $captured).' 张'
+                    : '有 '.count($images).' 张截图，但没有勾选"支持视觉"的 AI 接口，AI 看不到截图（到 AI 接口里勾选并使用支持图片的模型）';
+            } elseif ($site->reference_url) {
+                $this->designNotes[] = '没有截图发给 AI：服务器'.($this->reference->browserAvailable() ? '截图失败' : '未安装 Chromium').'，也没有上传参考截图';
+            }
+            if (! $vision) {
                 $images = [];
             }
+            // The design prompt gets the structure, not the full text and image list.
+            $forDesign = $reference ? array_merge(Arr::except($reference, ['images', 'content']), ['content_excerpt' => Str::limit((string) ($reference['content'] ?? ''), 1500)]) : null;
             $res = $this->ai->prompt(PromptType::DesignConfig, [
                 'brand' => $this->brandContext($site),
                 'logo_color' => $this->logoColor($site) ?? 'unknown',
                 'whitelist' => json_encode($this->whitelist($site), JSON_UNESCAPED_UNICODE),
                 'feedback' => $feedback ?? '',
                 'reference_url' => $site->reference_url ?? '',
-                'reference' => $reference ? json_encode($reference, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : 'none',
+                'reference' => $forDesign ? json_encode($forDesign, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : 'none',
             ], $site, $images)->json();
             $customCss = $res['custom_css'] ?? null;
             $config = $res['design'] ?? $res;
@@ -316,6 +337,7 @@ class SiteGenerator
             $ai = $this->ai->prompt(PromptType::PageContent, [
                 'brand' => $this->brandContext($site),
                 'pages' => json_encode($spec, JSON_UNESCAPED_UNICODE),
+                'reference_content' => $this->referenceContent($site),
             ], $site)->json()['pages'] ?? [];
         } catch (Throwable) {
             $ai = [];
@@ -357,6 +379,18 @@ class SiteGenerator
             }
             $page->delete();
         });
+    }
+
+    /** Reference text for AI rewriting, when the site's switch is on. */
+    protected function referenceContent(Site $site): string
+    {
+        if (! $site->reference_rewrite_content || ! $site->reference_url) {
+            return 'none';
+        }
+        $this->referenceData ??= rescue(fn () => $this->reference->analyze($site->reference_url), null);
+        $content = trim((string) ($this->referenceData['content'] ?? ''));
+
+        return $content !== '' ? Str::limit($content, 12_000) : 'none';
     }
 
     protected function defaultTitle(string $type, array $def, string $lang): string

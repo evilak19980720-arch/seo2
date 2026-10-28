@@ -57,7 +57,7 @@ class ReferenceDesignTest extends TestCase
         $this->assertSame('#e6e9f2', $design['colors']['text']);
         $this->assertSame('montserrat', $design['fonts']['heading']);
         $this->assertSame(['faq', 'guide', 'updates', 'blog'], $design['menu']);
-        $this->assertStringContainsString('#ff3366', $generator->designNotes[0]);
+        $this->assertStringContainsString('#ff3366', implode("\n", $generator->designNotes));
 
         $generator->generatePages($site);
         app(StaticSiteBuilder::class)->buildAll($site->fresh());

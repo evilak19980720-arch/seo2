@@ -6,6 +6,7 @@ use DOMDocument;
 use DOMXPath;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Symfony\Component\Process\Process;
 use Throwable;
 
 /**
@@ -21,13 +22,24 @@ class ReferenceAnalyzer
     /**
      * @return array{url: string, title: ?string, colors: array{primary: ?string, background: ?string, text: ?string, palette: array<int, string>}, fonts: array<int, string>, menu: array<int, string>, sections: array<int, string>, structure: array<int, string>}|null
      */
+    /**
+     * What happened on the last analyze() call, for the task log and the
+     * admin "检测参考站" check: how the page was read and what was found.
+     *
+     * @var array{status: ?int, via: ?string, bytes: int, text_chars: int, js_rendered: bool, blocked: bool, browser: bool, messages: array<int, string>}
+     */
+    public array $diagnostics = [];
+
     public function analyze(string $url): ?array
     {
+        $this->diagnostics = ['status' => null, 'via' => null, 'bytes' => 0, 'text_chars' => 0, 'js_rendered' => false, 'blocked' => false, 'browser' => $this->browserAvailable(), 'messages' => []];
         if (! preg_match('#^https?://#i', $url)) {
+            $this->diagnostics['messages'][] = '参考网站地址无效';
+
             return null;
         }
 
-        $html = $this->fetch($url, 1_500_000);
+        $html = $this->page($url);
         if ($html === null) {
             return null;
         }
@@ -37,6 +49,7 @@ class ReferenceAnalyzer
         $xpath = new DOMXPath($dom);
 
         $css = $this->styles($xpath, $url);
+        $content = $this->content($xpath);
 
         return [
             'url' => $url,
@@ -47,7 +60,194 @@ class ReferenceAnalyzer
             'navigation' => $this->navigation($xpath, $css),
             'sections' => $this->texts($xpath, '//main//h2 | //section//h2 | //body//h2', 12),
             'structure' => $this->structure($xpath),
+            'content' => $content,
+            'images' => $this->images($xpath, $css, $url),
         ];
+    }
+
+    /**
+     * The page HTML: a plain request first; pages that build their content
+     * with JavaScript (SPA) are rendered with headless Chromium when the
+     * server has it. Bot-protection pages are reported, never bypassed.
+     */
+    protected function page(string $url): ?string
+    {
+        $d = &$this->diagnostics;
+        $html = null;
+        try {
+            $res = Http::withHeaders(['User-Agent' => self::UA, 'Accept-Language' => 'pt-BR,pt;q=0.9,en;q=0.8'])->timeout(20)->connectTimeout(8)->get($url);
+            $d['status'] = $res->status();
+            $html = $res->successful() ? substr($res->body(), 0, 3_000_000) : null;
+            $d['blocked'] = in_array($res->status(), [403, 429, 503], true) || ($html !== null && $this->isChallenge($html));
+        } catch (Throwable $e) {
+            $d['messages'][] = '请求参考网站失败：'.Str::limit($e->getMessage(), 120);
+        }
+        if ($html !== null && ! $d['blocked']) {
+            $d['via'] = 'http';
+        }
+
+        $text = $html !== null ? $this->visibleTextLength($html) : 0;
+        if ($html !== null && ! $d['blocked'] && $text < 600 && substr_count(strtolower($html), '<script') >= 3) {
+            $d['js_rendered'] = true;
+            $d['messages'][] = "参考网站是 JavaScript 渲染的页面，直接读取只拿到 {$text} 个字符";
+        }
+
+        if ($html === null || $d['js_rendered']) {
+            if ($d['blocked']) {
+                $d['messages'][] = '参考网站有防护（HTTP '.($d['status'] ?? '?').' / 人机验证），无法自动读取，请上传首页截图';
+            } elseif ($d['browser']) {
+                $rendered = $this->render($url);
+                if ($rendered !== null && $this->isChallenge($rendered)) {
+                    $d['blocked'] = true;
+                    $d['messages'][] = '参考网站要求人机验证，无法自动读取，请上传首页截图';
+                } elseif ($rendered !== null && $this->visibleTextLength($rendered) > $text) {
+                    $html = $rendered;
+                    $d['via'] = 'browser';
+                    $d['messages'][] = '已用无头浏览器渲染后读取';
+                }
+            } else {
+                $d['messages'][] = '服务器没有安装 Chromium，无法渲染 JavaScript 页面（安装后在 .env 设置 CHROMIUM_BIN），或上传首页截图';
+            }
+        }
+
+        if ($html === null || $d['blocked']) {
+            return null;
+        }
+        $d['bytes'] = strlen($html);
+        $d['text_chars'] = $this->visibleTextLength($html);
+
+        return $html;
+    }
+
+    /**
+     * Human-readable report of what was read (and why not), shown in the
+     * admin check and logged on every generation task.
+     *
+     * @return array<int, string>
+     */
+    public function report(?array $ref): array
+    {
+        $d = $this->diagnostics;
+        $lines = $d['messages'] ?? [];
+        if (! $ref) {
+            return $lines ?: ['参考网站读取失败'];
+        }
+        $nav = $ref['navigation'] ?? [];
+        array_unshift($lines, '读取方式：'.(($d['via'] ?? null) === 'browser' ? '无头浏览器渲染' : '直接请求').'（HTTP '.($d['status'] ?? '?').'，可见文字 '.($d['text_chars'] ?? 0).' 字）');
+
+        return array_merge($lines, array_filter([
+            '标题：'.($ref['title'] ?? '无'),
+            '配色：主色 '.($ref['colors']['primary'] ?? '未识别').'，背景 '.($ref['colors']['background'] ?? '未识别').'，文字 '.($ref['colors']['text'] ?? '未识别'),
+            '字体：'.(implode(' / ', $ref['fonts']) ?: '未识别'),
+            '菜单 '.count($ref['menu']).' 项：'.Str::limit(implode('、', $ref['menu']), 120),
+            ($nav['dropdown'] ?? false) || ($nav['mobile_bar'] ?? false) ? '导航：'.implode('、', array_filter([($nav['dropdown'] ?? false) ? '下拉子菜单' : null, ($nav['mobile_bar'] ?? false) ? '手机底部栏' : null])) : null,
+            '版块：'.(implode(' → ', $ref['structure'] ?? []) ?: '未识别'),
+            '正文：'.mb_strlen($ref['content'] ?? '').' 字',
+            '图片：'.count($ref['images'] ?? []).' 张',
+        ]));
+    }
+
+    public function browserAvailable(): bool
+    {
+        $bin = (string) config('platform.chromium_bin');
+
+        return $bin !== '' && (is_executable($bin) || trim((string) @shell_exec('command -v '.escapeshellarg($bin).' 2>/dev/null')) !== '');
+    }
+
+    protected function render(string $url): ?string
+    {
+        try {
+            $p = new Process([
+                config('platform.chromium_bin'), '--headless=new', '--no-sandbox', '--disable-gpu', '--hide-scrollbars',
+                '--window-size=1366,900', '--virtual-time-budget=10000', '--user-agent='.self::UA, '--dump-dom', $url,
+            ], null, null, null, 60);
+            $p->run();
+            $out = $p->getOutput();
+
+            return strlen($out) > 200 ? substr($out, 0, 3_000_000) : null;
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    protected function isChallenge(string $html): bool
+    {
+        return (bool) preg_match('/cf-challenge|challenge-platform|Just a moment\.\.\.|Attention Required! \| Cloudflare|captcha-delivery|px-captcha|Checking your browser/i', substr($html, 0, 200_000));
+    }
+
+    protected function visibleTextLength(string $html): int
+    {
+        $text = preg_replace('/<(script|style|noscript|template|svg)[^>]*>.*?<\/\1>/is', ' ', $html);
+
+        return mb_strlen(trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags((string) $text)))));
+    }
+
+    /** Main text in reading order (headings and paragraphs), for AI rewriting. */
+    protected function content(DOMXPath $xpath): string
+    {
+        $out = [];
+        $length = 0;
+        foreach ($xpath->query('//body//*[self::h1 or self::h2 or self::h3 or self::p or self::li or self::dt or self::dd][not(ancestor::nav) and not(ancestor::footer) and not(ancestor::script)]') as $node) {
+            $text = trim(preg_replace('/\s+/u', ' ', $node->textContent));
+            if (mb_strlen($text) < 3 || in_array($text, $out, true) || ($node->nodeName === 'li' && $xpath->query('.//p | .//h2 | .//h3', $node)->length)) {
+                continue;
+            }
+            $line = in_array($node->nodeName, ['h1', 'h2', 'h3'], true) ? '## '.$text : $text;
+            $out[] = $line;
+            $length += mb_strlen($line);
+            if ($length > 12_000) {
+                break;
+            }
+        }
+
+        return implode("\n", $out);
+    }
+
+    /**
+     * Content images (img/srcset/lazy attributes, og:image, CSS backgrounds),
+     * absolute URLs in page order, icons and tracking pixels left out.
+     *
+     * @return array<int, array{url: string, alt: string}>
+     */
+    protected function images(DOMXPath $xpath, string $css, string $base): array
+    {
+        $found = [];
+        $add = function (?string $src, string $alt = '') use (&$found, $base) {
+            $src = trim((string) $src);
+            if ($src === '' || str_starts_with($src, 'data:') || preg_match('/\.(svg|ico|gif)(\?|$)|sprite|pixel|tracking|logo|icon|avatar|flag/i', $src)) {
+                return;
+            }
+            $url = $this->absolute($src, $base);
+            if (preg_match('#^https?://#i', $url) && ! isset($found[$url])) {
+                $found[$url] = ['url' => $url, 'alt' => Str::limit(trim($alt), 120, '')];
+            }
+        };
+
+        foreach ($xpath->query('//meta[@property="og:image"]/@content') as $attr) {
+            $add($attr->value);
+        }
+        foreach ($xpath->query('//img | //source') as $node) {
+            $alt = $node->getAttribute('alt');
+            foreach (['data-src', 'data-original', 'data-lazy-src', 'src'] as $attr) {
+                if ($node->getAttribute($attr) !== '') {
+                    $add($node->getAttribute($attr), $alt);
+                    break;
+                }
+            }
+            if (($srcset = $node->getAttribute('srcset') ?: $node->getAttribute('data-srcset')) !== '') {
+                // The largest candidate of the srcset.
+                $candidates = array_map(fn ($c) => preg_split('/\s+/', trim($c)), explode(',', $srcset));
+                usort($candidates, fn ($a, $b) => (int) ($b[1] ?? 0) <=> (int) ($a[1] ?? 0));
+                $add($candidates[0][0] ?? null, $alt);
+            }
+        }
+        if (preg_match_all('/background(?:-image)?\s*:[^;}]*url\(\s*[\'"]?([^\'")]+)/i', $css, $m)) {
+            foreach ($m[1] as $src) {
+                $add($src);
+            }
+        }
+
+        return array_slice(array_values($found), 0, 40);
     }
 
     /** Account links (login, register…) are never reproduced: brand sites have no accounts. */

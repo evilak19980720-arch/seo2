@@ -74,10 +74,15 @@ class SiteForm
                 FileUpload::make('logo_path')->label('LOGO')->image()->disk(Media::DISK)->directory('logos')->maxSize(2048)
                     ->helperText('自动生成 favicon.ico、apple-touch-icon、192/512 图标和 manifest'),
                 TextInput::make('reference_url')->label('参考网站')->url()
-                    ->helperText('只提取配色、字体和布局结构，不复制文案、LOGO 和品牌名'),
+                    ->helperText('提取配色、字体、导航和版块结构；点右侧按钮可检测能否读取')
+                    ->suffixAction(SiteResource::referenceCheckAction()),
                 FileUpload::make('reference_images')->label('参考截图')->image()->multiple()->maxFiles(3)->maxSize(4096)
                     ->disk(Media::DISK)->directory('reference')->columnSpanFull()
                     ->helperText('参考网站有防护、无法抓取时上传 1-3 张截图（首页首屏最重要）；会从截图中提取配色，有视觉模型时也交给 AI 参考布局'),
+                Toggle::make('reference_import_images')->label('导入参考网站图片')
+                    ->helperText('生成时把参考网站的内容图片下载到对象存储，用于横幅、卡片和图库。仅用于你有权使用的网站，否则有版权风险'),
+                Toggle::make('reference_rewrite_content')->label('参考网站内容二次创作')
+                    ->helperText('生成页面时读取参考网站正文，由 AI 按其主题和结构重新撰写，不照抄句子；品牌名替换为本站产品'),
             ]),
             Section::make('标题与描述')->schema([
                 TextInput::make('title')->label('首页标题')->maxLength(70)
@@ -120,6 +125,8 @@ class SiteForm
                         TextInput::make('url')->label('视频链接')->url()->visible(fn (Get $get) => $get('type') === 'video'),
                         TextInput::make('alt')->label('alt（站点语言）'),
                         TextInput::make('caption')->label('说明'),
+                        Hidden::make('source'),
+                        Hidden::make('source_url'),
                     ]),
                 Repeater::make('cta_links')->label('下载 / 购买 / 询盘链接')->columns(2)->defaultItems(0)->addActionLabel('添加链接')
                     ->schema([TextInput::make('label')->label('按钮文字')->required(), TextInput::make('url')->label('链接')->url()->required()]),
