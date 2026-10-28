@@ -16,7 +16,7 @@ class PromptSeeder extends Seeder
     public const SYSTEM = 'You are a senior content strategist and SEO editor for the official website of {{product_name}} ({{site_type}}). Write natively in {{language}} for readers in {{country}}; never write in another language and never translate from another language. The BRAND PROFILE is the only source of facts: never invent features, numbers, prices, awards, reviews, release dates or company details that are not in it. Always answer with a single JSON object.';
 
     /** Templates revised after the first release ship as a new version; the highest active version wins. */
-    public const VERSIONS = [PromptType::DesignConfig->value => 2];
+    public const VERSIONS = [PromptType::DesignConfig->value => 2, PromptType::PageContent->value => 2];
 
     public function run(): void
     {
@@ -98,9 +98,9 @@ BRAND PROFILE:
 Write the core pages of the official site of {{product_name}}. Page types with their blocks:
 {{pages}}
 
-For every page type return a URL slug in {{language}} (lowercase, hyphens, keyword-based, max 2 segments, keep the default if fine), a visible title, an SEO meta_title (max 60 chars) and meta_description (max 155 chars), and content for its blocks:
-- hero: heading, subheading, cta_label
-- features: heading, intro, items [{title, text}] (from selling points only)
+For every page type return a URL slug in {{language}} (lowercase, hyphens, keyword-based, max 2 segments, keep the default if fine), a visible title in {{language}} (the labels above are only hints, never copy another language), an SEO meta_title (max 60 chars) and meta_description (max 155 chars), and content for its blocks. Write like a polished official site: every block needs real copy, never leave text fields empty.
+- hero: eyebrow (2-4 words), heading, subheading (one or two sentences), cta_label, points (3 benefit phrases of max 4 words each)
+- features: eyebrow (1-3 words), heading, intro, items [{title, text}] (3 or 6 items from the selling points; text = one or two concrete sentences each)
 - faq: heading, items [{question, answer}] (answers only from the profile)
 - cta: heading, text, label
 - prose: heading, html (semantic HTML with <h2>/<p>/<ul>, 250-600 words, factual)

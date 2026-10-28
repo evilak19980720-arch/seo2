@@ -269,7 +269,8 @@ class SiteGenerator
         $ai = [];
 
         try {
-            $spec = collect($types)->map(fn ($p, $type) => ['label' => $p['label'], 'default_slug' => $p['slug'][$lang] ?? $p['slug']['en'], 'blocks' => $p['blocks']])->all();
+            // Labels in the site language: the admin's Chinese labels would be copied into page titles.
+            $spec = collect($types)->map(fn ($p, $type) => ['label' => __("theme.page_titles.{$type}", [], $lang), 'default_slug' => $p['slug'][$lang] ?? $p['slug']['en'], 'blocks' => $p['blocks']])->all();
             $ai = $this->ai->prompt(PromptType::PageContent, [
                 'brand' => $this->brandContext($site),
                 'pages' => json_encode($spec, JSON_UNESCAPED_UNICODE),
@@ -293,7 +294,8 @@ class SiteGenerator
             }
             $usedSlugs[] = $slug;
 
-            $title = $data['title'] ?? __("theme.page_titles.{$type}", [], $lang);
+            $title = is_string($data['title'] ?? null) && LanguageDetector::matches($data['title'], $lang)
+                ? $data['title'] : __("theme.page_titles.{$type}", [], $lang);
             $content = $this->cleanBlocks($data['blocks'] ?? [], $type, $site);
 
             $site->pages()->updateOrCreate(['type' => $type], [
@@ -448,8 +450,13 @@ class SiteGenerator
                 'text' => $str($b['text'] ?? null, 400),
                 'cta_label' => $str($b['cta_label'] ?? null, 40),
                 'label' => $str($b['label'] ?? null, 40),
+                'eyebrow' => $str($b['eyebrow'] ?? null, 40),
                 'html' => isset($b['html']) ? HtmlSanitizer::clean($b['html']) : null,
             ]);
+            if (isset($b['points']) && is_array($b['points'])) {
+                $clean['points'] = collect($b['points'])->map(fn ($p) => $str($p, 40))->filter()->values()->take(4)->all() ?: null;
+                $clean = array_filter($clean);
+            }
             if (isset($b['items']) && is_array($b['items'])) {
                 $clean['items'] = collect($b['items'])->filter(fn ($i) => is_array($i))->map(fn ($i) => array_filter([
                     'title' => $str($i['title'] ?? null, 120),

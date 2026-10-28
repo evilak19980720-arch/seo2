@@ -1,17 +1,29 @@
 @php($heroImg = $ctx->image($data['image'] ?? ($ctx->brand->media[0]['path'] ?? null), 1600))
 @php($cta = $ctx->primaryCta())
+@php($logo = $ctx->site->logo_path ? $ctx->image($ctx->site->logo_path, 480) : null)
+@php($points = array_slice(array_values(array_filter($data['points'] ?? ($ctx->brand->selling_points ?? []), 'is_string')), 0, 3))
+@php($isHome = ($page?->type ?? null) === 'home')
 <section class="hero hero--{{ $variant }}">
 <div class="container hero__grid">
 <div class="hero__text">
-@if ($isFirst ?? false)<h1>{{ $data['heading'] ?? ($page?->title ?? $ctx->brand->product_name) }}</h1>@else<h2>{{ $data['heading'] ?? $ctx->brand->product_name }}</h2>@endif
-<p class="hero__lead">{{ $data['subheading'] ?? $ctx->brand->tagline }}</p>
+@if (! empty($data['eyebrow']))<span class="hero__eyebrow">{{ $data['eyebrow'] }}</span>@endif
+@if ($isFirst ?? false)<h1>{{ $data['heading'] ?? ($isHome ? $ctx->brand->product_name : ($page?->title ?? $ctx->brand->product_name)) }}</h1>@else<h2>{{ $data['heading'] ?? $ctx->brand->product_name }}</h2>@endif
+@php($lead = $data['subheading'] ?? $ctx->brand->tagline)
+@if ($lead)<p class="hero__lead">{{ $lead }}</p>@endif
 <div class="hero__actions">
-@if ($cta)<a class="btn" href="{{ $cta['url'] }}" rel="noopener">{{ $data['cta_label'] ?? $cta['label'] }}</a>@endif
-@if (! empty($data['secondary_href']))<a class="btn btn--ghost" href="{{ $data['secondary_href'] }}">{{ $data['secondary_label'] ?? $ctx->t('read_more') }}</a>@endif
+@if ($cta)<a class="btn btn--lg" href="{{ $cta['url'] }}" rel="noopener">{{ $data['cta_label'] ?? $cta['label'] }}</a>@endif
+@if (! empty($data['secondary_href']))<a class="btn btn--ghost btn--lg" href="{{ $data['secondary_href'] }}">{{ $data['secondary_label'] ?? $ctx->t('read_more') }}</a>@endif
 </div>
+@if (count($points))<ul class="hero__points">@foreach ($points as $point)<li>{{ $point }}</li>@endforeach</ul>@endif
 </div>
 @if ($heroImg)
 <div class="hero__media">@include('theme.partials.picture', ['img' => $heroImg, 'alt' => $data['image_alt'] ?? ($ctx->brand->media[0]['alt'] ?? $ctx->brand->product_name), 'eager' => $isFirst ?? false])</div>
+@else
+<div class="hero__art" aria-hidden="true">@if ($logo)<img src="{{ $logo['src'] }}" width="{{ $logo['width'] ?? 240 }}" height="{{ $logo['height'] ?? 240 }}" alt="">@else<span>{{ mb_strtoupper(mb_substr($ctx->brand->product_name ?: $ctx->site->name, 0, 1)) }}</span>@endif</div>
 @endif
 </div>
 </section>
+@php($specs = collect($ctx->brand->specs ?? [])->filter(fn ($s) => filled($s['key'] ?? null) && filled($s['value'] ?? null))->take(4))
+@if ($isHome && ($isFirst ?? false) && $specs->count() >= 2 && ! collect($ctx->design['pages']['home'] ?? [])->contains('block', 'specs'))
+<div class="stats"><div class="container"><dl class="stats__grid">@foreach ($specs as $s)<div class="stats__item"><dt>{{ $s['key'] }}</dt><dd>{{ $s['value'] }}</dd></div>@endforeach</dl></div></div>
+@endif

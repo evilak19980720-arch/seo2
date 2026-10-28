@@ -31,6 +31,14 @@ cp .env.example .env && php artisan key:generate
 | 计划任务 | `* * * * * php artisan schedule:run` |
 | 证书 | Cloudflare Origin CA（ECC），`php artisan app:issue-cert {domain}` |
 
+## 宝塔面板部署注意
+
+品牌站域名绑定在后台站点上时，宝塔默认的静态缓存规则会让 `.css`、`.png` 请求直接去 `public/` 找文件而返回 404。请在站点配置文件里删除 `location ~ .*\.(gif|jpg|jpeg|png|bmp|swf)$` 和 `location ~ .*\.(js|css)?$` 两段，并加入：
+
+```
+location ^~ /_theme/ { alias /www/wwwroot/<项目目录>/public/theme/; expires 30d; access_log off; }
+```
+
 ## 使用流程
 
 1. 全局配置：Cloudflare Token、Google 服务账号、AI 服务商、发布配额。
