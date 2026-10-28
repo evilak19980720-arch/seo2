@@ -3,11 +3,11 @@
 namespace App\Services\Theme;
 
 use App\Support\Binary;
+use App\Support\Chromium;
 use DOMDocument;
 use DOMXPath;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
-use Symfony\Component\Process\Process;
 use Throwable;
 
 /**
@@ -105,6 +105,10 @@ class ReferenceAnalyzer
                     $html = $rendered;
                     $d['via'] = 'browser';
                     $d['messages'][] = '已用无头浏览器渲染后读取';
+                } elseif ($rendered === null) {
+                    $d['messages'][] = '无头浏览器渲染失败：'.(Chromium::$lastError ?: '没有输出');
+                } else {
+                    $d['messages'][] = '无头浏览器渲染后文字仍然很少（'.$this->visibleTextLength($rendered).' 字），页面可能要滚动或交互才加载内容，请上传首页截图';
                 }
             } else {
                 $d['messages'][] = Binary::canRun()
@@ -152,23 +156,14 @@ class ReferenceAnalyzer
 
     public function browserAvailable(): bool
     {
-        return Binary::find(config('platform.chromium_bin')) !== null;
+        return Chromium::bin() !== null;
     }
 
     protected function render(string $url): ?string
     {
-        try {
-            $p = new Process([
-                Binary::find(config('platform.chromium_bin')), '--headless=new', '--no-sandbox', '--disable-gpu', '--hide-scrollbars',
-                '--window-size=1366,900', '--virtual-time-budget=8000', '--user-agent='.self::UA, '--dump-dom', $url,
-            ], null, null, null, 35);
-            $p->run();
-            $out = $p->getOutput();
+        $out = (string) Chromium::run(['--window-size=1366,900', '--virtual-time-budget=10000', '--dump-dom', $url], 25);
 
-            return strlen($out) > 200 ? substr($out, 0, 3_000_000) : null;
-        } catch (Throwable) {
-            return null;
-        }
+        return strlen($out) > 200 ? substr($out, 0, 3_000_000) : null;
     }
 
     protected function isChallenge(string $html): bool

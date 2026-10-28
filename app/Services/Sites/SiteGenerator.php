@@ -189,7 +189,7 @@ class SiteGenerator
                     ? '发给 AI 的截图：自动截图 '.$captured.' 张，上传 '.(count($images) - $captured).' 张'
                     : '有 '.count($images).' 张截图，但没有勾选"支持视觉"的 AI 接口，AI 看不到截图（到 AI 接口里勾选并使用支持图片的模型）';
             } elseif ($site->reference_url) {
-                $this->designNotes[] = '没有截图发给 AI：服务器'.($this->reference->browserAvailable() ? '截图失败' : '未安装 Chromium').'，也没有上传参考截图';
+                $this->designNotes[] = '没有截图发给 AI：'.($this->reference->browserAvailable() ? '自动截图失败（'.(implode('；', array_unique($this->screenshot->errors)) ?: '未知原因').'）' : '服务器未安装 Chromium').'，也没有上传参考截图';
             }
             if (! $vision) {
                 $images = [];

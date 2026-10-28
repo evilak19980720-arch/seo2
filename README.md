@@ -43,10 +43,18 @@ location ^~ /_theme/ { alias /www/wwwroot/<项目目录>/public/theme/; expires 
 
 很多参考网站是 JavaScript 渲染的，直接请求只能拿到空壳。服务器装上 Chromium 后，会自动用无头浏览器渲染读取，并截图交给视觉模型：
 
+推荐安装 Google 官方的 chrome-headless-shell（专为服务器设计；完整版 Chromium 在没有桌面环境的服务器上常常卡住不退出）：
+
 ```
-apt install -y chromium || apt install -y chromium-browser
-# .env 中设置实际路径，例如：CHROMIUM_BIN=/usr/bin/chromium
+apt install -y chromium || yum install -y chromium   # 只为装好运行依赖库
+cd /opt && V=$(curl -s https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_STABLE) \
+  && curl -sLO https://storage.googleapis.com/chrome-for-testing-public/$V/linux64/chrome-headless-shell-linux64.zip \
+  && unzip -o chrome-headless-shell-linux64.zip && chmod -R 755 /opt/chrome-headless-shell-linux64
+ldd /opt/chrome-headless-shell-linux64/chrome-headless-shell | grep "not found"   # 没有输出才算依赖齐全
+# .env 中设置：CHROMIUM_BIN=/opt/chrome-headless-shell-linux64/chrome-headless-shell
 ```
+
+CHROMIUM_BIN 留空或为 chromium 时，会依次查找 chrome-headless-shell、chromium、chromium-browser、google-chrome。PHP 需允许 proc_open、proc_get_status；站点开了防跨站（open_basedir）时，要把 /opt/chrome-headless-shell-linux64 加进去或关闭防跨站。
 
 站点编辑页「参考网站」右侧的放大镜按钮可以检测能否读取，以及读到了什么。有人机验证（如 Cloudflare 防护）的网站无法自动读取，请上传首页截图，并在 AI 接口里勾选「支持视觉」。
 
