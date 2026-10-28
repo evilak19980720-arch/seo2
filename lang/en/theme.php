@@ -122,4 +122,13 @@ return [
     'cookies_html' => '<p>:site uses a small number of cookies. Necessary cookies keep the site working; analytics cookies, which measure visits anonymously, are only set after you accept them in the cookie banner. You can change your choice at any time by clearing the cookies of this site in your browser. We do not use cookies to sell personal data.</p>',
     'bonus_terms_html' => '<p>These general terms apply to every promotion and event published on :site, together with the specific terms shown on each offer. Where the two differ, the specific terms of the offer apply. Offers are available only for the period, regions and conditions stated on them, may be changed or withdrawn, and any attempt to abuse an offer can lead to its cancellation.</p>',
     'regions_html' => '<p>The content and offers of :site are not available everywhere. Visitors must follow the laws of the country or region they are in, and must not use the site where its content is restricted. Some games, promotions or features may be unavailable in certain regions.</p>',
+    'calendar' => 'Event calendar',
+    'search_site' => 'Search the site',
+    'search' => 'Search',
+    'no_search_results' => 'Nothing found. Try other words.',
+    'cookie_settings' => 'Change cookie preferences',
+    'game_terms_html' => '<p>The games on :site are provided for entertainment. Each game has its own rules, shown inside the game; those rules apply together with these terms. Results are decided by the game alone and cannot be changed by the site. Use the games only as intended and do not try to interfere with their operation.</p>',
+    'ip_html' => '<p>The names, logos, texts, images and other content of :site belong to their owners and are protected by intellectual property law. Game names and artwork belong to their providers. You may not copy, republish or use them commercially without permission. If you believe content on this site infringes your rights, contact us and we will review it.</p>',
+    'accessibility_html' => '<p>We want :site to be usable by everyone. Pages use clear headings, text alternatives for images, sufficient colour contrast and work with keyboard navigation and screen readers. If something is hard to use, contact us and tell us the page and the problem so we can fix it.</p>',
+    'payment_terms_html' => '<p>These terms apply to payments made on :site. Available methods, limits, fees and processing times are those shown on the site at the time of the transaction. Payments must be made from accounts in your own name. We may delay or refuse a transaction to protect you or to comply with the law.</p>',
 ];

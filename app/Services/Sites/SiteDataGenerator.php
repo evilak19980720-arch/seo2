@@ -25,7 +25,7 @@ class SiteDataGenerator
 {
     /** Data fields kept per collection (anything else the model returns is dropped). */
     public const FIELDS = [
-        'game' => ['provider', 'themes', 'mechanics', 'tags', 'rtp', 'volatility', 'max_win', 'paylines', 'reels', 'min_bet', 'max_bet', 'release_date'],
+        'game' => ['provider', 'themes', 'mechanics', 'tags', 'types', 'theme_keys', 'devices', 'demo', 'rtp', 'volatility', 'max_win', 'paylines', 'reels', 'min_bet', 'max_bet', 'release_date', 'series'],
         'provider' => ['country', 'founded'],
         'promotion' => ['tags', 'reward', 'requirement', 'starts_at', 'ends_at', 'status'],
         'event' => ['tags', 'reward', 'requirement', 'starts_at', 'ends_at', 'status'],
@@ -34,11 +34,11 @@ class SiteDataGenerator
     ];
 
     public const TAGS = [
-        'game' => ['hot', 'new', 'classic'],
-        'promotion' => ['new_user', 'regular', 'festival', 'featured'],
-        'event' => ['featured'],
-        'notice' => ['maintenance', 'game_maintenance', 'rules'],
-        'news' => ['brand', 'new_games', 'features', 'updates', 'partners'],
+        'game' => ['hot', 'new', 'classic', 'featured', 'upcoming'],
+        'promotion' => ['new_user', 'regular', 'festival', 'featured', 'anniversary', 'app', 'invite'],
+        'event' => ['featured', 'launch', 'anniversary', 'festival', 'community', 'quiz', 'creative', 'collab', 'live', 'offline'],
+        'notice' => ['maintenance', 'game_maintenance', 'rules', 'restored', 'new_game', 'removed', 'game_update', 'payments', 'policy', 'channels'],
+        'news' => ['brand', 'new_games', 'features', 'updates', 'partners', 'editorial', 'monthly', 'community'],
     ];
 
     /** Fields that are figures: kept only when every number in them appears in the sources. */
@@ -102,6 +102,8 @@ class SiteDataGenerator
                 'collections' => implode(', ', $collections),
                 'max_items' => max(self::MAX_ITEMS),
                 'site_features' => $features,
+                'game_types' => self::vocabulary('game_types'),
+                'game_themes' => self::vocabulary('game_themes'),
             ], $site)->json();
         } catch (Throwable $e) {
             $this->notes[] = '站点数据生成失败：'.Str::limit($e->getMessage(), 150);
@@ -173,11 +175,26 @@ class SiteDataGenerator
         $data = [];
         foreach (self::FIELDS[$collection] ?? [] as $field) {
             $value = $item[$field] ?? null;
-            if (in_array($field, ['tags', 'themes', 'mechanics'], true)) {
+            if ($field === 'demo') {
+                if (filter_var($value, FILTER_VALIDATE_BOOLEAN)) {
+                    $data['demo'] = true;
+                }
+
+                continue;
+            }
+            if (in_array($field, ['tags', 'themes', 'mechanics', 'types', 'theme_keys', 'devices'], true)) {
                 $list = collect(is_array($value) ? $value : explode(',', (string) $value))
                     ->filter(fn ($v) => is_string($v))->map(fn ($v) => Str::limit(trim(strip_tags($v)), 30, ''))->filter()->unique();
-                if ($field === 'tags') {
-                    $list = $list->map(fn ($v) => Str::snake(mb_strtolower($v)))->intersect(self::TAGS[$collection] ?? []);
+                // Category keys come from fixed vocabularies so lists and filters can match them.
+                $allowed = match ($field) {
+                    'tags' => self::TAGS[$collection] ?? [],
+                    'types' => array_keys((array) config('game_site.game_types')),
+                    'theme_keys' => array_keys((array) config('game_site.game_themes')),
+                    'devices' => ['mobile', 'desktop', 'tablet'],
+                    default => null,
+                };
+                if ($allowed !== null) {
+                    $list = $list->map(fn ($v) => Str::snake(mb_strtolower($v)))->intersect($allowed);
                 }
                 if ($list->isNotEmpty()) {
                     $data[$field] = $list->take(6)->values()->all();
@@ -279,6 +296,12 @@ class SiteDataGenerator
             }
         }
         $this->notes[] = "详情页文案：{$written} 条";
+    }
+
+    /** "key = label" list of a game vocabulary for the prompt. */
+    public static function vocabulary(string $name): string
+    {
+        return collect((array) config("game_site.{$name}"))->map(fn ($label, $key) => "{$key} = {$label}")->implode('; ');
     }
 
     /** Lines of the reference pages around mentions of a name. */

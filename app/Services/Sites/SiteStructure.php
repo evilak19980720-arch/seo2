@@ -71,12 +71,50 @@ class SiteStructure
                     $sections[] = $section['key'];
                 }
             }
+            // Long pools are capped: optional sections beyond the limit are dropped at random.
+            $max = (int) ($def['max_sections'] ?? $type['max_sections'] ?? 99);
+            $fixed = array_column(array_filter($def['sections'], fn ($x) => ! empty($x['required'])), 'key');
+            $kept = $previous['pages'][$pageType] ?? [];
+            while (count($sections) > $max) {
+                $optional = array_values(array_diff($sections, $fixed, $kept));
+                if ($optional === []) {
+                    break;
+                }
+                $sections = array_values(array_diff($sections, [$optional[$rand->getInt(0, count($optional) - 1)]]));
+            }
             $order = array_column($def['sections'], 'key');
             usort($sections, fn ($a, $b) => array_search($a, $order, true) <=> array_search($b, $order, true));
             $pages[$pageType] = $sections;
         }
 
-        return ['pages' => $pages];
+        // Detail pages (games, promotions…) combine their sections the same way.
+        $collections = [];
+        foreach ($type['collections'] ?? [] as $name => $collection) {
+            $chosen = [];
+            foreach ($collection['sections'] as $section) {
+                if (! $ok($section)) {
+                    continue;
+                }
+                if (! empty($section['required']) || in_array($section['key'], $previous['collections'][$name] ?? [], true)
+                    || $rand->nextFloat() < (float) ($type['optional_section_chance'] ?? 0.6)) {
+                    $chosen[] = $section['key'];
+                }
+            }
+            $collections[$name] = $chosen;
+        }
+
+        // Each block type gets one look per site (used when the design does not pick one).
+        $variants = [];
+        foreach ($pages as $pageType => $keys) {
+            foreach ($type['pages'][$pageType]['sections'] as $section) {
+                $options = config("theme.blocks.{$section['block']}", ['default']);
+                if (in_array($section['key'], $keys, true) && ! isset($variants[$section['block']])) {
+                    $variants[$section['block']] = $previous['variants'][$section['block']] ?? $options[$rand->getInt(0, count($options) - 1)];
+                }
+            }
+        }
+
+        return ['pages' => $pages, 'collections' => $collections, 'variants' => $variants];
     }
 
     /** The preset reduced to the chosen pages; each page's "blocks" and "sections" follow the choice. */
@@ -88,11 +126,20 @@ class SiteStructure
                 continue;
             }
             $chosen = $structure['pages'][$pageType];
-            $def['sections'] = array_values(array_filter($def['sections'], fn ($s) => in_array($s['key'], $chosen, true)));
+            $def['sections'] = array_values(array_map(
+                fn ($s) => $s + array_filter(['variant' => $structure['variants'][$s['block']] ?? null]),
+                array_filter($def['sections'], fn ($s) => in_array($s['key'], $chosen, true)),
+            ));
             $def['blocks'] = array_column($def['sections'], 'block');
             $pages[$pageType] = $def;
         }
         $type['pages'] = $pages;
+        foreach ($type['collections'] ?? [] as $name => $collection) {
+            if (isset($structure['collections'][$name])) {
+                $chosen = $structure['collections'][$name];
+                $type['collections'][$name]['sections'] = array_values(array_filter($collection['sections'], fn ($s) => in_array($s['key'], $chosen, true)));
+            }
+        }
 
         return $type;
     }

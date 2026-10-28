@@ -1,13 +1,62 @@
 <?php
 
 /*
-| Game site preset: a pool of sections. Each site keeps the required pages
-| and a random (seeded) selection of the rest; inside every page, required
-| sections plus a random selection of the optional ones. "requires" names a
-| condition (accounts, payments, app, company, license, certification) the
-| site must meet, so features it does not have are never described.
-| "nav": main = header menu, secondary = dropdown under "parent", footer/legal = footer only.
+| Game site preset: a pool of pages (big sections) and of sections inside
+| each page (small sections). Every site keeps the required pages and a
+| seeded random selection of the others; inside each page its required
+| sections plus a random selection of the rest (at most "max_sections").
+| Detail pages of games, providers, promotions and events combine their
+| sections the same way.
+|
+| Section fields: key, block, label (admin), topic (for the AI), and
+|   collection/filter  list of site data (filters: all, hot, new, classic, featured,
+|                      upcoming, demo, active, ongoing, ended, latest, tag:x, type:x,
+|                      theme:x, device:x)
+|   links              link_grid targets: page types, or "sections:<page>"
+|   requires           accounts | payments | app | company | license | certification
+|   source             true = only facts from the brand profile or the reference;
+|                      the section is left out when the sources say nothing
+| "nav": main = header, secondary = dropdown under "parent", footer, legal.
+| Features that need a live backend (my offers, transaction records, ticket
+| status, event sign-up, newsletter) are not part of the pool: a static site
+| cannot provide them.
 */
+
+$s = fn (string $key, string $block, string $label, string $topic, array $extra = []): array => compact('key', 'block', 'label', 'topic') + $extra;
+$req = ['required' => true];
+$src = ['source' => true];
+$list = fn (string $key, string $label, string $topic, string $collection, string $filter, array $extra = []) => $s($key, 'entry_list', $label, $topic, ['collection' => $collection, 'filter' => $filter] + $extra);
+$slug = fn (string $en, string $pt, string $es): array => compact('en', 'pt', 'es');
+
+// Vocabulary the site data uses for game categories (keys are stored on games).
+$types = [
+    'classic_3_reel' => ['经典三轴 Slots', 'classic three-reel slots'],
+    'five_reel' => ['五轴 Slots', 'five-reel slots'],
+    'video' => ['视频 Slots', 'video slots'],
+    'multi_line' => ['多线 Slots', 'multi-line slots'],
+    'ways' => ['多路赔付 Slots', 'ways-to-win slots'],
+    'cluster' => ['集群赔付 Slots', 'cluster pays slots'],
+    'megaways' => ['Megaways 类游戏', 'Megaways games'],
+    'cascading' => ['连锁消除类游戏', 'cascading / tumbling reels games'],
+    'hold_and_win' => ['Hold and Win 类游戏', 'hold and win games'],
+    'respin' => ['重转机制游戏', 'games with respins'],
+    'expanding_reels' => ['扩展卷轴游戏', 'expanding reels games'],
+    'variable_reels' => ['可变卷轴游戏', 'variable reels games'],
+    'multi_level' => ['多层卷轴游戏', 'multi-level reels games'],
+    'fixed_jackpot' => ['固定奖池游戏', 'fixed jackpot games'],
+    'progressive_jackpot' => ['累积奖池游戏', 'progressive jackpot games'],
+    'series' => ['系列游戏合集', 'game series'],
+    'branded' => ['品牌联名游戏', 'branded / licensed games'],
+];
+$themes = [
+    'egypt' => ['古埃及主题', 'ancient Egypt'], 'greek' => ['希腊神话主题', 'Greek mythology'], 'norse' => ['北欧神话主题', 'Norse mythology'],
+    'asian' => ['亚洲文化主题', 'Asian culture'], 'history' => ['历史文明主题', 'historic civilisations'], 'fantasy' => ['奇幻冒险主题', 'fantasy adventure'],
+    'magic' => ['魔法主题', 'magic'], 'pirates' => ['海盗主题', 'pirates'], 'ocean' => ['海洋主题', 'ocean'], 'animals' => ['动物主题', 'animals'],
+    'fruit' => ['水果主题', 'fruit'], 'candy' => ['糖果甜品主题', 'candy and sweets'], 'gems' => ['宝石主题', 'gems'], 'gold' => ['黄金宝藏主题', 'gold and treasure'],
+    'western' => ['西部牛仔主题', 'wild west'], 'space' => ['太空科幻主题', 'space and sci-fi'], 'music' => ['音乐主题', 'music'], 'sports' => ['体育主题', 'sports'],
+    'movies' => ['电影与角色授权主题', 'movies and licensed characters'], 'retro' => ['复古街机主题', 'retro arcade'], 'holiday' => ['节日主题', 'holidays'],
+    'seasonal' => ['季节限定主题', 'seasonal'],
+];
 
 return [
     'label' => '游戏品牌站',
@@ -15,294 +64,537 @@ return [
     'sectioned' => true,
     'responsible_notice' => true,
     'main_nav_max' => 6,
-    'optional_page_chance' => 0.65,
-    'optional_section_chance' => 0.6,
-    // Data shown in lists and on detail pages (/{owner page}/{entry}/), owner = first chosen page.
+    'main_nav_order' => ['games', 'lobby', 'promotions', 'events', 'providers', 'news', 'download', 'about', 'help'],
+    'optional_page_chance' => 0.6,
+    'optional_section_chance' => 0.55,
+    'max_sections' => 9,
+    'game_types' => array_map(fn ($t) => $t[0], $types),
+    'game_themes' => array_map(fn ($t) => $t[0], $themes),
+
+    // Site data shown in lists and on detail pages (/{owner page}/{entry}/); owner = first chosen page.
     'collections' => [
         'game' => ['label' => '游戏', 'owners' => ['games', 'lobby'], 'sections' => [
-            ['key' => 'details', 'label' => '游戏详情', 'topic' => 'what the game is about (theme, look, setting)', 'required' => true],
-            ['key' => 'features', 'label' => '游戏特色与玩法规则', 'topic' => 'features and how to play'],
-            ['key' => 'symbols', 'label' => '特殊符号与奖励机制', 'topic' => 'special symbols and bonus mechanics'],
-        ], 'blocks' => ['params' => '游戏参数说明', 'media' => '游戏截图与视频', 'series' => '同系列游戏推荐']],
+            $s('details', 'prose', '游戏详情', 'what the game is: theme, look, setting', $req),
+            $s('story', 'prose', '游戏背景故事', 'the story behind the game', $src),
+            $s('characters', 'prose', '游戏角色介绍', 'the characters of the game', $src),
+            $s('visuals', 'prose', '游戏画面展示', 'graphics and art style'),
+            $s('audio', 'prose', '游戏音效介绍', 'sound and music'),
+            $s('features', 'prose', '游戏特色', 'what makes the game stand out'),
+            $s('rules', 'prose', '玩法规则', 'how to play'),
+            $s('symbols', 'prose', '符号说明', 'the symbols and what they do'),
+            $s('paytable', 'prose', '赔付表说明', 'how to read the paytable', $src),
+            $s('mechanics', 'prose', '特殊机制说明', 'special mechanics and bonus features'),
+            $s('devices', 'prose', '支持设备', 'devices and browsers the game runs on'),
+            $s('faq', 'prose', '游戏常见问题', 'common questions about this game'),
+            $s('version', 'prose', '游戏版本说明', 'versions of the game', $src),
+            $s('changelog', 'prose', '游戏更新记录', 'updates to the game', $src),
+        ], 'blocks' => ['params' => '游戏参数', 'media' => '游戏画面与视频', 'series' => '同系列 / 相似游戏推荐']],
         'provider' => ['label' => '供应商', 'owners' => ['providers'], 'sections' => [
-            ['key' => 'details', 'label' => '供应商介绍', 'topic' => 'who the provider is and its style', 'required' => true],
-        ], 'blocks' => ['games' => '旗下游戏', 'latest' => '最新上线作品']],
+            $s('details', 'prose', '供应商详情', 'who the provider is and its style', $req),
+            $s('story', 'prose', '供应商品牌故事', 'the provider\'s story', $src),
+            $s('mechanics', 'prose', '供应商特色机制', 'mechanics the provider is known for'),
+            $s('studio', 'prose', '研发工作室介绍', 'the studio behind the games', $src),
+            $s('interview', 'prose', '供应商访谈', 'interview highlights', $src),
+        ], 'blocks' => ['games' => '供应商游戏合集', 'latest' => '供应商新作']],
         'promotion' => ['label' => '优惠', 'owners' => ['promotions'], 'sections' => [
-            ['key' => 'details', 'label' => '优惠详情', 'topic' => 'what the offer is', 'required' => true],
-            ['key' => 'how_to_claim', 'label' => '领取方式', 'topic' => 'how to claim it'],
-            ['key' => 'terms', 'label' => '优惠条款', 'topic' => 'terms of this offer'],
+            $s('details', 'prose', '优惠详情', 'what the offer is', $req),
+            $s('eligibility', 'prose', '优惠资格说明', 'who can take part'),
+            $s('how_to_claim', 'prose', '优惠领取指南', 'how to claim it'),
+            $s('usage', 'prose', '优惠使用指南', 'how to use it'),
+            $s('validity', 'prose', '优惠有效期', 'when it is valid'),
+            $s('games', 'prose', '优惠适用游戏', 'games the offer applies to'),
+            $s('limits', 'prose', '优惠限制条件', 'limits and restrictions'),
+            $s('terms', 'prose', '优惠完整条款', 'full terms of this offer'),
+            $s('faq', 'prose', '优惠常见问题', 'common questions about this offer'),
         ], 'blocks' => []],
         'event' => ['label' => '活动', 'owners' => ['events'], 'sections' => [
-            ['key' => 'details', 'label' => '活动详情', 'topic' => 'what the event is', 'required' => true],
-            ['key' => 'rules', 'label' => '活动规则', 'topic' => 'rules of this event'],
-            ['key' => 'results', 'label' => '活动结果', 'topic' => 'how results are announced'],
+            $s('details', 'prose', '活动详情', 'what the event is', $req),
+            $s('rules', 'prose', '活动规则', 'rules of this event'),
+            $s('progress', 'prose', '活动进度', 'how the event progresses', $src),
+            $s('results', 'prose', '活动结果', 'results of the event', $src),
+            $s('winners', 'prose', '获奖公示', 'announced winners', $src),
+            $s('prizes', 'prose', '奖品领取说明', 'how prizes are claimed'),
+            $s('recap', 'prose', '活动精彩回顾', 'highlights of the event', $src),
         ], 'blocks' => []],
-        'notice' => ['label' => '公告', 'owners' => ['notices'], 'sections' => [
-            ['key' => 'details', 'label' => '公告内容', 'topic' => 'the announcement', 'required' => true],
+        'notice' => ['label' => '公告', 'owners' => ['notices', 'status'], 'sections' => [
+            $s('details', 'prose', '公告内容', 'the announcement', $req),
         ], 'blocks' => []],
         'news' => ['label' => '资讯', 'owners' => ['news'], 'sections' => [
-            ['key' => 'details', 'label' => '资讯正文', 'topic' => 'the news story', 'required' => true],
+            $s('details', 'prose', '资讯正文', 'the news story', $req),
+            $s('background', 'prose', '背景信息', 'background and context'),
         ], 'blocks' => []],
     ],
+
     'pages' => [
+        // 一、首页与品牌展示
         'home' => [
-            'label' => '首页',
-            'slug' => ['en' => ''],
-            'nav' => 'none',
-            'required' => true,
-            'min_words' => 300,
+            'label' => '品牌首页', 'slug' => ['en' => ''], 'nav' => 'none', 'required' => true, 'min_words' => 300, 'max_sections' => 11,
             'sections' => [
-                ['key' => 'intro', 'block' => 'hero', 'label' => '品牌介绍', 'topic' => 'brand introduction: who we are and what players find here', 'required' => true],
-                ['key' => 'hot_games', 'block' => 'entry_list', 'label' => '热门游戏推荐', 'topic' => 'popular games', 'collection' => 'game', 'filter' => 'hot'],
-                ['key' => 'new_games', 'block' => 'entry_list', 'label' => '新游戏推荐', 'topic' => 'newly added games', 'collection' => 'game', 'filter' => 'new'],
-                ['key' => 'promos', 'block' => 'entry_list', 'label' => '优惠精选', 'topic' => 'featured promotions', 'collection' => 'promotion', 'filter' => 'featured'],
-                ['key' => 'live_events', 'block' => 'entry_list', 'label' => '正在进行的活动', 'topic' => 'events running now', 'collection' => 'event', 'filter' => 'ongoing'],
-                ['key' => 'latest_notices', 'block' => 'entry_list', 'label' => '最新公告', 'topic' => 'latest announcements', 'collection' => 'notice', 'filter' => 'latest'],
-                ['key' => 'support', 'block' => 'cta', 'label' => '客服入口', 'topic' => 'how to reach customer support', 'link' => 'help'],
-            ],
-        ],
-        'games' => [
-            'label' => '游戏介绍',
-            'slug' => ['en' => 'games', 'pt' => 'jogos', 'es' => 'juegos'],
-            'nav' => 'main',
-            'required' => true,
-            'min_words' => 250,
-            'sections' => [
-                ['key' => 'overview', 'block' => 'prose', 'label' => '游戏总览', 'topic' => 'overview of the slot games on the site and how they differ', 'required' => true],
-                ['key' => 'cards', 'block' => 'entry_list', 'label' => '各类 Slots 游戏卡片', 'topic' => 'card-style introduction of every slot game', 'collection' => 'game', 'filter' => 'all', 'required' => true],
-            ],
-        ],
-        'lobby' => [
-            'label' => '游戏大厅',
-            'slug' => ['en' => 'game-lobby', 'pt' => 'lobby-de-jogos', 'es' => 'lobby-de-juegos'],
-            'nav' => 'main',
-            'required' => true,
-            'min_words' => 0,
-            'sections' => [
-                ['key' => 'lobby', 'block' => 'game_lobby', 'label' => '全部游戏 / 搜索与筛选', 'topic' => 'all games with search, tabs and filters', 'required' => true],
-                ['key' => 'about_lobby', 'block' => 'prose', 'label' => '大厅使用说明', 'topic' => 'how to find games in the lobby (tabs, providers, themes, mechanics, recently played, favourites)'],
-            ],
-        ],
-        'promotions' => [
-            'label' => '优惠内容',
-            'slug' => ['en' => 'promotions', 'pt' => 'promocoes', 'es' => 'promociones'],
-            'nav' => 'main',
-            'required' => true,
-            'min_words' => 250,
-            'sections' => [
-                ['key' => 'list', 'block' => 'entry_list', 'label' => '优惠列表', 'topic' => 'all current promotions', 'collection' => 'promotion', 'filter' => 'active', 'required' => true],
-                ['key' => 'new_user', 'block' => 'entry_list', 'label' => '新用户优惠', 'topic' => 'offers for new players', 'collection' => 'promotion', 'filter' => 'tag:new_user'],
-                ['key' => 'regular', 'block' => 'entry_list', 'label' => '常规优惠', 'topic' => 'regular recurring offers', 'collection' => 'promotion', 'filter' => 'tag:regular'],
-                ['key' => 'festival', 'block' => 'entry_list', 'label' => '节日优惠', 'topic' => 'holiday and festival offers', 'collection' => 'promotion', 'filter' => 'tag:festival'],
-                ['key' => 'how_to_claim', 'block' => 'steps', 'label' => '优惠领取说明', 'topic' => 'how to claim a promotion step by step'],
-                ['key' => 'terms', 'block' => 'prose', 'label' => '优惠条款', 'topic' => 'general promotion terms'],
-                ['key' => 'ended', 'block' => 'entry_list', 'label' => '已结束优惠', 'topic' => 'promotions that have ended', 'collection' => 'promotion', 'filter' => 'ended'],
-            ],
-        ],
-        'events' => [
-            'label' => '活动中心',
-            'slug' => ['en' => 'events', 'pt' => 'eventos', 'es' => 'eventos'],
-            'nav' => 'main',
-            'min_words' => 250,
-            'sections' => [
-                ['key' => 'list', 'block' => 'entry_list', 'label' => '活动列表', 'topic' => 'all events', 'collection' => 'event', 'filter' => 'all', 'required' => true],
-                ['key' => 'upcoming', 'block' => 'entry_list', 'label' => '即将开始', 'topic' => 'events starting soon', 'collection' => 'event', 'filter' => 'upcoming'],
-                ['key' => 'ongoing', 'block' => 'entry_list', 'label' => '正在进行', 'topic' => 'events running now', 'collection' => 'event', 'filter' => 'ongoing'],
-                ['key' => 'past', 'block' => 'entry_list', 'label' => '往期活动', 'topic' => 'past events', 'collection' => 'event', 'filter' => 'ended'],
-                ['key' => 'rules', 'block' => 'prose', 'label' => '活动规则', 'topic' => 'general event rules'],
-                ['key' => 'results', 'block' => 'prose', 'label' => '活动结果公告', 'topic' => 'how event results and winners are announced'],
-            ],
-        ],
-        'guide' => [
-            'label' => '新手指南',
-            'slug' => ['en' => 'guide', 'pt' => 'guia', 'es' => 'guia'],
-            'nav' => 'secondary',
-            'parent' => 'help',
-            'sections' => [
-                ['key' => 'register_login', 'block' => 'prose', 'label' => '注册与登录指南', 'topic' => 'registration and login guide', 'requires' => 'accounts'],
-                ['key' => 'account_settings', 'block' => 'prose', 'label' => '账户设置指南', 'topic' => 'account settings guide', 'requires' => 'accounts'],
-                ['key' => 'basics', 'block' => 'prose', 'label' => 'Slots 基础玩法', 'topic' => 'slots basics: reels, paylines, bets, spins', 'required' => true],
-                ['key' => 'glossary', 'block' => 'faq', 'label' => '游戏术语解释', 'topic' => 'glossary of slot terms (question = term, answer = definition)'],
-                ['key' => 'rtp', 'block' => 'prose', 'label' => 'RTP 与波动性说明', 'topic' => 'RTP and volatility explained'],
-                ['key' => 'reading_rules', 'block' => 'prose', 'label' => '游戏规则阅读指南', 'topic' => 'how to read a game rules / paytable screen'],
-                ['key' => 'demo', 'block' => 'prose', 'label' => '试玩说明', 'topic' => 'how demo / free play works'],
-            ],
-        ],
-        'providers' => [
-            'label' => '游戏供应商',
-            'slug' => ['en' => 'providers', 'pt' => 'provedores', 'es' => 'proveedores'],
-            'nav' => 'main',
-            'min_words' => 200,
-            'sections' => [
-                ['key' => 'list', 'block' => 'entry_list', 'label' => '供应商列表', 'topic' => 'all game providers', 'collection' => 'provider', 'filter' => 'all', 'required' => true],
-                ['key' => 'intro', 'block' => 'prose', 'label' => '供应商介绍', 'topic' => 'what a game provider is and why it matters'],
-                ['key' => 'latest', 'block' => 'entry_list', 'label' => '最新上线作品', 'topic' => 'latest releases from the providers', 'collection' => 'game', 'filter' => 'new'],
-            ],
-        ],
-        'news' => [
-            'label' => '资讯中心',
-            'slug' => ['en' => 'news', 'pt' => 'noticias', 'es' => 'noticias'],
-            'nav' => 'main',
-            'min_words' => 0,
-            'sections' => [
-                ['key' => 'all', 'block' => 'entry_list', 'label' => '全部资讯', 'topic' => 'all news', 'collection' => 'news', 'filter' => 'all', 'required' => true],
-                ['key' => 'brand', 'block' => 'entry_list', 'label' => '品牌新闻', 'topic' => 'brand news', 'collection' => 'news', 'filter' => 'tag:brand'],
-                ['key' => 'new_games', 'block' => 'entry_list', 'label' => '游戏上新', 'topic' => 'new game releases', 'collection' => 'news', 'filter' => 'tag:new_games'],
-                ['key' => 'features', 'block' => 'entry_list', 'label' => '游戏功能介绍', 'topic' => 'game feature introductions', 'collection' => 'news', 'filter' => 'tag:features'],
-                ['key' => 'updates', 'block' => 'entry_list', 'label' => '产品更新', 'topic' => 'product updates', 'collection' => 'news', 'filter' => 'tag:updates'],
-                ['key' => 'partners', 'block' => 'entry_list', 'label' => '品牌合作动态', 'topic' => 'partnership news', 'collection' => 'news', 'filter' => 'tag:partners'],
-            ],
-        ],
-        'notices' => [
-            'label' => '公告中心',
-            'slug' => ['en' => 'notices', 'pt' => 'avisos', 'es' => 'avisos'],
-            'nav' => 'secondary',
-            'min_words' => 0,
-            'parent' => 'help',
-            'sections' => [
-                ['key' => 'all', 'block' => 'entry_list', 'label' => '平台公告', 'topic' => 'all announcements', 'collection' => 'notice', 'filter' => 'all', 'required' => true],
-                ['key' => 'maintenance', 'block' => 'entry_list', 'label' => '系统维护通知', 'topic' => 'system maintenance notices', 'collection' => 'notice', 'filter' => 'tag:maintenance'],
-                ['key' => 'game_maintenance', 'block' => 'entry_list', 'label' => '游戏维护通知', 'topic' => 'game maintenance notices', 'collection' => 'notice', 'filter' => 'tag:game_maintenance'],
-                ['key' => 'rule_changes', 'block' => 'entry_list', 'label' => '规则调整通知', 'topic' => 'rule change notices', 'collection' => 'notice', 'filter' => 'tag:rules'],
-                ['key' => 'security', 'block' => 'prose', 'label' => '安全提醒', 'topic' => 'security reminders for players'],
-                ['key' => 'official_channels', 'block' => 'prose', 'label' => '官方渠道与防冒充说明', 'topic' => 'official channels and how to recognise impostors'],
-            ],
-        ],
-        'help' => [
-            'label' => '帮助中心',
-            'slug' => ['en' => 'help', 'pt' => 'ajuda', 'es' => 'ayuda'],
-            'nav' => 'main',
-            'required' => true,
-            'sections' => [
-                ['key' => 'faq', 'block' => 'faq', 'label' => '常见问题', 'topic' => 'frequently asked questions', 'required' => true],
-                ['key' => 'account', 'block' => 'faq', 'label' => '账户与登录', 'topic' => 'account and login questions', 'requires' => 'accounts'],
-                ['key' => 'verification', 'block' => 'faq', 'label' => '身份验证', 'topic' => 'identity verification questions', 'requires' => 'accounts'],
-                ['key' => 'loading', 'block' => 'faq', 'label' => '游戏加载与运行', 'topic' => 'game loading and performance questions'],
-                ['key' => 'promo_faq', 'block' => 'faq', 'label' => '优惠与活动问题', 'topic' => 'promotion and event questions'],
-                ['key' => 'payments', 'block' => 'faq', 'label' => '支付与交易问题', 'topic' => 'payment and transaction questions', 'requires' => 'payments'],
-                ['key' => 'feedback', 'block' => 'contact', 'label' => '问题反馈', 'topic' => 'how to send feedback'],
-                ['key' => 'complaints', 'block' => 'steps', 'label' => '投诉处理流程', 'topic' => 'complaint handling process'],
+                $s('intro', 'hero', '品牌介绍', 'brand introduction: who we are and what players find here', $req),
+                $s('highlights', 'features', '品牌特色', 'what makes the brand different'),
+                $list('hot_games', '热门游戏推荐', 'popular games', 'game', 'hot'),
+                $list('new_games', '新游戏推荐', 'newly added games', 'game', 'new'),
+                $list('featured_games', '编辑精选', 'editor\'s picks', 'game', 'featured'),
+                $s('categories', 'link_grid', '游戏分类入口', 'shortcuts to the game categories', ['links' => 'sections:slot_types']),
+                $list('promos', '优惠精选', 'featured promotions', 'promotion', 'featured'),
+                $list('live_events', '正在进行的活动', 'events running now', 'event', 'ongoing'),
+                $list('latest_notices', '最新公告', 'latest announcements', 'notice', 'latest'),
+                $list('latest_news', '最新资讯', 'latest news', 'news', 'latest'),
+                $list('providers', '合作供应商', 'game providers on the site', 'provider', 'all'),
+                $s('trust', 'checklist', '安全与信任', 'why players can trust the site (only true facts)'),
+                $s('support', 'cta', '客服入口', 'how to reach customer support', ['link' => 'help']),
             ],
         ],
         'about' => [
-            'label' => '关于我们',
-            'slug' => ['en' => 'about-us', 'pt' => 'sobre-nos', 'es' => 'sobre-nosotros'],
-            'nav' => 'secondary',
-            'required' => true,
-            'parent' => 'help',
+            'label' => '品牌介绍', 'slug' => $slug('about-us', 'sobre-nos', 'sobre-nosotros'), 'nav' => 'main', 'required' => true,
             'sections' => [
-                ['key' => 'story', 'block' => 'prose', 'label' => '品牌故事', 'topic' => 'brand story', 'required' => true],
-                ['key' => 'company', 'block' => 'prose', 'label' => '公司介绍', 'topic' => 'company introduction', 'requires' => 'company'],
-                ['key' => 'operator', 'block' => 'prose', 'label' => '运营主体', 'topic' => 'operating entity', 'requires' => 'company'],
-                ['key' => 'history', 'block' => 'steps', 'label' => '品牌发展历程', 'topic' => 'brand milestones in order (only ones from the sources)'],
-                ['key' => 'channels', 'block' => 'prose', 'label' => '官方渠道', 'topic' => 'official channels'],
-                ['key' => 'business', 'block' => 'prose', 'label' => '商务合作', 'topic' => 'business cooperation'],
-                ['key' => 'contact', 'block' => 'contact', 'label' => '联系我们', 'topic' => 'contact us'],
+                $s('intro', 'prose', '品牌介绍', 'who the brand is', $req),
+                $s('philosophy', 'quote', '品牌理念', 'the brand\'s philosophy in one statement'),
+                $s('features', 'features', '品牌特色', 'what makes the brand special'),
+                $s('visual', 'prose', '品牌视觉与吉祥物', 'visual identity and mascot', $src),
+                $s('global', 'prose', '全球业务', 'where the brand operates', $src),
+                $s('regions', 'table', '服务地区', 'regions served (region / note)', $src),
+                $s('languages', 'table', '支持语言', 'supported languages', $src),
+                $s('more', 'link_grid', '了解更多', 'more about the brand', ['links' => ['brand_story', 'company', 'press', 'official_channels', 'contact', 'business']]),
+            ],
+        ],
+        'brand_story' => [
+            'label' => '品牌故事', 'slug' => $slug('our-story', 'nossa-historia', 'nuestra-historia'), 'nav' => 'secondary', 'parent' => 'about',
+            'sections' => [
+                $s('story', 'prose', '品牌故事', 'the brand story', $req),
+                $s('founder', 'quote', '创始人寄语', 'a message from the founder', $src),
+                $s('history', 'timeline', '品牌发展历程', 'how the brand developed, in order', $src),
+                $s('milestones', 'timeline', '品牌里程碑', 'key milestones with dates', $src),
+                $s('honors', 'card_grid', '品牌荣誉', 'awards and honours', $src),
+            ],
+        ],
+        'company' => [
+            'label' => '公司介绍', 'slug' => $slug('company', 'empresa', 'empresa'), 'nav' => 'secondary', 'parent' => 'about', 'requires' => 'company',
+            'sections' => [
+                $s('company', 'prose', '公司介绍', 'the company', $req),
+                $s('operator', 'table', '运营主体', 'operating entity details (name, address, registration)', $src),
+                $s('team', 'card_grid', '团队介绍', 'the team', $src),
+                $s('global', 'prose', '全球业务', 'the company\'s markets', $src),
+            ],
+        ],
+        'press' => [
+            'label' => '媒体与合作伙伴', 'slug' => $slug('press', 'imprensa', 'prensa'), 'nav' => 'secondary', 'parent' => 'about',
+            'sections' => [
+                $s('coverage', 'card_grid', '媒体报道', 'press coverage', $src + $req),
+                $s('partners', 'card_grid', '合作伙伴', 'partners', $src),
+                $s('media_kit', 'prose', '媒体资料包', 'what is in the media kit and how to request it'),
+                $s('brand_guidelines', 'checklist', '品牌标识使用规范', 'rules for using the logo and brand name'),
+                $s('press_contact', 'contact', '新闻联系', 'press contact'),
+            ],
+        ],
+        'official_channels' => [
+            'label' => '官方渠道', 'slug' => $slug('official-channels', 'canais-oficiais', 'canales-oficiales'), 'nav' => 'secondary', 'parent' => 'about',
+            'sections' => [
+                $s('channels', 'prose', '官方渠道', 'the official channels', $req),
+                $s('domain_check', 'callout', '官方域名验证', 'how to check you are on the official domain'),
+                $s('socials', 'prose', '官方社交账号验证', 'how to recognise the official social accounts'),
+                $s('impostors', 'checklist', '防冒充说明', 'signs of impostor sites and fake support'),
+            ],
+        ],
+        'contact' => [
+            'label' => '联系我们', 'slug' => $slug('contact', 'contato', 'contacto'), 'nav' => 'secondary', 'parent' => 'about',
+            'sections' => [
+                $s('contact', 'contact', '联系我们', 'how to contact us', $req),
+                $s('hours', 'table', '客服服务时间', 'support hours', $src),
+                $s('email', 'prose', '邮件支持', 'email support and what to include'),
+            ],
+        ],
+
+        // 二、游戏介绍
+        'games' => [
+            'label' => '游戏介绍', 'slug' => $slug('games', 'jogos', 'juegos'), 'nav' => 'main', 'required' => true, 'min_words' => 250,
+            'sections' => [
+                $s('overview', 'prose', '全部游戏介绍', 'overview of the games on the site and how they differ', $req),
+                $list('cards', '全部游戏', 'every game', 'game', 'all', $req),
+                $list('hot', '热门游戏介绍', 'popular games', 'game', 'hot'),
+                $list('new', '新游戏介绍', 'new games', 'game', 'new'),
+                $list('classic', '经典游戏介绍', 'classic games', 'game', 'classic'),
+                $list('featured', '编辑精选', 'editor\'s picks', 'game', 'featured'),
+                $s('topics', 'card_grid', '游戏专题', 'themed game collections on the site'),
+                $list('upcoming', '即将上线游戏', 'games coming soon', 'game', 'upcoming'),
+                $s('categories', 'link_grid', '按类型浏览', 'browse by type', ['links' => 'sections:slot_types']),
+                $s('faq', 'faq', '游戏常见问题', 'common questions about the games'),
+            ],
+        ],
+        // 四、按 Slots 类型分类
+        'slot_types' => [
+            'label' => '按 Slots 类型分类', 'slug' => $slug('slot-types', 'tipos-de-slots', 'tipos-de-slots'), 'nav' => 'secondary', 'parent' => 'games', 'max_sections' => 12,
+            'sections' => array_merge(
+                [$s('intro', 'prose', '类型说明', 'how slot types differ', $req)],
+                array_map(fn ($key, $t) => $list($key, $t[0], $t[1], 'game', "type:{$key}"), array_keys($types), $types),
+            ),
+        ],
+        // 五、按游戏主题分类
+        'themes' => [
+            'label' => '按游戏主题分类', 'slug' => $slug('game-themes', 'temas-de-jogos', 'temas-de-juegos'), 'nav' => 'secondary', 'parent' => 'games', 'max_sections' => 12,
+            'sections' => array_merge(
+                [$s('intro', 'prose', '主题说明', 'why themes matter when choosing a game', $req)],
+                array_map(fn ($key, $t) => $list($key, $t[0], 'games with a '.$t[1].' theme', 'game', "theme:{$key}"), array_keys($themes), $themes),
+            ),
+        ],
+
+        // 三、游戏大厅
+        'lobby' => [
+            'label' => '游戏大厅', 'slug' => $slug('game-lobby', 'lobby-de-jogos', 'lobby-de-juegos'), 'nav' => 'main', 'required' => true, 'min_words' => 0,
+            'sections' => [
+                $s('lobby', 'game_lobby', '全部游戏 / 搜索 / 分类 / 筛选 / 排序 / 最近玩过 / 收藏', 'all games with search, tabs, filters and sorting', $req),
+                $list('demo', '试玩专区', 'games with a free demo', 'game', 'demo'),
+                $list('mobile', '手机游戏专区', 'games for phones', 'game', 'device:mobile'),
+                $list('desktop', '桌面游戏专区', 'games for desktop', 'game', 'device:desktop'),
+                $list('upcoming', '新游戏预告', 'upcoming games', 'game', 'upcoming'),
+                $list('maintenance', '游戏维护状态', 'games under maintenance', 'notice', 'tag:game_maintenance'),
+                $s('about_lobby', 'steps', '大厅使用说明', 'how to use the lobby: tabs, search, filters, recently played, favourites'),
+            ],
+        ],
+
+        // 六、游戏机制与知识库
+        'academy' => [
+            'label' => 'Slots 入门与机制', 'slug' => $slug('slots-guide', 'guia-de-slots', 'guia-de-slots'), 'nav' => 'secondary', 'parent' => 'games', 'max_sections' => 10,
+            'sections' => [
+                $s('basics', 'prose', 'Slots 入门', 'slots basics', $req),
+                $s('glossary', 'glossary', '游戏术语词典', 'glossary of slot terms'),
+                $s('reels', 'prose', '卷轴与行列说明', 'reels and rows'),
+                $s('paylines', 'prose', '投注线说明', 'paylines'),
+                $s('ways', 'prose', 'Ways 赔付说明', 'ways to win'),
+                $s('cluster', 'prose', '集群赔付说明', 'cluster pays'),
+                $s('wild', 'prose', 'Wild 符号说明', 'wild symbols'),
+                $s('scatter', 'prose', 'Scatter 符号说明', 'scatter symbols'),
+                $s('free_spins', 'prose', '免费旋转机制说明', 'free spins'),
+                $s('respins', 'prose', '重转机制说明', 'respins'),
+                $s('multipliers', 'prose', '倍数机制说明', 'multipliers'),
+                $s('cascades', 'prose', '连锁消除机制说明', 'cascading reels'),
+                $s('expanding', 'prose', '扩展符号说明', 'expanding symbols'),
+                $s('bonus_rounds', 'prose', '特殊奖励回合说明', 'bonus rounds'),
+                $s('jackpots', 'prose', '奖池机制说明', 'how jackpots work'),
+                $s('reading_rules', 'steps', '如何阅读游戏规则', 'how to read a game\'s rules screen'),
+                $s('in_game_params', 'steps', '如何查看游戏内参数', 'how to find a game\'s parameters in the game'),
+            ],
+        ],
+        'game_math' => [
+            'label' => '概率与公平知识', 'slug' => $slug('rtp-and-volatility', 'rtp-e-volatilidade', 'rtp-y-volatilidad'), 'nav' => 'secondary', 'parent' => 'games',
+            'sections' => [
+                $s('rng', 'prose', 'RNG 随机数说明', 'random number generators', $req),
+                $s('rtp', 'prose', 'RTP 说明', 'return to player explained'),
+                $s('volatility', 'prose', '波动性说明', 'volatility explained'),
+                $s('hit_frequency', 'prose', '命中频率说明', 'hit frequency'),
+                $s('probability', 'callout', '理论概率与短期结果', 'why short-term results differ from theory'),
+                $s('demo_vs_real', 'table', '试玩与实际游戏的区别', 'demo play compared with normal play'),
+                $s('myths', 'checklist', '常见游戏误区', 'common myths about slots, corrected'),
+            ],
+        ],
+
+        // 七、游戏供应商与研发商
+        'providers' => [
+            'label' => '游戏供应商', 'slug' => $slug('providers', 'provedores', 'proveedores'), 'nav' => 'main', 'min_words' => 200,
+            'sections' => [
+                $list('list', '供应商列表', 'all game providers', 'provider', 'all', $req),
+                $s('intro', 'prose', '供应商介绍', 'what a game provider is and why it matters'),
+                $list('latest', '供应商新作', 'latest releases from the providers', 'game', 'new'),
+                $s('mechanics', 'prose', '供应商特色机制', 'signature mechanics of the providers'),
+                $s('studios', 'prose', '研发工作室介绍', 'the studios behind the games', $src),
+            ],
+        ],
+        'behind_scenes' => [
+            'label' => '游戏制作幕后', 'slug' => $slug('behind-the-games', 'bastidores', 'detras-de-los-juegos'), 'nav' => 'secondary', 'parent' => 'providers',
+            'sections' => [
+                $s('making', 'prose', '游戏制作幕后', 'how the games are made', $src + $req),
+                $s('art', 'prose', '美术设计幕后', 'art and design', $src),
+                $s('music', 'prose', '音乐制作幕后', 'music and sound', $src),
+                $s('dev_log', 'timeline', '开发者日志', 'developer log entries', $src),
+                $s('interviews', 'quote', '供应商访谈', 'a quote from a developer interview', $src),
+            ],
+        ],
+
+        // 八、优惠内容
+        'promotions' => [
+            'label' => '优惠内容', 'slug' => $slug('promotions', 'promocoes', 'promociones'), 'nav' => 'main', 'required' => true, 'min_words' => 250,
+            'sections' => [
+                $list('list', '当前优惠', 'promotions running now', 'promotion', 'active', $req),
+                $list('new_user', '新用户优惠', 'offers for new players', 'promotion', 'tag:new_user'),
+                $list('regular', '常规优惠', 'regular recurring offers', 'promotion', 'tag:regular'),
+                $list('festival', '节日优惠', 'holiday and festival offers', 'promotion', 'tag:festival'),
+                $list('anniversary', '周年庆优惠', 'anniversary offers', 'promotion', 'tag:anniversary'),
+                $list('app_only', 'App 专属优惠', 'app-only offers', 'promotion', 'tag:app', ['requires' => 'app']),
+                $list('invite', '专属邀请优惠', 'invitation offers', 'promotion', 'tag:invite'),
+                $s('eligibility', 'checklist', '优惠资格说明', 'who can take part in promotions'),
+                $s('how_to_claim', 'steps', '优惠领取指南', 'how to claim a promotion step by step'),
+                $s('usage', 'steps', '优惠使用指南', 'how to use a promotion'),
+                $s('limits', 'table', '优惠限制条件', 'common limits (item / rule)', $src),
+                $s('terms', 'prose', '优惠通用条款', 'general promotion terms'),
+                $s('faq', 'faq', '优惠常见问题', 'questions about promotions'),
+                $list('ended', '已结束优惠', 'promotions that have ended', 'promotion', 'ended'),
+            ],
+        ],
+
+        // 九、活动中心
+        'events' => [
+            'label' => '活动中心', 'slug' => $slug('events', 'eventos', 'eventos'), 'nav' => 'main', 'min_words' => 200,
+            'sections' => [
+                $list('list', '全部活动', 'all events', 'event', 'all', $req),
+                $list('ongoing', '正在进行', 'events running now', 'event', 'ongoing'),
+                $list('upcoming', '即将开始', 'events starting soon', 'event', 'upcoming'),
+                $s('calendar', 'event_calendar', '活动日历', 'event calendar'),
+                $list('launches', '新游戏发布活动', 'new game launch events', 'event', 'tag:launch'),
+                $list('anniversary', '品牌周年活动', 'anniversary events', 'event', 'tag:anniversary'),
+                $list('festival', '节日主题活动', 'holiday events', 'event', 'tag:festival'),
+                $list('community', '社区互动活动', 'community events', 'event', 'tag:community'),
+                $list('quiz', '游戏知识问答', 'quiz events', 'event', 'tag:quiz'),
+                $list('creative', '创意征集活动', 'creative contests', 'event', 'tag:creative'),
+                $list('collab', '品牌联名活动', 'collaboration events', 'event', 'tag:collab'),
+                $list('live', '直播活动', 'live-stream events', 'event', 'tag:live'),
+                $list('offline', '线下活动', 'in-person events', 'event', 'tag:offline'),
+                $s('rules', 'checklist', '活动规则', 'general event rules'),
+                $s('results', 'prose', '活动结果与获奖公示', 'how results and winners are announced'),
+                $s('prizes', 'steps', '奖品领取说明', 'how prizes are claimed'),
+                $list('past', '往期活动', 'past events', 'event', 'ended'),
+            ],
+        ],
+
+        // 十、新手中心
+        'guide' => [
+            'label' => '新手中心', 'slug' => $slug('beginners-guide', 'guia-para-iniciantes', 'guia-para-principiantes'), 'nav' => 'secondary', 'parent' => 'help', 'max_sections' => 10,
+            'sections' => [
+                $s('start', 'steps', '新用户入门', 'getting started on the site', $req),
+                $s('register', 'steps', '注册指南', 'how to register', ['requires' => 'accounts']),
+                $s('login', 'steps', '登录指南', 'how to log in', ['requires' => 'accounts']),
+                $s('recover', 'steps', '找回账户', 'how to recover an account', ['requires' => 'accounts']),
+                $s('profile', 'prose', '设置个人资料', 'setting up a profile', ['requires' => 'accounts']),
+                $s('verification', 'steps', '身份验证指南', 'identity verification', ['requires' => 'accounts']),
+                $s('first_use', 'prose', '首次使用指南', 'your first visit'),
+                $s('lobby_guide', 'steps', '游戏大厅使用指南', 'using the game lobby'),
+                $s('search_guide', 'prose', '游戏搜索指南', 'finding a game with search and filters'),
+                $s('favorites_guide', 'prose', '收藏游戏指南', 'saving favourite games'),
+                $s('demo_guide', 'prose', '试玩操作指南', 'playing a demo'),
+                $s('mobile_guide', 'prose', '手机端使用指南', 'using the site on a phone'),
+                $s('desktop_guide', 'prose', '电脑端使用指南', 'using the site on a computer'),
+                $s('support_guide', 'prose', '客服使用指南', 'getting help from support'),
+                $s('security_guide', 'checklist', '安全设置指南', 'security settings', ['requires' => 'accounts']),
+                $s('limits_guide', 'steps', '游戏限制设置指南', 'setting play limits', ['requires' => 'accounts']),
+            ],
+        ],
+
+        // 十一、帮助与客服
+        'help' => [
+            'label' => '帮助中心', 'slug' => $slug('help', 'ajuda', 'ayuda'), 'nav' => 'main', 'required' => true, 'max_sections' => 10,
+            'sections' => [
+                $s('faq', 'faq', '常见问题', 'frequently asked questions', $req),
+                $s('account', 'faq', '账户问题', 'account questions', ['requires' => 'accounts']),
+                $s('login', 'faq', '登录问题', 'login questions', ['requires' => 'accounts']),
+                $s('verification', 'faq', '验证问题', 'verification questions', ['requires' => 'accounts']),
+                $s('loading', 'faq', '游戏加载问题', 'games not loading'),
+                $s('lag', 'faq', '游戏卡顿问题', 'games running slowly'),
+                $s('disconnect', 'faq', '游戏断线问题', 'disconnections'),
+                $s('results', 'faq', '游戏结果查询', 'checking game results', ['requires' => 'accounts']),
+                $s('promo_faq', 'faq', '优惠问题', 'promotion questions'),
+                $s('event_faq', 'faq', '活动问题', 'event questions'),
+                $s('app_faq', 'faq', 'App 使用问题', 'app questions', ['requires' => 'app']),
+                $s('browser', 'table', '浏览器兼容问题', 'supported browsers (browser / note)'),
+                $s('devices', 'faq', '设备兼容问题', 'device compatibility'),
+                $s('feedback', 'contact', '意见反馈与在线客服', 'how to send feedback or reach support'),
+                $s('game_error', 'steps', '游戏错误反馈', 'how to report a game error'),
+                $s('complaints', 'steps', '投诉处理流程', 'how complaints are handled'),
+                $s('disputes', 'prose', '争议处理说明', 'how disputes are resolved'),
+                $s('hours', 'table', '客服服务时间', 'support hours', $src),
+                $s('accessibility', 'prose', '无障碍支持', 'accessibility support'),
+                $s('more', 'link_grid', '更多帮助', 'other help pages', ['links' => ['guide', 'notices', 'payments', 'security', 'contact', 'responsible']]),
+            ],
+        ],
+
+        // 十二、公告与资讯
+        'notices' => [
+            'label' => '公告中心', 'slug' => $slug('notices', 'avisos', 'avisos'), 'nav' => 'secondary', 'parent' => 'help', 'min_words' => 0,
+            'sections' => [
+                $list('all', '平台公告', 'all announcements', 'notice', 'all', $req),
+                $list('maintenance', '系统维护公告', 'maintenance notices', 'notice', 'tag:maintenance'),
+                $list('restored', '服务恢复公告', 'service restored notices', 'notice', 'tag:restored'),
+                $list('launches', '游戏上新公告', 'new game notices', 'notice', 'tag:new_game'),
+                $list('removals', '游戏下架公告', 'games removed', 'notice', 'tag:removed'),
+                $list('game_updates', '游戏更新公告', 'game update notices', 'notice', 'tag:game_update'),
+                $list('payments', '支付渠道公告', 'payment channel notices', 'notice', 'tag:payments', ['requires' => 'payments']),
+                $list('rules', '活动规则更新', 'rule changes', 'notice', 'tag:rules'),
+                $list('policy', '协议与隐私政策更新', 'terms and privacy updates', 'notice', 'tag:policy'),
+                $list('channels', '官方渠道变更', 'official channel changes', 'notice', 'tag:channels'),
+                $s('security', 'callout', '安全提醒', 'security reminder for players'),
+                $s('anti_fraud', 'checklist', '防诈骗公告', 'how to avoid scams'),
+            ],
+        ],
+        'news' => [
+            'label' => '资讯中心', 'slug' => $slug('news', 'noticias', 'noticias'), 'nav' => 'main', 'min_words' => 0,
+            'sections' => [
+                $list('all', '全部资讯', 'all news', 'news', 'all', $req),
+                $list('brand', '品牌新闻', 'brand news', 'news', 'tag:brand'),
+                $list('new_games', '游戏上新', 'new game releases', 'news', 'tag:new_games'),
+                $list('features', '游戏功能介绍', 'game features', 'news', 'tag:features'),
+                $list('updates', '产品更新日志', 'product updates', 'news', 'tag:updates'),
+                $list('editorial', '编辑专栏', 'editorial columns', 'news', 'tag:editorial'),
+                $list('monthly', '品牌月报', 'monthly reports', 'news', 'tag:monthly'),
+                $list('partners', '品牌合作动态', 'partnership news', 'news', 'tag:partners'),
+                $list('archive', '资讯归档', 'news archive', 'news', 'latest'),
+            ],
+        ],
+
+        // 十四、资金与交易服务（如适用）
+        'payments' => [
+            'label' => '资金与交易服务', 'slug' => $slug('payments', 'pagamentos', 'pagos'), 'nav' => 'secondary', 'parent' => 'help', 'requires' => 'payments',
+            'sections' => [
+                $s('overview', 'prose', '钱包概览', 'how the wallet works', $req),
+                $s('methods', 'table', '支持的支付方式', 'payment methods', $src),
+                $s('deposit', 'steps', '存款指南', 'how to deposit'),
+                $s('withdraw', 'steps', '提款指南', 'how to withdraw'),
+                $s('currencies', 'table', '支持币种', 'currencies', $src),
+                $s('limits', 'table', '交易限额', 'transaction limits', $src),
+                $s('fees', 'table', '手续费说明', 'fees', $src),
+                $s('timing', 'table', '到账时间说明', 'processing times', $src),
+                $s('status', 'prose', '交易状态查询', 'checking a transaction\'s status'),
+                $s('failed', 'checklist', '失败交易帮助', 'what to do when a transaction fails'),
+                $s('refunds', 'prose', '退款说明', 'refunds'),
+                $s('safety', 'callout', '资金安全说明', 'how funds are protected', $src),
+                $s('faq', 'faq', '支付常见问题', 'payment questions'),
+            ],
+        ],
+
+        // 十五、App 与下载
+        'download' => [
+            'label' => 'App 与下载', 'slug' => $slug('download', 'baixar', 'descargar'), 'nav' => 'main', 'requires' => 'app',
+            'sections' => [
+                $s('intro', 'download', 'App 介绍 / 官方下载', 'app introduction and official download links', $req),
+                $s('features', 'features', 'App 功能介绍', 'what the app does'),
+                $s('ios', 'steps', 'iOS 使用说明', 'using it on iPhone'),
+                $s('android', 'steps', 'Android 使用说明', 'using it on Android'),
+                $s('mobile_web', 'prose', '移动网页版', 'the mobile web version'),
+                $s('install', 'steps', '安装指南', 'installation guide'),
+                $s('update', 'steps', '更新指南', 'how to update'),
+                $s('requirements', 'table', '系统要求', 'system requirements', $src),
+                $s('devices', 'table', '设备兼容列表', 'compatible devices', $src),
+                $s('versions', 'timeline', '版本历史', 'version history', $src),
+                $s('known_issues', 'checklist', '已知问题', 'known issues', $src),
+                $s('troubleshooting', 'faq', '安装问题排查', 'installation problems'),
+                $s('verify', 'callout', '下载真实性验证', 'how to make sure the download is official'),
+            ],
+        ],
+
+        // 十六、安全、公平与信任
+        'security' => [
+            'label' => '安全中心', 'slug' => $slug('security', 'seguranca', 'seguridad'), 'nav' => 'footer',
+            'sections' => [
+                $s('center', 'prose', '安全中心', 'how the site keeps players safe', $req),
+                $s('account_protection', 'checklist', '账户保护', 'protecting your account', ['requires' => 'accounts']),
+                $s('passwords', 'checklist', '密码安全', 'password safety', ['requires' => 'accounts']),
+                $s('two_factor', 'steps', '双重验证说明', 'two-factor authentication', ['requires' => 'accounts']),
+                $s('phishing', 'checklist', '钓鱼网站识别', 'recognising phishing sites'),
+                $s('fake_support', 'callout', '假冒客服识别', 'recognising fake support agents'),
+                $s('domains', 'prose', '官方域名查询', 'checking official domains'),
+                $s('socials', 'prose', '官方社交账号验证', 'verifying official social accounts'),
+                $s('report', 'steps', '可疑行为举报', 'reporting suspicious activity'),
+                $s('vulnerabilities', 'prose', '安全漏洞反馈', 'reporting a security vulnerability'),
             ],
         ],
         'fairness' => [
-            'label' => '安全与公平',
-            'slug' => ['en' => 'security-and-fairness', 'pt' => 'seguranca-e-justica', 'es' => 'seguridad-y-justicia'],
-            'nav' => 'footer',
+            'label' => '公平与信任', 'slug' => $slug('fairness', 'jogo-justo', 'juego-justo'), 'nav' => 'footer',
             'sections' => [
-                ['key' => 'account_security', 'block' => 'prose', 'label' => '账户安全', 'topic' => 'account security', 'requires' => 'accounts'],
-                ['key' => 'privacy', 'block' => 'prose', 'label' => '个人信息保护', 'topic' => 'personal information protection', 'required' => true],
-                ['key' => 'fairness', 'block' => 'prose', 'label' => '游戏公平性说明', 'topic' => 'game fairness explained (random number generation)'],
-                ['key' => 'certification', 'block' => 'prose', 'label' => '可核验的测试与认证信息', 'topic' => 'testing and certification information (only verifiable facts)', 'requires' => 'certification'],
-                ['key' => 'license', 'block' => 'prose', 'label' => '可核验的牌照信息', 'topic' => 'licence information (only verifiable facts)', 'requires' => 'license'],
+                $s('fairness', 'prose', '游戏公平性说明', 'how games stay fair (random number generation)', $req),
+                $s('labs', 'prose', '独立测试机构介绍', 'independent testing labs', ['requires' => 'certification']),
+                $s('certificates', 'table', '认证资料查询', 'certificates', ['requires' => 'certification']),
+                $s('license', 'table', '牌照与监管信息', 'licence and regulator', ['requires' => 'license']),
+                $s('operator', 'table', '运营主体查询', 'operating entity', ['requires' => 'company']),
+                $s('privacy', 'prose', '个人信息保护说明', 'how personal data is protected'),
             ],
         ],
+
+        // 十七、负责任游戏
         'responsible' => [
-            'label' => '负责任游戏',
-            'slug' => ['en' => 'responsible-gaming', 'pt' => 'jogo-responsavel', 'es' => 'juego-responsable'],
-            'nav' => 'footer',
-            'required' => true,
+            'label' => '负责任游戏', 'slug' => $slug('responsible-gaming', 'jogo-responsavel', 'juego-responsable'), 'nav' => 'footer', 'required' => true, 'max_sections' => 10,
             'sections' => [
-                ['key' => 'age', 'block' => 'prose', 'label' => '年龄与参与资格说明', 'topic' => 'age and eligibility', 'required' => true],
-                ['key' => 'risks', 'block' => 'prose', 'label' => '游戏风险说明', 'topic' => 'risks of gaming'],
-                ['key' => 'limits', 'block' => 'prose', 'label' => '时间与金额限制', 'topic' => 'time and spending limits', 'requires' => 'payments'],
-                ['key' => 'self_exclusion', 'block' => 'prose', 'label' => '暂停与自我排除', 'topic' => 'pausing and self-exclusion', 'requires' => 'accounts'],
-                ['key' => 'resources', 'block' => 'prose', 'label' => '帮助资源', 'topic' => 'where to get help'],
+                $s('intro', 'prose', '负责任游戏首页', 'our approach to responsible gaming', $req),
+                $s('age', 'callout', '年龄与参与资格', 'age and eligibility', $req),
+                $s('risks', 'prose', '游戏风险说明', 'risks of gaming'),
+                $s('self_assessment', 'checklist', '自我评估', 'questions to check your gaming habits'),
+                $s('reminders', 'prose', '时间提醒', 'time reminders'),
+                $s('time_limits', 'steps', '游戏时间限制', 'setting time limits', ['requires' => 'accounts']),
+                $s('deposit_limits', 'steps', '存款限制', 'deposit limits', ['requires' => 'payments']),
+                $s('loss_limits', 'steps', '消费或损失限制', 'spending or loss limits', ['requires' => 'payments']),
+                $s('pause', 'steps', '暂停游戏', 'taking a break', ['requires' => 'accounts']),
+                $s('self_exclusion', 'steps', '自我排除', 'self-exclusion', ['requires' => 'accounts']),
+                $s('limits_info', 'prose', '限制设置说明', 'how limits work', ['requires' => 'accounts']),
+                $s('history', 'prose', '历史使用情况', 'reviewing your play history', ['requires' => 'accounts']),
+                $s('minors', 'prose', '未成年人保护', 'protecting minors'),
+                $s('family', 'prose', '家人和朋友支持', 'support for family and friends'),
+                $s('get_help', 'prose', '寻求帮助', 'getting help'),
+                $s('resources', 'table', '外部支持资源', 'support organisations (name / how to reach)', $src),
+                $s('marketing', 'prose', '营销信息退订', 'opting out of marketing messages'),
             ],
         ],
+
+        // 十八、社区与品牌互动
+        'community' => [
+            'label' => '社区与品牌互动', 'slug' => $slug('community', 'comunidade', 'comunidad'), 'nav' => 'footer',
+            'sections' => [
+                $s('intro', 'prose', '社区首页', 'the community around the brand', $req),
+                $list('announcements', '社区公告', 'community news', 'news', 'tag:community'),
+                $s('rules', 'checklist', '社区规则', 'community rules'),
+                $s('feedback', 'card_grid', '玩家反馈精选', 'player feedback highlights', $src),
+                $s('discussions', 'prose', '游戏主题讨论', 'what players talk about', $src),
+                $s('ideas', 'prose', '新功能意见征集', 'how to suggest features'),
+                $s('dev_qa', 'faq', '开发者问答', 'developer Q&A', $src),
+                $s('live', 'prose', '品牌直播', 'live streams', $src),
+                $s('videos', 'gallery', '视频中心', 'videos'),
+                $s('wallpapers', 'gallery', '品牌壁纸与素材', 'wallpapers and assets'),
+                $s('characters', 'card_grid', '游戏角色图鉴', 'game characters', $src),
+                $s('fan_art', 'card_grid', '粉丝作品展示', 'fan creations', $src),
+                $s('socials', 'link_grid', '官方社交平台', 'official social platforms', ['links' => ['official_channels', 'news', 'events']]),
+            ],
+        ],
+
+        // 十九、商务与合作
+        'business' => [
+            'label' => '商务合作', 'slug' => $slug('business', 'parcerias', 'alianzas'), 'nav' => 'footer',
+            'sections' => [
+                $s('intro', 'prose', '商务合作首页', 'working with the brand', $req),
+                $s('types', 'features', '合作方式', 'ways to partner: game content, providers, technical integration, co-branding, media, creators'),
+                $s('process', 'steps', '合作流程', 'how a partnership starts'),
+                $s('apply', 'contact', '合作申请', 'how to apply'),
+                $s('cases', 'card_grid', '合作案例', 'partnership examples', $src),
+                $s('partner_support', 'prose', '合作伙伴支持', 'support for partners'),
+                $s('media_kit', 'prose', '媒体资料包', 'media kit'),
+                $s('careers', 'prose', '招聘与职业发展', 'careers', $src),
+            ],
+        ],
+
+        // 二十、法律、隐私与网站服务
         'account' => [
-            'label' => '用户中心',
-            'slug' => ['en' => 'account', 'pt' => 'minha-conta', 'es' => 'mi-cuenta'],
-            'nav' => 'footer',
-            'requires' => 'accounts',
+            'label' => '用户中心', 'slug' => $slug('account', 'minha-conta', 'mi-cuenta'), 'nav' => 'footer', 'requires' => 'accounts',
             'sections' => [
-                ['key' => 'overview', 'block' => 'prose', 'label' => '用户中心说明', 'topic' => 'what players manage in their account: profile, verification, security, favourites, history, messages, support records', 'required' => true],
+                $s('overview', 'prose', '用户中心说明', 'what players manage in their account: profile, verification, security, favourites, history, messages, support records', $req),
+                $s('data_requests', 'steps', '个人数据请求与删除', 'requesting or deleting personal data'),
             ],
         ],
-        'download' => [
-            'label' => '下载中心',
-            'slug' => ['en' => 'download', 'pt' => 'baixar', 'es' => 'descargar'],
-            'nav' => 'main',
-            'requires' => 'app',
+        'status' => [
+            'label' => '服务状态', 'slug' => $slug('service-status', 'status-do-servico', 'estado-del-servicio'), 'nav' => 'footer', 'min_words' => 0,
             'sections' => [
-                ['key' => 'intro', 'block' => 'download', 'label' => 'App 介绍 / 官方下载入口', 'topic' => 'app introduction and official download links', 'required' => true],
-                ['key' => 'install', 'block' => 'steps', 'label' => '安装指南', 'topic' => 'installation guide'],
-                ['key' => 'requirements', 'block' => 'prose', 'label' => '系统要求', 'topic' => 'system requirements'],
-                ['key' => 'changelog', 'block' => 'prose', 'label' => '版本更新记录', 'topic' => 'version history (only versions from the sources)'],
-                ['key' => 'faq', 'block' => 'faq', 'label' => '安装常见问题', 'topic' => 'installation questions'],
+                $s('intro', 'prose', '服务状态', 'where service status and maintenance are announced', $req),
+                $list('maintenance', '维护日历', 'scheduled maintenance', 'notice', 'tag:maintenance'),
+                $list('restored', '服务恢复', 'services restored', 'notice', 'tag:restored'),
+                $s('report', 'contact', '页面错误反馈', 'reporting a broken page'),
             ],
         ],
-        'terms' => [
-            'label' => '用户协议',
-            'slug' => ['en' => 'terms-of-service', 'pt' => 'termos-de-servico', 'es' => 'terminos-de-servicio'],
-            'nav' => 'legal',
-            'required' => true,
-            'min_words' => 0,
-            'sections' => [
-                ['key' => 'legal', 'block' => 'legal', 'label' => '用户协议', 'topic' => '用户协议', 'required' => true],
-            ],
+        'search' => [
+            'label' => '全站搜索', 'slug' => $slug('search', 'buscar', 'buscar'), 'nav' => 'legal', 'required' => true, 'min_words' => 0,
+            'sections' => [$s('search', 'site_search', '全站搜索', 'search the whole site', $req)],
         ],
-        'privacy' => [
-            'label' => '隐私政策',
-            'slug' => ['en' => 'privacy-policy', 'pt' => 'politica-de-privacidade', 'es' => 'politica-de-privacidad'],
-            'nav' => 'legal',
-            'required' => true,
-            'min_words' => 0,
-            'sections' => [
-                ['key' => 'legal', 'block' => 'legal', 'label' => '隐私政策', 'topic' => '隐私政策', 'required' => true],
-            ],
-        ],
-        'cookies' => [
-            'label' => 'Cookie 政策',
-            'slug' => ['en' => 'cookie-policy', 'pt' => 'politica-de-cookies', 'es' => 'politica-de-cookies'],
-            'nav' => 'legal',
-            'min_words' => 0,
-            'sections' => [
-                ['key' => 'legal', 'block' => 'legal', 'label' => 'Cookie 政策', 'topic' => 'Cookie 政策', 'required' => true],
-            ],
-        ],
-        'bonus_terms' => [
-            'label' => '优惠通用条款',
-            'slug' => ['en' => 'bonus-terms', 'pt' => 'termos-de-bonus', 'es' => 'terminos-de-bonos'],
-            'nav' => 'legal',
-            'min_words' => 0,
-            'sections' => [
-                ['key' => 'legal', 'block' => 'legal', 'label' => '优惠通用条款', 'topic' => '优惠通用条款', 'required' => true],
-            ],
-        ],
-        'regions' => [
-            'label' => '地区限制说明',
-            'slug' => ['en' => 'restricted-regions', 'pt' => 'regioes-restritas', 'es' => 'regiones-restringidas'],
-            'nav' => 'legal',
-            'min_words' => 0,
-            'sections' => [
-                ['key' => 'legal', 'block' => 'legal', 'label' => '地区限制说明', 'topic' => '地区限制说明', 'required' => true],
-            ],
-        ],
-        'sitemap' => [
-            'label' => '网站地图',
-            'slug' => ['en' => 'sitemap', 'pt' => 'mapa-do-site', 'es' => 'mapa-del-sitio'],
-            'nav' => 'legal',
-            'required' => true,
-            'min_words' => 0,
-            'sections' => [
-                ['key' => 'map', 'block' => 'html_sitemap', 'label' => '网站地图', 'topic' => 'every page of the site', 'required' => true],
-            ],
-        ],
+        'terms' => ['label' => '用户协议', 'slug' => $slug('terms-of-service', 'termos-de-servico', 'terminos-de-servicio'), 'nav' => 'legal', 'required' => true, 'min_words' => 0, 'sections' => [$s('legal', 'legal', '用户协议', 'terms of service', $req)]],
+        'privacy' => ['label' => '隐私政策', 'slug' => $slug('privacy-policy', 'politica-de-privacidade', 'politica-de-privacidad'), 'nav' => 'legal', 'required' => true, 'min_words' => 0, 'sections' => [$s('legal', 'legal', '隐私政策', 'privacy policy', $req), $s('data_requests', 'steps', '个人数据请求与删除', 'how to request or delete personal data')]],
+        'cookies' => ['label' => 'Cookie 政策', 'slug' => $slug('cookie-policy', 'politica-de-cookies', 'politica-de-cookies'), 'nav' => 'legal', 'min_words' => 0, 'sections' => [$s('legal', 'legal', 'Cookie 政策', 'cookie policy', $req), $s('preferences', 'cookie_settings', 'Cookie 偏好设置', 'change cookie preferences')]],
+        'bonus_terms' => ['label' => '优惠与活动通用条款', 'slug' => $slug('bonus-terms', 'termos-de-bonus', 'terminos-de-bonos'), 'nav' => 'legal', 'min_words' => 0, 'sections' => [$s('legal', 'legal', '优惠通用条款', 'general promotion terms', $req), $s('event_terms', 'prose', '活动通用条款', 'general event terms')]],
+        'game_terms' => ['label' => '游戏使用条款', 'slug' => $slug('game-rules', 'regras-dos-jogos', 'reglas-de-los-juegos'), 'nav' => 'legal', 'min_words' => 0, 'sections' => [$s('legal', 'legal', '游戏使用条款', 'terms for using the games', $req)]],
+        'payment_terms' => ['label' => '支付条款', 'slug' => $slug('payment-terms', 'termos-de-pagamento', 'terminos-de-pago'), 'nav' => 'legal', 'requires' => 'payments', 'min_words' => 0, 'sections' => [$s('legal', 'legal', '支付条款', 'payment terms', $req)]],
+        'regions' => ['label' => '地区限制', 'slug' => $slug('restricted-regions', 'regioes-restritas', 'regiones-restringidas'), 'nav' => 'legal', 'min_words' => 0, 'sections' => [$s('legal', 'legal', '地区限制说明', 'restricted regions', $req)]],
+        'ip' => ['label' => '知识产权声明', 'slug' => $slug('intellectual-property', 'propriedade-intelectual', 'propiedad-intelectual'), 'nav' => 'legal', 'min_words' => 0, 'sections' => [$s('legal', 'legal', '知识产权声明 / 商标与版权', 'intellectual property, trademarks and copyright', $req), $s('third_party', 'prose', '第三方服务说明', 'third-party services used by the site')]],
+        'accessibility' => ['label' => '无障碍声明', 'slug' => $slug('accessibility', 'acessibilidade', 'accesibilidad'), 'nav' => 'legal', 'min_words' => 0, 'sections' => [$s('legal', 'legal', '无障碍声明', 'accessibility statement', $req)]],
+        'sitemap' => ['label' => '网站地图', 'slug' => $slug('sitemap', 'mapa-do-site', 'mapa-del-sitio'), 'nav' => 'legal', 'required' => true, 'min_words' => 0, 'sections' => [$s('map', 'html_sitemap', '网站地图', 'every page of the site', $req)]],
     ],
 ];

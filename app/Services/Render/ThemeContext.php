@@ -292,7 +292,8 @@ class ThemeContext
 
     /**
      * Entries of a collection matching a section filter: all, hot, new,
-     * classic, featured, active, upcoming, ongoing, ended, latest or tag:x.
+     * classic, featured, demo, active, upcoming, ongoing, ended, latest,
+     * tag:x, type:x, theme:x or device:x.
      * "hot" and "new" fall back to sort order and date when nothing is tagged.
      */
     public function entries(string $collection, string $filter = 'all', ?int $limit = null): Collection
@@ -308,7 +309,12 @@ class ThemeContext
             $filter === 'featured' => $items->filter(fn (Entry $e) => $e->get('featured') || in_array('featured', $e->tags(), true))->whenEmpty($live),
             $filter === 'active' => $live(),
             $filter === 'ongoing' => $items->filter(fn (Entry $e) => in_array($e->status(), ['ongoing', null], true)),
+            $filter === 'upcoming' && $collection === 'game' => $items->filter(fn (Entry $e) => in_array('upcoming', $e->tags(), true) || ($e->date()?->isFuture() ?? false)),
             in_array($filter, ['upcoming', 'ended'], true) => $items->filter(fn (Entry $e) => $e->status() === $filter),
+            $filter === 'demo' => $items->filter(fn (Entry $e) => (bool) $e->get('demo')),
+            str_starts_with($filter, 'type:') => $items->filter(fn (Entry $e) => in_array(substr($filter, 5), (array) $e->get('types', []), true)),
+            str_starts_with($filter, 'theme:') => $items->filter(fn (Entry $e) => in_array(substr($filter, 6), (array) $e->get('theme_keys', []), true)),
+            str_starts_with($filter, 'device:') => $items->filter(fn (Entry $e) => in_array(substr($filter, 7), (array) $e->get('devices', []), true)),
             $filter === 'latest' => $byDate($items),
             str_starts_with($filter, 'tag:') => $tagged(substr($filter, 4)),
             $filter === 'classic' => $tagged('classic'),

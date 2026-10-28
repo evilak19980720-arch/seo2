@@ -37,6 +37,9 @@ class GameSiteTest extends TestCase
                     'prose', 'legal' => ['heading' => 'Seção '.$section['key'], 'html' => '<p>Texto da seção '.$section['key'].' do Galaxy Run.</p>'],
                     'faq' => ['items' => [['question' => 'Pergunta '.$section['key'].'?', 'answer' => 'Resposta.']]],
                     'hero' => ['heading' => 'Galaxy Run jogos de slots', 'subheading' => 'Bem-vindo'],
+                    'timeline', 'glossary', 'checklist', 'table' => ['heading' => 'Bloco '.$section['key'], 'items' => [['title' => 'Item A '.$section['key'], 'text' => 'Texto A.'], ['title' => 'Item B', 'text' => 'Texto B.']]],
+                    'callout' => ['heading' => 'Aviso '.$section['key'], 'text' => 'Atenção ao '.$section['key'].'.'],
+                    'quote' => ['text' => 'Citação '.$section['key'], 'cite' => 'Equipe Galaxy Run'],
                     default => ['heading' => 'Lista '.$section['key']],
                 };
             }
@@ -88,9 +91,18 @@ class GameSiteTest extends TestCase
             $this->assertGreaterThanOrEqual(1, count($sections));
         }
 
-        $b = $this->gameSite(['has_accounts' => true, 'has_payments' => true]);
-        $withAccounts = SiteStructure::choose($b, $type);
-        $this->assertArrayHasKey('account', $withAccounts['pages']);
+        // With accounts, account pages and sections become possible (chosen at random per site).
+        $withAccounts = collect(range(1, 8))->map(fn () => SiteStructure::choose($this->gameSite(['has_accounts' => true, 'has_payments' => true]), $type));
+        $this->assertTrue($withAccounts->contains(fn ($st) => isset($st['pages']['account']) || in_array('register', $st['pages']['guide'] ?? [], true)));
+        $this->assertTrue($withAccounts->contains(fn ($st) => isset($st['pages']['payments'])));
+        $this->assertFalse(collect(range(1, 8))->contains(fn () => isset(SiteStructure::choose($this->gameSite(), $type)['pages']['payments'])));
+
+        // Long pools are capped; detail pages and block looks are chosen too.
+        foreach ($first['pages'] as $page => $sections) {
+            $this->assertLessThanOrEqual($type['pages'][$page]['max_sections'] ?? $type['max_sections'], count($sections), $page);
+        }
+        $this->assertContains('details', $first['collections']['game']);
+        $this->assertNotEmpty($first['variants']);
 
         // Different sites differ somewhere in their combination.
         $shapes = collect(range(1, 6))->map(fn () => json_encode(SiteStructure::choose($this->gameSite(), $type)))->unique();
@@ -133,7 +145,7 @@ class GameSiteTest extends TestCase
 
         $home = file_get_contents("{$dir}/index.html");
         $this->assertSame(1, substr_count($home, '<h1'));
-        $this->assertStringContainsString('Fortune Tiger', $home);
+        $this->assertStringContainsString('entry-card', $home);
 
         $promos = file_get_contents("{$dir}/".$site->pages()->where('type', 'promotions')->value('slug').'/index.html');
         $this->assertStringContainsString('Bônus de boas-vindas', $promos);
@@ -204,6 +216,61 @@ class GameSiteTest extends TestCase
         $games = $site->pages()->where('type', 'games')->value('slug');
         $this->assertFileExists("{$dir}/{$games}/fortune-tiger/index.html");
         $this->assertStringContainsString('Sobre o Fortune Tiger', file_get_contents("{$dir}/{$games}/fortune-tiger/index.html"));
+    }
+
+    public function test_content_blocks_categories_search_and_empty_sections(): void
+    {
+        $site = $this->gameSite();
+        $structure = SiteStructure::choose($site, config('site_types.game'));
+        $structure['pages'] = array_merge($structure['pages'], [
+            'games' => ['overview', 'cards', 'categories'],
+            'slot_types' => ['intro', 'megaways', 'cluster', 'ways'],
+            'academy' => ['basics', 'glossary', 'wild'],
+            'game_math' => ['rng', 'probability', 'demo_vs_real', 'myths'],
+            'brand_story' => ['story', 'founder', 'history'],
+            'events' => ['list', 'calendar'],
+            'search' => ['search'],
+        ]);
+        $site->update(['structure' => $structure]);
+        $site = $site->fresh(['domain', 'brandProfile']);
+        $this->fillPages($site);
+        // "wild" got no copy: it is left out instead of showing filler.
+        $academy = $site->pages()->where('type', 'academy')->first();
+        $academy->update(['content' => array_diff_key($academy->content, ['wild' => 1])]);
+        $this->addEntries($site);
+        $site->entries()->where('slug', 'gates-of-olympus')->first()->update(['data' => ['provider' => 'Pragmatic Play', 'types' => ['megaways'], 'theme_keys' => ['greek']]]);
+        $tiger = $site->entries()->where('slug', 'fortune-tiger')->first();
+        $tiger->update(['data' => $tiger->data + ['types' => ['ways']]]);
+        $site->entries()->create(['collection' => 'event', 'slug' => 'torneio', 'title' => 'Torneio de verão', 'data' => ['starts_at' => now()->addDays(3)->toDateString(), 'ends_at' => now()->addDays(10)->toDateString()]]);
+
+        (new StaticSiteBuilder)->buildAll($site);
+        $dir = StaticSiteBuilder::dirFor($site);
+        $page = fn ($type) => file_get_contents("{$dir}/".$site->pages()->where('type', $type)->value('slug').'/index.html');
+
+        $types = $page('slot_types');
+        $this->assertStringContainsString('id="megaways"', $types);
+        $this->assertStringContainsString('Gates of Olympus', $types);
+        $this->assertStringNotContainsString('id="cluster"', $types, 'a category without games is not shown');
+        $this->assertStringContainsString('tipos-de-slots/#megaways', $page('games'), 'category shortcuts link to filled categories');
+
+        $academy = $page('academy');
+        $this->assertStringContainsString('glossary__items', $academy);
+        $this->assertStringNotContainsString('Seção wild', $academy);
+        $math = $page('game_math');
+        $this->assertStringContainsString('callout', $math);
+        $this->assertStringContainsString('checklist__items', $math);
+        $this->assertStringContainsString('<table>', $math);
+        $story = $page('brand_story');
+        $this->assertStringContainsString('<blockquote>', $story);
+        $this->assertStringContainsString('timeline__list', $story);
+        $this->assertStringContainsString('Torneio de verão', $page('events'));
+        $this->assertStringContainsString('data-search', $page('search'));
+
+        $index = json_decode(file_get_contents("{$dir}/search.json"), true);
+        $this->assertContains('Fortune Tiger', array_column($index, 't'));
+        foreach ([$academy, $math, $story] as $html) {
+            $this->assertSame(1, substr_count($html, '<h1'));
+        }
     }
 
     public function test_admin_shows_site_data_for_game_sites(): void

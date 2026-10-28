@@ -16,7 +16,7 @@ class PromptSeeder extends Seeder
     public const SYSTEM = 'You are a senior content strategist and SEO editor for the official website of {{product_name}} ({{site_type}}). Write natively in {{language}} for readers in {{country}}; never write in another language and never translate from another language. The BRAND PROFILE is the only source of facts: never invent features, numbers, prices, awards, reviews, release dates or company details that are not in it. Always answer with a single JSON object.';
 
     /** Templates revised after the first release ship as a new version; the highest active version wins. */
-    public const VERSIONS = [PromptType::DesignConfig->value => 4, PromptType::PageContent->value => 6, PromptType::SiteMeta->value => 2];
+    public const VERSIONS = [PromptType::DesignConfig->value => 4, PromptType::PageContent->value => 7, PromptType::SiteData->value => 2, PromptType::SiteMeta->value => 2];
 
     public function run(): void
     {
@@ -130,8 +130,14 @@ For every page type return a URL slug in {{language}} (lowercase, hyphens, keywo
 - gallery / specs / article_list: heading, intro
 - contact: heading, html (short intro)
 - legal: html (privacy policy / terms appropriate for {{country}}, e.g. LGPD for Brazil; generic, no invented company data)
-- entry_list / game_lobby / html_sitemap: heading, intro (one or two sentences introducing the list; the items come from the site data)
-For sectioned pages, "blocks" is keyed by the section keys (not block names); each section gets the fields of its block and a heading about its topic, and min_words counts all sections together.
+- entry_list / game_lobby / html_sitemap / event_calendar / site_search / link_grid / cookie_settings: heading, intro (one or two sentences introducing it; the items come from the site data)
+- timeline: heading, intro, items [{title: date or stage, text}] (only real dates and events from the sources)
+- glossary: heading, intro, items [{title: term, text: definition}] (6-16 terms)
+- checklist: heading, intro, items [{title, text}] (3-8 points)
+- callout: heading, text (one or two sentences: an important notice)
+- quote: heading, text (the statement), cite (who said it; only a real person or the brand from the sources)
+- table: heading, intro, items [{title: label, text: value}] (2-12 rows, values only from the sources or general facts)
+For sectioned pages, "blocks" is keyed by the section keys (not block names); each section gets the fields of its block and a heading about its topic, prose sections 120-350 words each, and min_words counts all sections together. A section marked [sources only] uses only facts from the brand profile or the reference content: leave it out of "blocks" when they say nothing about it.
 Return JSON: {"pages": {"<type>": {"slug": "", "title": "", "meta_title": "", "meta_description": "", "blocks": {"<block or section key>": {...}}}}}
 TXT,
             PromptType::ArticleGenerate->value => <<<'TXT'
@@ -203,12 +209,14 @@ Rules:
 - Site features: {{site_features}}. Nothing about accounts or payments the site does not have.
 
 Fields per collection:
-- game: title, slug, summary, image, provider, themes [], mechanics [], tags (any of "hot", "new", "classic"), rtp, volatility, max_win, paylines, reels, min_bet, max_bet, release_date
+- game: title, slug, summary, image, provider, series, themes [] (free words), mechanics [] (free words), types [] (any keys of GAME TYPES), theme_keys [] (any keys of GAME THEMES), devices [] (any of "mobile", "desktop", "tablet"), demo (true when the sources say a free demo exists), tags (any of "hot", "new", "classic", "featured", "upcoming"), rtp, volatility, max_win, paylines, reels, min_bet, max_bet, release_date
 - provider: title, slug, summary, image, country, founded
-- promotion: title, slug, summary, image, tags (any of "new_user", "regular", "festival", "featured"), reward, requirement, starts_at, ends_at, status ("upcoming"|"ongoing"|"ended"|"")
-- event: title, slug, summary, image, tags, reward, requirement, starts_at, ends_at, status
-- notice: title, slug, summary, date, tags (any of "maintenance", "game_maintenance", "rules")
-- news: title, slug, summary, image, date, tags (any of "brand", "new_games", "features", "updates", "partners")
+- promotion: title, slug, summary, image, tags (any of "new_user", "regular", "festival", "featured", "anniversary", "app", "invite"), reward, requirement, starts_at, ends_at, status ("upcoming"|"ongoing"|"ended"|"")
+- event: title, slug, summary, image, tags (any of "featured", "launch", "anniversary", "festival", "community", "quiz", "creative", "collab", "live", "offline"), reward, requirement, starts_at, ends_at, status
+- notice: title, slug, summary, date, tags (any of "maintenance", "game_maintenance", "rules", "restored", "new_game", "removed", "game_update", "payments", "policy", "channels")
+- news: title, slug, summary, image, date, tags (any of "brand", "new_games", "features", "updates", "partners", "editorial", "monthly", "community")
+GAME TYPES (key = meaning): {{game_types}}
+GAME THEMES (key = meaning): {{game_themes}}
 At most {{max_items}} items per collection.
 Return JSON: {"<collection>": [{...}]}
 TXT,

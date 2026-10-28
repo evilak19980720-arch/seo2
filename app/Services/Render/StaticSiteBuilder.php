@@ -199,6 +199,9 @@ class StaticSiteBuilder
         $this->writeFile("{$dir}/robots.txt", SitemapBuilder::robots($site));
         $this->writeFile("{$dir}/sitemap.xml", SitemapBuilder::sitemap($site, $renderer));
         $this->writeFile("{$dir}/feed.xml", SitemapBuilder::feed($site, $renderer));
+        if ($renderer->ctx->pages->contains(fn ($p) => collect($renderer->ctx->blocks($p->type))->contains('block', 'site_search'))) {
+            $this->writeFile("{$dir}/search.json", json_encode($renderer->searchIndex(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        }
         if ($key = Settings::get('indexnow_key')) {
             $this->writeFile("{$dir}/{$key}.txt", $key);
         }

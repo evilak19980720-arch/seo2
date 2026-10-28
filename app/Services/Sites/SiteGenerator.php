@@ -439,7 +439,7 @@ class SiteGenerator
             'label' => $this->defaultTitle($type, $p, $lang),
             'default_slug' => $p['slug'][$lang] ?? $p['slug']['en'],
             'blocks' => isset($p['sections']) ? null : $designBlocks($type, $p),
-            'sections' => isset($p['sections']) ? collect($p['sections'])->mapWithKeys(fn ($s) => [$s['key'] => ['block' => $s['block'], 'topic' => $s['topic']]])->all() : null,
+            'sections' => isset($p['sections']) ? collect($p['sections'])->mapWithKeys(fn ($s) => [$s['key'] => ['block' => $s['block'], 'topic' => $s['topic'].(empty($s['source']) ? '' : ' [sources only]')]])->all() : null,
             'min_words' => $this->minWords($site, $type) ?: null,
         ]))->all();
         $ai = $this->askPages($site, $spec);
@@ -829,6 +829,7 @@ class SiteGenerator
                 'cta_label' => $label($b['cta_label'] ?? null),
                 'label' => $label($b['label'] ?? null),
                 'eyebrow' => $str($b['eyebrow'] ?? null, 40),
+                'cite' => $str($b['cite'] ?? null, 80),
                 'html' => isset($b['html']) && is_string($b['html']) ? (SeoRules::stripClaimsHtml(HtmlSanitizer::clean($b['html']), $facts) ?: null) : null,
             ]);
             if (isset($b['points']) && is_array($b['points'])) {
@@ -842,7 +843,7 @@ class SiteGenerator
                     'tag' => $str($i['tag'] ?? null, 20),
                     'question' => $str($i['question'] ?? null, 200),
                     'answer' => $str($i['answer'] ?? null, 800),
-                ]))->filter()->values()->take(12)->all();
+                ]))->filter()->values()->take(in_array($kind, ['glossary', 'table'], true) ? 24 : 12)->all();
             }
             if ($clean !== []) {
                 $out[$block] = $clean;

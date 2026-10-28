@@ -19,6 +19,9 @@ use Illuminate\Support\Facades\View;
  */
 class SiteRenderer
 {
+    /** Blocks that show site data or brand data on their own, without page copy. */
+    public const SELF_FILLING = ['entry_list', 'game_lobby', 'html_sitemap', 'event_calendar', 'site_search', 'cookie_settings', 'link_grid', 'download', 'cta', 'contact', 'legal', 'gallery'];
+
     public readonly ThemeContext $ctx;
 
     protected ?Collection $visibleArticles = null;
@@ -328,6 +331,10 @@ class SiteRenderer
         $first = $page !== null || $pageType === 'blog';
         foreach ($this->ctx->blocks($pageType) as $entry) {
             $section = isset($entry['key']) ? $this->ctx->section($pageType, $entry['key']) : [];
+            // A pool section with no copy is left out (no brand-profile filler repeated across sections).
+            if ($section !== [] && ($content[$entry['key']] ?? []) === [] && ! in_array($entry['block'], self::SELF_FILLING, true)) {
+                continue;
+            }
             $view = View::make('theme.blocks.'.$entry['block'], [
                 'ctx' => $this->ctx,
                 'variant' => $entry['variant'],
@@ -396,6 +403,25 @@ class SiteRenderer
             'provider' => $all->where('collection', 'game')->filter(fn (Entry $e) => $same($e->get('provider'), $entry->title))->take(12)->values(),
             default => $this->ctx->entries($entry->collection, 'latest')->where('id', '!=', $entry->id)->take(3)->values(),
         };
+    }
+
+    /** Title, URL and description of every indexable page, post and entry, for the on-site search. */
+    public function searchIndex(): array
+    {
+        $index = [];
+        foreach ($this->ctx->pages as $page) {
+            if (! $this->isNoindex($page)) {
+                $index[] = ['t' => $page->title, 'u' => $this->ctx->href($page->slug), 'd' => SeoHead::limit($this->pageDescription($page), 160)];
+            }
+        }
+        foreach ($this->entryPages() as $entry) {
+            $index[] = ['t' => $entry->title, 'u' => $this->ctx->entryHref($entry), 'd' => SeoHead::limit((string) $entry->summary, 160)];
+        }
+        foreach ($this->listedArticles() as $article) {
+            $index[] = ['t' => $article->title, 'u' => $this->ctx->href($article->path()), 'd' => SeoHead::limit((string) $article->meta_description, 160)];
+        }
+
+        return $index;
     }
 
     /** Entries with a detail page on this site. */

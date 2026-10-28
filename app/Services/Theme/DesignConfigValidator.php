@@ -125,7 +125,8 @@ class DesignConfigValidator
                 $variants = collect((array) ($config['pages'][$pageType] ?? []))->filter(fn ($e) => is_array($e) && isset($e['block']))->mapWithKeys(fn ($e) => [$e['block'] => $e['variant'] ?? null]);
                 $result['pages'][$pageType] = array_map(fn ($section) => [
                     'block' => $section['block'],
-                    'variant' => $this->variant($section['block'], $section['variant'] ?? $variants[$section['block']] ?? null),
+                    // The design's choice (it follows the reference) first, else the site's own random look.
+                    'variant' => $this->variant($section['block'], $variants[$section['block']] ?? $section['variant'] ?? null),
                     'key' => $section['key'],
                 ], $siteTypeConfig['pages'][$pageType]['sections']);
 
@@ -162,6 +163,9 @@ class DesignConfigValidator
     protected function sectionedMenu(array $siteTypeConfig): array
     {
         $main = array_keys(array_filter($siteTypeConfig['pages'], fn ($p) => ($p['nav'] ?? null) === 'main'));
+        // Preferred order: what players look for first; the rest keep pool order.
+        $order = array_flip($siteTypeConfig['main_nav_order'] ?? []);
+        usort($main, fn ($a, $b) => ($order[$a] ?? 99) <=> ($order[$b] ?? 99));
         $max = (int) ($siteTypeConfig['main_nav_max'] ?? 6);
         // "help" (the parent of the secondary pages) is kept as the last item.
         $help = in_array('help', $main, true) ? ['help'] : [];
