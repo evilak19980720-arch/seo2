@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Concerns\EditableNavigation;
 use App\Models\Site;
 use Filament\Forms\Components\Select;
 use Filament\Pages\Dashboard as BaseDashboard;
@@ -10,6 +11,7 @@ use Filament\Schemas\Schema;
 
 class Dashboard extends BaseDashboard
 {
+    use EditableNavigation;
     use HasFiltersForm;
 
     protected static ?string $title = '数据面板';

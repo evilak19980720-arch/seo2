@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\Dashboard;
+use App\Support\AdminMenu;
 use App\Support\Settings;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Http\Middleware\Authenticate;
@@ -38,12 +39,7 @@ class AdminPanelProvider extends PanelProvider
                 [AppAuthentication::make()->recoverable()],
                 isRequired: fn () => (bool) Settings::get('mfa_required', false),
             )
-            ->navigationGroups([
-                NavigationGroup::make('站点'),
-                NavigationGroup::make('内容'),
-                NavigationGroup::make('变现'),
-                NavigationGroup::make('系统'),
-            ])
+            ->navigationGroups(array_map(fn ($g) => NavigationGroup::make(AdminMenu::groupLabel($g)), AdminMenu::GROUPS))
             ->databaseNotifications(false)
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')

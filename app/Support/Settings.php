@@ -79,6 +79,9 @@ class Settings
 
             // AI provider per purpose: [purpose => [primary, primary_model, fallback, fallback_model]]
             'ai_routes' => [],
+
+            // Admin menu names (系统 › 菜单管理)
+            'admin_menu' => [],
         ];
     }
 

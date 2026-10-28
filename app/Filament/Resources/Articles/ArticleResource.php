@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Articles;
 
 use App\Enums\ArticleStatus;
 use App\Enums\ArticleType;
+use App\Filament\Concerns\EditableNavigation;
 use App\Filament\Resources\Articles\Pages\CreateArticle;
 use App\Filament\Resources\Articles\Pages\EditArticle;
 use App\Filament\Resources\Articles\Pages\ListArticles;
@@ -42,6 +43,8 @@ use UnitEnum;
 
 class ArticleResource extends Resource
 {
+    use EditableNavigation;
+
     protected static ?string $model = Article::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;

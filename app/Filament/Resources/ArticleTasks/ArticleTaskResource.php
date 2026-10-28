@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\ArticleTasks;
 
 use App\Enums\ArticleTaskStatus;
+use App\Filament\Concerns\EditableNavigation;
 use App\Filament\Resources\Articles\ArticleResource;
 use App\Filament\Resources\ArticleTasks\Pages\ListArticleTasks;
 use App\Models\ArticleTask;
@@ -19,13 +20,19 @@ use UnitEnum;
 /** 文章队列: every article generation / rewrite and the step it is on. */
 class ArticleTaskResource extends Resource
 {
+    use EditableNavigation;
+
+    /** Listed under the articles menu item, whatever it is called now. */
+    public static function getNavigationParentItem(): ?string
+    {
+        return (string) ArticleResource::getNavigationLabel();
+    }
+
     protected static ?string $model = ArticleTask::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedQueueList;
 
     protected static string|UnitEnum|null $navigationGroup = '内容';
-
-    protected static ?string $navigationParentItem = '文章管理';
 
     protected static ?string $modelLabel = '文章任务';
 

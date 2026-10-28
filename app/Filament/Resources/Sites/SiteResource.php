@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Sites;
 
 use App\Enums\SiteStatus;
+use App\Filament\Concerns\EditableNavigation;
 use App\Filament\Resources\Sites\Pages\CreateSite;
 use App\Filament\Resources\Sites\Pages\EditSite;
 use App\Filament\Resources\Sites\Pages\ListSites;
@@ -37,6 +38,8 @@ use UnitEnum;
 
 class SiteResource extends Resource
 {
+    use EditableNavigation;
+
     protected static ?string $model = Site::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedComputerDesktop;

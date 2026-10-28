@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Enums\AiPurpose;
+use App\Filament\Concerns\EditableNavigation;
 use App\Models\AiProvider;
 use App\Models\AiUsageLog;
 use App\Support\Settings;
@@ -24,6 +25,8 @@ use UnitEnum;
 /** Which AI provider (and backup) each kind of work uses. */
 class AiRouting extends Page
 {
+    use EditableNavigation;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowsRightLeft;
 
     protected static string|UnitEnum|null $navigationGroup = '系统';

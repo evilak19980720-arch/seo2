@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\AiProviders;
 
+use App\Filament\Concerns\EditableNavigation;
 use App\Filament\Resources\AiProviders\Pages\CreateAiProvider;
 use App\Filament\Resources\AiProviders\Pages\EditAiProvider;
 use App\Filament\Resources\AiProviders\Pages\ListAiProviders;
@@ -27,6 +28,8 @@ use UnitEnum;
 
 class AiProviderResource extends Resource
 {
+    use EditableNavigation;
+
     protected static ?string $model = AiProvider::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCpuChip;

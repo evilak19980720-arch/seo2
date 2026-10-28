@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Concerns\EditableNavigation;
 use App\Services\Install\ServerConfig;
 use App\Services\Integrations\Cloudflare;
 use App\Services\Integrations\GoogleAuth;
@@ -30,6 +31,8 @@ use UnitEnum;
 
 class GlobalSettings extends Page
 {
+    use EditableNavigation;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCog6Tooth;
 
     protected static string|UnitEnum|null $navigationGroup = '系统';

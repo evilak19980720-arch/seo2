@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Domains;
 
+use App\Filament\Concerns\EditableNavigation;
 use App\Filament\Resources\Domains\Pages\EditDomain;
 use App\Filament\Resources\Domains\Pages\ListDomains;
 use App\Filament\Resources\Domains\Pages\ManageDnsRecords;
@@ -35,6 +36,8 @@ use UnitEnum;
 
 class DomainResource extends Resource
 {
+    use EditableNavigation;
+
     protected static ?string $model = Domain::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedGlobeAlt;

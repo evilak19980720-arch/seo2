@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Ads;
 
+use App\Filament\Concerns\EditableNavigation;
 use App\Filament\Resources\Ads\Pages\CreateAd;
 use App\Filament\Resources\Ads\Pages\EditAd;
 use App\Filament\Resources\Ads\Pages\ListAds;
@@ -30,6 +31,8 @@ use UnitEnum;
 
 class AdResource extends Resource
 {
+    use EditableNavigation;
+
     protected static ?string $model = Ad::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedMegaphone;

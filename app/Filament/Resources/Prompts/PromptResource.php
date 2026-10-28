@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Prompts;
 
 use App\Enums\PromptType;
+use App\Filament\Concerns\EditableNavigation;
 use App\Filament\Resources\Prompts\Pages\CreatePrompt;
 use App\Filament\Resources\Prompts\Pages\EditPrompt;
 use App\Filament\Resources\Prompts\Pages\ListPrompts;
@@ -26,6 +27,8 @@ use UnitEnum;
 
 class PromptResource extends Resource
 {
+    use EditableNavigation;
+
     protected static ?string $model = Prompt::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChatBubbleBottomCenterText;

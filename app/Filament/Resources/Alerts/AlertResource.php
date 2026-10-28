@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Alerts;
 
+use App\Filament\Concerns\EditableNavigation;
 use App\Filament\Resources\Alerts\Pages\ListAlerts;
 use App\Models\Alert;
 use BackedEnum;
@@ -17,6 +18,8 @@ use UnitEnum;
 
 class AlertResource extends Resource
 {
+    use EditableNavigation;
+
     protected static ?string $model = Alert::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBellAlert;
