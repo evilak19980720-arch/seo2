@@ -79,7 +79,7 @@ class ReferenceAnalyzer
         try {
             $res = Http::withHeaders(['User-Agent' => self::UA, 'Accept-Language' => 'pt-BR,pt;q=0.9,en;q=0.8'])->timeout(12)->connectTimeout(6)->get($url);
             $d['status'] = $res->status();
-            $html = $res->successful() ? substr($res->body(), 0, 3_000_000) : null;
+            $html = $res->successful() ? $this->slim($res->body()) : null;
             $d['blocked'] = in_array($res->status(), [403, 429, 503], true) || ($html !== null && $this->isChallenge($html));
         } catch (Throwable $e) {
             $d['messages'][] = '请求参考网站失败：'.Str::limit($e->getMessage(), 120);
@@ -165,7 +165,35 @@ class ReferenceAnalyzer
     {
         $out = (string) Chromium::run(['--window-size=1366,900', '--virtual-time-budget=10000', '--dump-dom', $url], 25);
 
-        return strlen($out) > 200 ? substr($out, 0, 3_000_000) : null;
+        return strlen($out) > 200 ? $this->slim($out) : null;
+    }
+
+    /**
+     * Keep the page under 3 MB without losing the body: SPA builds often
+     * inline megabytes of CSS in <head>, so <style> blocks share a 1 MB
+     * budget (enough for colours and fonts) before the rest is cut.
+     */
+    protected function slim(string $html): string
+    {
+        $budget = 1_000_000;
+        $out = '';
+        $pos = 0;
+        // A plain scan: a regex over megabytes of CSS hits PCRE's backtrack limit.
+        while (($open = stripos($html, '<style', $pos)) !== false && ($start = strpos($html, '>', $open)) !== false) {
+            $close = stripos($html, '</style>', $start) ?: strlen($html);
+            $css = substr($html, $start + 1, $close - $start - 1);
+            if (strlen($css) > $budget) {
+                // Cut at a rule boundary so the kept CSS still parses.
+                $css = substr($css, 0, max(0, $budget));
+                $css = ($end = strrpos($css, '}')) !== false ? substr($css, 0, $end + 1) : '';
+            }
+            $budget -= strlen($css);
+            $out .= substr($html, $pos, $start + 1 - $pos).$css;
+            $pos = $close;
+        }
+        $out .= substr($html, $pos);
+
+        return substr($out, 0, 3_000_000);
     }
 
     protected function isChallenge(string $html): bool
@@ -295,13 +323,19 @@ class ReferenceAnalyzer
                         break;
                     }
                 }
-                // A container of many image items reads as a card grid whatever its name.
-                if ($kind === null && $node->childNodes->length >= 6) {
-                    $withImages = 0;
+                // A container of many image items reads as a card grid whatever its name;
+                // with captions it is one even inside a slider (game and product rows).
+                if ($node->childNodes->length >= 6) {
+                    $withImages = $captioned = 0;
                     foreach ($node->childNodes as $child) {
-                        $withImages += $child instanceof \DOMElement && $child->getElementsByTagName('img')->length > 0 ? 1 : 0;
+                        if ($child instanceof \DOMElement && $child->getElementsByTagName('img')->length > 0) {
+                            $withImages++;
+                            $captioned += trim($child->textContent) !== '' ? 1 : 0;
+                        }
                     }
-                    $kind = $withImages >= 6 ? 'card_grid' : null;
+                    if ($captioned >= 6 || ($kind === null && $withImages >= 6)) {
+                        $kind = 'card_grid';
+                    }
                 }
             }
             if ($kind !== null && end($found) !== $kind && ! in_array($kind, $found, true)) {
@@ -312,7 +346,11 @@ class ReferenceAnalyzer
             }
         }
 
-        return $found;
+        if (! in_array('notice', $found, true) && $xpath->query('//marquee | //*[contains(concat(" ", @class, " "), " js-marquee ") or contains(local-name(), "hot-news") or contains(local-name(), "marquee")]')->length) {
+            array_unshift($found, 'notice');
+        }
+
+        return array_slice($found, 0, 10);
     }
 
     /**
@@ -521,6 +559,19 @@ class ReferenceAnalyzer
     /** @return array<int, string> top-level menu labels from the header navigation */
     protected function menu(DOMXPath $xpath): array
     {
+        foreach ($xpath->query('//nav') as $nav) {
+            $items = [];
+            foreach ($xpath->query('.//li[not(ancestor::li)]', $nav) as $li) {
+                $first = $xpath->query('.//a | .//button | .//span', $li)->item(0);
+                $text = $first ? trim(preg_replace('/\s+/u', ' ', $first->textContent)) : '';
+                if ($text !== '' && mb_strlen($text) <= 40 && ! preg_match(self::ACCOUNT_PATTERN, $text) && ! in_array($text, $items, true)) {
+                    $items[] = $text;
+                }
+            }
+            if (count($items) >= 3) {
+                return array_slice($items, 0, 12);
+            }
+        }
         foreach (['//header//nav//a', '//nav//a', '//header//a'] as $query) {
             $items = array_values(array_filter($this->texts($xpath, $query, 12), fn ($t) => ! preg_match(self::ACCOUNT_PATTERN, $t)));
             if (count($items) >= 2) {
@@ -558,7 +609,7 @@ class ReferenceAnalyzer
                     continue;
                 }
                 $children = [];
-                foreach ($xpath->query('.//ul//a', $li) as $a) {
+                foreach ($xpath->query('.//ul//a | .//ol//a', $li) as $a) {
                     $text = $clean($a);
                     if ($text !== '' && $text !== $label && mb_strlen($text) <= 40 && ! in_array($text, $children, true) && ! preg_match(self::ACCOUNT_PATTERN, $text)) {
                         $children[] = $text;

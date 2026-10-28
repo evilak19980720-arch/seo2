@@ -39,6 +39,36 @@ class ReferenceDesignTest extends TestCase
         $this->assertSame('montserrat', ReferenceAnalyzer::whitelistFont($ref['fonts']));
     }
 
+    public function test_analyzer_reads_spa_with_huge_inline_css_and_sidebar_menu(): void
+    {
+        // Shaped like a rendered AngularJS casino app: 4 MB of inline CSS before the body,
+        // hashed class names, custom elements, the menu in a sidebar <nav>.
+        $games = implode('', array_map(fn ($i) => "<div class=\"slick-slide\"><li><img src=\"/g{$i}.png\"><p>Game number {$i}</p></li></div>", range(1, 8)));
+        Http::fake(['spa.test/*' => Http::response('<html><head><title>Spa</title><style>.a{color:#ffdc50}'.str_repeat('._x1{margin:0}', 300_000).'</style></head><body>
+            <gupw-header><header class="_3vHa"><gupw-hot-news><div class="js-marquee"><ul><li>Bagong address ng website ngayon</li></ul></div></gupw-hot-news>
+            <button>Sign up</button><button>Login</button></header></gupw-header>
+            <gupw-sidebar><section class="_1wPQ"><gupw-nav><nav><ul>
+              <li class="home"><a><i></i><span>Home</span></a></li>
+              <li class="slot"><a><i></i><span>SLOT</span></a><div class="_2xvn"><ol><li><a><img src="/j.png"><span>JILI Slot</span></a></li><li><a><span>PG Slot</span></a></li></ol></div></li>
+              <li class="live"><a><i></i><span>LIVE Casino</span></a></li>
+              <li class="promotion"><a><i></i><span>Promotions</span></a></li>
+            </ul></nav></gupw-nav></section></gupw-sidebar>
+            <div class="_1h0f"><gupw-slide-banner><section class="DQFg"><a href="/"><img src="/banner.jpg"></a></section></gupw-slide-banner>
+            <gupw-home><section><div class="_353n">PG Casino</div><ul class="x73Q slick-slider"><div class="slick-list"><div class="slick-track">'.$games.'</div></div></ul></section>
+            <section><div class="_9Pb">Maglaro ng daan-daang laro araw-araw at makakuha ng malaking rebate tuwing linggo sa aming website.</div></section>
+            </gupw-home></div><gupw-footer><footer><p>Copyright reserved here</p></footer></gupw-footer></body></html>')]);
+
+        $ref = app(ReferenceAnalyzer::class)->analyze('https://spa.test/');
+
+        $this->assertSame(['Home', 'SLOT', 'LIVE Casino', 'Promotions'], $ref['menu']);
+        $this->assertSame(['JILI Slot', 'PG Slot'], $ref['navigation']['items'][1]['children']);
+        $this->assertTrue($ref['navigation']['dropdown']);
+        $this->assertSame(['notice', 'banner', 'card_grid'], array_slice($ref['structure'], 0, 3));
+        $this->assertStringContainsString('Maglaro ng daan-daang laro', $ref['content']);
+        $this->assertStringContainsString('Game number 3', $ref['content']);
+        $this->assertSame('#ffdc50', $ref['colors']['primary']);
+    }
+
     public function test_generated_design_follows_reference_even_if_ai_ignores_it(): void
     {
         $this->fakeReference();
