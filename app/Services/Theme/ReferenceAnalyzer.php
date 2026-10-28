@@ -44,10 +44,14 @@ class ReferenceAnalyzer
             'colors' => $this->colors($css, (string) $xpath->evaluate('string(//meta[@name="theme-color"]/@content)')),
             'fonts' => $this->fonts($css, $xpath),
             'menu' => $this->menu($xpath),
+            'navigation' => $this->navigation($xpath, $css),
             'sections' => $this->texts($xpath, '//main//h2 | //section//h2 | //body//h2', 12),
             'structure' => $this->structure($xpath),
         ];
     }
+
+    /** Account links (login, register…) are never reproduced: brand sites have no accounts. */
+    public const ACCOUNT_PATTERN = '/^(log ?in|sign ?(in|up)|register|entrar|login|cadastr|cadastre-se|registr|criar conta|minha conta|my account|登录|注册)/iu';
 
     /** Section kinds, as theme block names, guessed from class/id names in document order. */
     public const STRUCTURE_HINTS = [
@@ -307,13 +311,87 @@ class ReferenceAnalyzer
     protected function menu(DOMXPath $xpath): array
     {
         foreach (['//header//nav//a', '//nav//a', '//header//a'] as $query) {
-            $items = $this->texts($xpath, $query, 12);
+            $items = array_values(array_filter($this->texts($xpath, $query, 12), fn ($t) => ! preg_match(self::ACCOUNT_PATTERN, $t)));
             if (count($items) >= 2) {
                 return $items;
             }
         }
 
         return [];
+    }
+
+    /**
+     * How the reference's navigation behaves: menu tree, header buttons,
+     * mobile bottom bar, sticky header, leading "home" link.
+     *
+     * @return array{items: array<int, array{label: string, children: array<int, string>}>, dropdown: bool, buttons: int, mobile_bar: bool, sticky: bool, home_link: bool}
+     */
+    public function navigation(DOMXPath $xpath, string $css = ''): array
+    {
+        $items = [];
+        $root = null;
+        foreach (['//header//nav', '//nav', '//header'] as $query) {
+            foreach ($xpath->query($query) as $node) {
+                if ($xpath->query('.//a', $node)->length >= 2) {
+                    $root = $node;
+                    break 2;
+                }
+            }
+        }
+        if ($root) {
+            $clean = fn ($node) => trim(preg_replace('/\s+/u', ' ', $node->textContent));
+            foreach ($xpath->query('.//li[not(ancestor::li)]', $root) as $li) {
+                $first = $xpath->query('.//a | .//button | .//span', $li)->item(0);
+                $label = $first ? $clean($first) : '';
+                if ($label === '' || mb_strlen($label) > 40 || preg_match(self::ACCOUNT_PATTERN, $label)) {
+                    continue;
+                }
+                $children = [];
+                foreach ($xpath->query('.//ul//a', $li) as $a) {
+                    $text = $clean($a);
+                    if ($text !== '' && $text !== $label && mb_strlen($text) <= 40 && ! in_array($text, $children, true) && ! preg_match(self::ACCOUNT_PATTERN, $text)) {
+                        $children[] = $text;
+                    }
+                }
+                $items[] = ['label' => $label, 'children' => array_slice($children, 0, 8)];
+                if (count($items) >= 12) {
+                    break;
+                }
+            }
+        }
+        if ($items === []) {
+            $items = array_map(fn ($label) => ['label' => $label, 'children' => []], $this->menu($xpath));
+        }
+
+        $buttons = 0;
+        foreach ($xpath->query('//header//a | //header//button') as $node) {
+            $name = strtolower($node->getAttribute('class').' '.$node->getAttribute('id').' '.$node->textContent);
+            // Login / register buttons are left out: brand sites have no accounts.
+            if (preg_match('/login|log-in|register|sign|entrar|cadastr|registr|conta|account|senha/', $name)) {
+                continue;
+            }
+            if (preg_match('/btn|button|download|baixar|jogar|play|app/', $name) && ! $xpath->query('ancestor::li', $node)->length) {
+                $buttons++;
+            }
+        }
+
+        $barPattern = 'tab-?bar|bottom-?nav|bottom-?bar|footer-?nav|footer-?menu|mobile-?nav|fixed-?bottom|navbar-?bottom|menu-?bottom';
+        $mobileBar = false;
+        foreach ($xpath->query('//*[@class or @id]') as $node) {
+            if (preg_match('/(^|[\s_-])('.$barPattern.')([\s_-]|$)/', strtolower($node->getAttribute('class').' '.$node->getAttribute('id')))) {
+                $mobileBar = true;
+                break;
+            }
+        }
+
+        return [
+            'items' => $items,
+            'dropdown' => collect($items)->contains(fn ($i) => $i['children'] !== []),
+            'buttons' => min(2, $buttons),
+            'mobile_bar' => $mobileBar || (bool) preg_match('/(\.('.$barPattern.')|#('.$barPattern.'))[^{]*\{[^}]*position\s*:\s*fixed[^}]*bottom/i', $css),
+            'sticky' => (bool) preg_match('/(header|\.header|#header|\.navbar|\.nav|\.top-?bar)[\w.#-]*\s*\{[^}]*position\s*:\s*(fixed|sticky)/i', $css),
+            'home_link' => isset($items[0]) && (bool) preg_match('/^(home|in[ií]cio|inicio|首页|página inicial|accueil|start)$/iu', $items[0]['label']),
+        ];
     }
 
     /** @return array<int, string> */

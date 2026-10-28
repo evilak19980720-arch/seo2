@@ -16,7 +16,7 @@ class PromptSeeder extends Seeder
     public const SYSTEM = 'You are a senior content strategist and SEO editor for the official website of {{product_name}} ({{site_type}}). Write natively in {{language}} for readers in {{country}}; never write in another language and never translate from another language. The BRAND PROFILE is the only source of facts: never invent features, numbers, prices, awards, reviews, release dates or company details that are not in it. Always answer with a single JSON object.';
 
     /** Templates revised after the first release ship as a new version; the highest active version wins. */
-    public const VERSIONS = [PromptType::DesignConfig->value => 3, PromptType::PageContent->value => 3];
+    public const VERSIONS = [PromptType::DesignConfig->value => 4, PromptType::PageContent->value => 3];
 
     public function run(): void
     {
@@ -74,6 +74,8 @@ When there is a reference, the design MUST follow it closely:
 - nav: "portal" for game/casino-style sites with a coloured menu bar, otherwise the closest variant. footer/radius/density/shadow/style: match the reference look.
 - home: the same sections in the same order as the reference ("structure" and the screenshots), using our blocks: banner (slider of big promo images), notice (announcement strip), card_grid (grid of game/product cards), stats, features, steps, gallery, faq, download (app download area), cta, article_list.
 - "menu": map each reference menu item, in order, to the matching value of "menu_items". For reference menu items with no match (e.g. events, ranking, promotions, VIP, support) add an entry to "extra_pages" ({"label": "<label in {{language}}>", "slug": "<slug in {{language}}>"}, max 5, only items that make sense for this brand), and put "extra_1"…"extra_N" into "menu" at their position.
+- "navigation": reproduce the reference header behaviour (see "navigation" in the analysis and the screenshots): "submenu" groups menu items under a parent like the reference dropdowns ({"<parent menu item>": ["<menu item>", …]}, children are left out of the top level of "menu"), "buttons" = 0-2 download/CTA buttons in the header, "mobile_bar" = true when the reference has a fixed bottom navigation bar on mobile, "sticky" = header stays on top while scrolling, "home_link" = menu starts with a Home link.
+Never add login, register or account links or buttons: the site has no user accounts.
 Without a reference: still build a rich home page (7-9 blocks) appropriate for the brand.
 Never copy text, logos or brand names from the reference.
 Feedback from the previous attempt (may be empty): {{feedback}}
@@ -85,7 +87,7 @@ For every page type in "page_types" choose an ordered list of blocks with a vari
 "custom_css": up to 8KB of CSS that recreates reference details the config cannot express (header/menu bar look, card frames, glows, gradients, section separators, hover effects, background textures). Use the CSS variables --c-primary --c-on-primary --c-secondary --c-on-secondary --c-accent --c-bg --c-surface --c-text --c-muted --radius --shadow and these classes: .nav .nav__inner .nav__bar .nav__links .nav__cta .btn .btn--ghost .hero .hero__art .banner .banner__slide .notice .section .section__head .card-grid .tile .tile__media .tile__tag .tile__body .feature .feature__icon .step .stats-block .faq details .cta .download .post-card .footer. No @import, no external url(), never hide or shrink content, no fixed heights on text containers. Use "" when not needed.
 
 Return JSON:
-{"design": {"colors": {"primary": "#", "secondary": "#", "accent": "#", "background": "#", "surface": "#", "text": "#", "muted": "#"}, "fonts": {"heading": "", "body": ""}, "radius": "", "density": "", "shadow": "", "style": {"background": "", "cards": "", "buttons": "", "headings": ""}, "nav": "", "footer": "", "menu": ["product", "extra_1", "blog"], "extra_pages": [{"label": "", "slug": ""}], "pages": {"home": [{"block": "banner", "variant": "slider"}]}}, "custom_css": ""}
+{"design": {"colors": {"primary": "#", "secondary": "#", "accent": "#", "background": "#", "surface": "#", "text": "#", "muted": "#"}, "fonts": {"heading": "", "body": ""}, "radius": "", "density": "", "shadow": "", "style": {"background": "", "cards": "", "buttons": "", "headings": ""}, "nav": "", "footer": "", "menu": ["product", "extra_1", "blog"], "navigation": {"submenu": {"product": ["guide", "faq"]}, "buttons": 1, "mobile_bar": false, "sticky": true, "home_link": false}, "extra_pages": [{"label": "", "slug": ""}], "pages": {"home": [{"block": "banner", "variant": "slider"}]}}, "custom_css": ""}
 TXT,
             PromptType::CustomCss->value => <<<'TXT'
 Write a CSS snippet (max 8KB) for the site of {{product_name}} that achieves: {{request}}

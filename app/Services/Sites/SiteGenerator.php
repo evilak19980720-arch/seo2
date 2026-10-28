@@ -158,7 +158,13 @@ class SiteGenerator
         if ($reference) {
             $this->designNotes[] = '参考网站：主色 '.($reference['colors']['primary'] ?? '未识别').'，背景 '.($reference['colors']['background'] ?? '未识别')
                 .'，字体 '.(implode(' / ', $reference['fonts']) ?: '未识别').'，菜单 '.count($reference['menu']).' 项'
-                .($reference['structure'] ?? [] ? '，版块 '.implode(' → ', $reference['structure']) : '');
+                .($reference['structure'] ?? [] ? '，版块 '.implode(' → ', $reference['structure']) : '')
+                .(isset($reference['navigation']) ? '，导航：'.collect([
+                    $reference['navigation']['dropdown'] ? '下拉子菜单' : null,
+                    $reference['navigation']['mobile_bar'] ? '手机底部栏' : null,
+                    $reference['navigation']['sticky'] ? '吸顶' : null,
+                    $reference['navigation']['buttons'] ? $reference['navigation']['buttons'].' 个按钮' : null,
+                ])->filter()->implode('、') : '');
         }
 
         try {
@@ -224,6 +230,19 @@ class SiteGenerator
         }
         if ($font = ReferenceAnalyzer::whitelistFont($reference['fonts'])) {
             $config['fonts'] = ['heading' => $font, 'body' => $font];
+        }
+
+        // Navigation behaves like the reference's (at least one download button stays).
+        if ($nav = $reference['navigation'] ?? null) {
+            $config['navigation'] = array_merge((array) ($config['navigation'] ?? []), [
+                'buttons' => max(1, (int) $nav['buttons']),
+                'mobile_bar' => (bool) $nav['mobile_bar'],
+                'sticky' => (bool) $nav['sticky'] || ! empty($config['navigation']['sticky']),
+                'home_link' => (bool) $nav['home_link'],
+            ]);
+            if (! $nav['dropdown']) {
+                $config['navigation']['submenu'] = [];
+            }
         }
 
         // Home follows the reference's section order; the model's variants are kept.

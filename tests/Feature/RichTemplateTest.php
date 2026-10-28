@@ -78,4 +78,51 @@ class RichTemplateTest extends TestCase
 
         $this->assertFalse($site->pages()->where('type', 'extra_1')->exists());
     }
+
+    public function test_analyzer_reads_navigation_features_without_account_links(): void
+    {
+        Http::fake([
+            'nav.test/s.css' => Http::response('.header{position:fixed;top:0} .tabbar{position:fixed;bottom:0}'),
+            'nav.test/*' => Http::response('<html><head><link rel="stylesheet" href="/s.css"></head><body>
+            <header class="header"><nav><ul>
+              <li><a href="/">Início</a></li>
+              <li><a href="/jogos">Jogos</a><ul><li><a href="/slots">Slots</a></li><li><a href="/cartas">Cartas</a></li></ul></li>
+              <li><a href="/promo">Promoções</a></li><li><a href="/login">Entrar</a></li>
+            </ul></nav><a class="btn" href="/login">Login</a><a class="btn" href="/cadastro">Cadastre-se</a><a class="btn-download" href="/app">Baixar App</a></header>
+            <div class="tabbar"><a href="/">Início</a></div></body></html>'),
+        ]);
+
+        $nav = app(ReferenceAnalyzer::class)->analyze('https://nav.test/')['navigation'];
+
+        $this->assertSame([['label' => 'Início', 'children' => []], ['label' => 'Jogos', 'children' => ['Slots', 'Cartas']], ['label' => 'Promoções', 'children' => []]], $nav['items']);
+        $this->assertTrue($nav['dropdown']);
+        $this->assertSame(1, $nav['buttons'], 'login/register buttons are not counted');
+        $this->assertTrue($nav['mobile_bar']);
+        $this->assertTrue($nav['sticky']);
+        $this->assertTrue($nav['home_link']);
+    }
+
+    public function test_navigation_renders_dropdowns_buttons_and_mobile_bar(): void
+    {
+        $this->fakeAi(['design' => ['design' => [
+            'menu' => ['product', 'guide', 'blog'],
+            'navigation' => ['submenu' => ['product' => ['faq', 'media', 'product', 'nonsense']], 'buttons' => 2, 'mobile_bar' => true, 'sticky' => false, 'home_link' => true],
+        ]]]);
+        $site = $this->makeSite(['domain' => 'nav.com.br'], ['cta_links' => [['label' => 'Google Play', 'url' => 'https://play.google.com/x'], ['label' => 'App Store', 'url' => 'https://apps.apple.com/x']]]);
+
+        app(SiteGenerator::class)->run(GenerationTask::create(['site_id' => $site->id, 'type' => 'full']));
+        $site->refresh();
+
+        $this->assertSame(['product' => ['faq', 'media']], $site->design_config['navigation']['submenu']);
+        $home = file_get_contents(StaticSiteBuilder::dirFor($site).'/index.html');
+        $this->assertStringContainsString('class="nav__has-sub"', $home);
+        $this->assertStringContainsString('<ul class="nav__sub"><li><a href="/perguntas-frequentes/">', $home);
+        $this->assertStringContainsString('nav--static', $home);
+        $this->assertSame(2, substr_count($home, 'btn nav__cta'));
+        $this->assertStringContainsString('class="mobile-bar"', $home);
+        $this->assertStringContainsString('has-mobile-bar', $home);
+        $this->assertStringContainsString('<li><a href="/">Início</a></li>', $home);
+        // The footer still lists every page.
+        $this->assertMatchesRegularExpression('#<footer.*perguntas-frequentes.*</footer>#s', $home);
+    }
 }

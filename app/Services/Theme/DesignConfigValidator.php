@@ -108,6 +108,7 @@ class DesignConfigValidator
             'extra_pages' => $extraPages,
             'pages' => [],
         ];
+        $result['navigation'] = $this->navigation($config['navigation'] ?? [], $result['menu'], $siteTypeConfig, $result['nav']);
 
         // Page compositions
         $pageTypes = array_map(fn ($p) => $p['blocks'], $siteTypeConfig['pages']) + self::SYSTEM_PAGES;
@@ -145,6 +146,37 @@ class DesignConfigValidator
         $allowed = array_merge(array_diff(array_keys($siteTypeConfig['pages']), ['home', 'privacy', 'terms']), ['blog']);
 
         return array_values(array_unique(array_filter((array) $menu, fn ($type) => is_string($type) && in_array($type, $allowed, true))));
+    }
+
+    /**
+     * Header behaviour: dropdown children per top-level menu item, number of
+     * CTA buttons, mobile bottom bar, sticky header, leading home link.
+     */
+    protected function navigation(mixed $nav, array $menu, array $siteTypeConfig, string $variant): array
+    {
+        $nav = is_array($nav) ? $nav : [];
+        $allowed = $this->menu(array_keys($siteTypeConfig['pages'] + ['blog' => 1]), $siteTypeConfig);
+        $used = $menu;
+        $submenu = [];
+        foreach ((array) ($nav['submenu'] ?? []) as $parent => $children) {
+            if (! in_array($parent, $menu, true)) {
+                continue;
+            }
+            foreach ((array) $children as $child) {
+                if (is_string($child) && in_array($child, $allowed, true) && ! in_array($child, $used, true)) {
+                    $submenu[$parent][] = $child;
+                    $used[] = $child;
+                }
+            }
+        }
+
+        return [
+            'submenu' => $submenu,
+            'buttons' => max(0, min(2, (int) ($nav['buttons'] ?? 1))),
+            'mobile_bar' => (bool) ($nav['mobile_bar'] ?? false),
+            'sticky' => (bool) ($nav['sticky'] ?? true),
+            'home_link' => (bool) ($nav['home_link'] ?? $variant === 'portal'),
+        ];
     }
 
     protected function variant(string $block, ?string $variant): string

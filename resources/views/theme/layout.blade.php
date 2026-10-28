@@ -39,7 +39,7 @@
 <script async src="https://www.googletagmanager.com/gtag/js?id={{ $site->ga4_measurement_id }}"></script>
 @endif
 </head>
-<body class="{{ $ctx->bodyClass() }}">
+<body class="{{ $ctx->bodyClass() }}@if ($ctx->navigation()['mobile_bar']) has-mobile-bar @endif">
 <a class="skip" href="#main">{{ $ctx->t('skip') }}</a>
 @include('theme.blocks.nav', ['variant' => $ctx->design['nav']])
 @include('theme.partials.ad', ['position' => 'top'])
@@ -55,6 +55,7 @@
 </main>
 @include('theme.partials.ad', ['position' => 'bottom'])
 @include('theme.blocks.footer', ['variant' => $ctx->design['footer']])
+@include('theme.partials.mobile-bar')
 @if ($assets['cookie_banner'])
 <div class="cookie" id="cookie" role="dialog" aria-live="polite"><p>{{ $ctx->t('cookie_text') }} <a href="{{ $ctx->pageHref('privacy') }}">{{ $ctx->pages->get('privacy')?->title }}</a></p><div class="cookie__actions"><button class="btn" data-consent="granted">{{ $ctx->t('cookie_accept') }}</button><button class="btn btn--ghost" data-consent="denied">{{ $ctx->t('cookie_reject') }}</button></div></div>
 <script>(function(){var b=document.getElementById('cookie'),v;try{v=localStorage.getItem('consent')}catch(e){}if(!v)b.classList.add('is-open');b.addEventListener('click',function(e){var c=e.target.getAttribute('data-consent');if(!c)return;try{localStorage.setItem('consent',c)}catch(e){}if(c==='granted'&&window.gtag)gtag('consent','update',{ad_storage:'granted',analytics_storage:'granted',ad_user_data:'granted',ad_personalization:'granted'});b.classList.remove('is-open')})})();</script>

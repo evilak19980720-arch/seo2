@@ -72,9 +72,10 @@ class ThemeContext
 
     /**
      * Header menu in the order of the design's "menu" (taken from the reference
-     * site); with $all the remaining pages follow, for the footer.
+     * site), each item with its dropdown children; with $all a flat list of
+     * every page follows, for the footer.
      *
-     * @return array<int, array{label: string, href: string}>
+     * @return array<int, array{label: string, href: string, children: array<int, array{label: string, href: string}>}>
      */
     public function navLinks(bool $all = false): array
     {
@@ -82,11 +83,38 @@ class ThemeContext
             ->reject(fn ($type) => in_array($type, ['home', 'privacy', 'terms'], true) || ! $this->pages->has($type))
             ->push('blog')->values();
         $menu = collect($this->design['menu'] ?? [])->intersect($available)->values();
-        $order = $menu->isEmpty() ? $available : ($all ? $menu->merge($available->diff($menu)) : $menu);
+        $submenu = collect($this->design['navigation']['submenu'] ?? [])->map(fn ($children) => collect($children)->intersect($available)->values());
 
-        return $order->map(fn ($type) => $type === 'blog'
+        if ($all) {
+            $nested = $menu->flatMap(fn ($type) => [$type, ...($submenu[$type] ?? [])]);
+
+            return $nested->merge($available->diff($nested))->map(fn ($type) => $this->link($type) + ['children' => []])->values()->all();
+        }
+
+        return ($menu->isEmpty() ? $available : $menu)
+            ->map(fn ($type) => $this->link($type) + ['children' => collect($submenu[$type] ?? [])->map(fn ($child) => $this->link($child))->all()])
+            ->all();
+    }
+
+    /** @return array{label: string, href: string} */
+    protected function link(string $type): array
+    {
+        return $type === 'blog'
             ? ['label' => $this->t('blog'), 'href' => $this->href('blog')]
-            : ['label' => $this->pages[$type]->title, 'href' => $this->href($this->pages[$type]->slug)])->all();
+            : ['label' => $this->pages[$type]->title, 'href' => $this->href($this->pages[$type]->slug)];
+    }
+
+    /** Header behaviour from the design (see DesignConfigValidator::navigation). */
+    public function navigation(): array
+    {
+        return ($this->design['navigation'] ?? []) + ['submenu' => [], 'buttons' => 1, 'mobile_bar' => false, 'sticky' => true, 'home_link' => false];
+    }
+
+    /** @return array<int, array{label: string, url: string}> */
+    public function ctaLinks(int $limit = 2): array
+    {
+        return collect($this->brand->cta_links ?? [])->filter(fn ($l) => filled($l['url'] ?? null))->take($limit)
+            ->map(fn ($l) => ['label' => $l['label'] ?? $this->t('read_more'), 'url' => $l['url']])->values()->all();
     }
 
     /** @return array<int, array{label: string, href: string}> */
