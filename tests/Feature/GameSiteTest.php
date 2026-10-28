@@ -15,6 +15,7 @@ use App\Services\Sites\SiteStructure;
 use App\Services\Theme\DesignConfigValidator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -71,6 +72,17 @@ class GameSiteTest extends TestCase
         $site->entries()->create(['collection' => 'promotion', 'slug' => 'bonus-boas-vindas', 'title' => 'Bônus de boas-vindas', 'summary' => 'Oferta para novos jogadores.', 'data' => ['tags' => ['new_user'], 'reward' => 'R$ 20', 'ends_at' => now()->addMonth()->toDateString()]]);
         $site->entries()->create(['collection' => 'promotion', 'slug' => 'antiga', 'title' => 'Promoção antiga', 'data' => ['ends_at' => now()->subMonth()->toDateString()]]);
         $site->entries()->create(['collection' => 'notice', 'slug' => 'manutencao', 'title' => 'Manutenção programada', 'data' => ['tags' => ['maintenance'], 'date' => now()->subDay()->toDateString()]]);
+    }
+
+    public function test_every_page_type_has_a_title_in_each_bundled_language(): void
+    {
+        foreach (array_keys(config('site_types')) as $siteType) {
+            foreach (array_keys(config("site_types.{$siteType}.pages") ?? []) as $type) {
+                foreach (['en', 'pt', 'es'] as $lang) {
+                    $this->assertTrue(Lang::has("theme.page_titles.{$type}", $lang, false), "{$siteType}.{$type} has no {$lang} title");
+                }
+            }
+        }
     }
 
     public function test_game_sites_get_the_mobile_bar_by_default(): void

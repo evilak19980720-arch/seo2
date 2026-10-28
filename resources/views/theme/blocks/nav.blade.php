@@ -5,8 +5,8 @@
 <header class="nav nav--{{ $variant }} @if (! $nav['sticky']) nav--static @endif">
 <div class="container nav__inner">
 <a class="nav__brand" href="/">@if ($logo)<img src="{{ $logo['src'] }}" width="42" height="42" alt="{{ $ctx->site->name }}">@else<span class="nav__mark" aria-hidden="true">{{ mb_strtoupper(mb_substr($ctx->site->name, 0, 1)) }}</span>@endif<span>{{ $ctx->site->name }}</span></a>
-<input class="nav__check" type="checkbox" id="nav-toggle" aria-label="{{ $ctx->t('pages') }}">
-<label class="nav__toggle" for="nav-toggle" aria-hidden="true">☰</label>
+<input class="nav__check" type="checkbox" id="nav-toggle" autocomplete="off" aria-label="{{ $ctx->t('pages') }}">
+<label class="nav__toggle" for="nav-toggle" aria-hidden="true"><span class="nav__open">☰</span><span class="nav__close">✕</span></label>
 @if ($variant !== 'portal')
 <div class="nav__menu"><nav aria-label="{{ $ctx->t('pages') }}">@include('theme.partials.nav-links')</nav></div>
 @endif

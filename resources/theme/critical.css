@@ -23,6 +23,7 @@ a{color:var(--c-link)}
 .nav__links a:hover{opacity:1;background:color-mix(in srgb,var(--c-primary) 12%,transparent)}
 .nav__check{position:absolute;opacity:0;pointer-events:none}
 .nav__toggle{display:none}
+.nav__close{display:none}
 .hero{position:relative;overflow:hidden;padding:calc(5rem*var(--space)) 0 calc(4.5rem*var(--space));background:radial-gradient(1000px 500px at 85% -10%,color-mix(in srgb,var(--c-primary) 28%,transparent),transparent 65%),radial-gradient(700px 420px at -5% 110%,color-mix(in srgb,var(--c-accent) 22%,transparent),transparent 60%),var(--c-surface)}
 .hero__grid{position:relative;display:grid;gap:2.5rem;align-items:center}
 .hero__eyebrow{display:inline-flex;align-items:center;gap:.5rem;padding:.35rem .9rem;border-radius:999px;background:color-mix(in srgb,var(--c-primary) 14%,transparent);color:var(--c-text);font-weight:700;font-size:.85rem;margin-bottom:1rem}

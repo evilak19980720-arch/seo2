@@ -77,8 +77,8 @@ class SiteForm
                 FileUpload::make('reference_images')->label('参考截图')->image()->multiple()->maxFiles(3)->maxSize(4096)
                     ->disk(Media::DISK)->directory('reference')->columnSpanFull()
                     ->helperText('参考网站有防护、无法抓取时上传 1-3 张截图（首页首屏最重要）；会从截图中提取配色，有视觉模型时也交给 AI 参考布局'),
-                Toggle::make('reference_import_images')->label('导入参考网站图片')
-                    ->helperText('生成时把参考网站的内容图片下载到对象存储，用于横幅、卡片和图库。仅用于你有权使用的网站，否则有版权风险'),
+                Toggle::make('reference_import_images')->label('导入参考网站图片')->default(true)
+                    ->helperText('生成时把参考网站的游戏图、横幅等图片下载并上传到绑定的对象存储（OSS），网站直接从 OSS 加载。仅用于你有权使用的网站，否则有版权风险'),
                 Toggle::make('reference_rewrite_content')->label('参考网站内容二次创作')
                     ->helperText('生成页面时读取参考网站正文，由 AI 按其主题和结构重新撰写，不照抄句子；品牌名替换为本站产品'),
                 Toggle::make('has_accounts')->label('网站有用户账户')

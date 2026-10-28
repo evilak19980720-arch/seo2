@@ -2,21 +2,38 @@
 
 namespace App\Services\Render;
 
+use App\Models\Site;
 use App\Support\Media;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 /**
  * Copies brand images into a site's static output as WebP (+ AVIF when GD
  * supports it), resized to a max width, and reports real dimensions so
- * templates can write width/height and avoid layout shift.
+ * templates can write width/height and avoid layout shift. With object
+ * storage configured, the converted files are uploaded there (public, long
+ * cache) and pages point at the OSS / CDN URL; otherwise, or when the
+ * bucket's files cannot be read publicly, they are served from the site.
  */
 class MediaPublisher
 {
     /** @var array<string, array|null> */
     protected array $cache = [];
 
-    public function __construct(protected string $siteDir) {}
+    /** Whether uploaded files are publicly readable; checked once per build. */
+    protected ?bool $remoteOk = null;
+
+    /** @var array<string, string>|null local file name => public URL */
+    protected ?array $manifest = null;
+
+    public function __construct(protected string $siteDir, protected ?string $host = null) {}
+
+    /** Absolute URL of a published image (local paths get the site's base URL). */
+    public static function absolute(Site $site, string $src): string
+    {
+        return preg_match('#^https?://#i', $src) ? $src : $site->baseUrl().$src;
+    }
 
     /**
      * @return array{src: string, avif: ?string, width: int, height: int}|null
@@ -31,7 +48,64 @@ class MediaPublisher
             return $this->cache[$key];
         }
 
-        return $this->cache[$key] = $this->convert($source, $maxWidth);
+        $local = $this->convert($source, $maxWidth);
+
+        return $this->cache[$key] = $local ? $this->remote($local) : null;
+    }
+
+    /** Swap local /media/ paths for object-storage URLs when possible. */
+    protected function remote(array $image): array
+    {
+        if ($this->host === null || $this->remoteOk === false || ! Media::configured()) {
+            return $image;
+        }
+        $urls = [];
+        foreach (['src', 'avif'] as $field) {
+            if ($image[$field] === null) {
+                continue;
+            }
+            $url = $this->upload(basename($image[$field]));
+            if ($url === null) {
+                return $image;
+            }
+            $urls[$field] = $url;
+        }
+
+        return $urls + $image;
+    }
+
+    protected function upload(string $file): ?string
+    {
+        $this->manifest ??= is_file($m = "{$this->siteDir}/media/.oss.json") ? (json_decode((string) file_get_contents($m), true) ?: []) : [];
+        $key = 'sites/'.$this->host.'/media/'.$file;
+        if (isset($this->manifest[$file]) && $this->remoteOk !== null) {
+            return $this->manifest[$file];
+        }
+        try {
+            $disk = Storage::disk(Media::DISK);
+            $url = $this->manifest[$file] ?? null;
+            if ($url === null) {
+                $ok = $disk->put($key, (string) file_get_contents("{$this->siteDir}/media/{$file}"), [
+                    'visibility' => 'public',
+                    'mimetype' => str_ends_with($file, '.avif') ? 'image/avif' : 'image/webp',
+                    'CacheControl' => 'public, max-age=31536000, immutable',
+                ]);
+                $url = $ok ? $disk->url($key) : null;
+            }
+            // The first file of a build proves the bucket serves files publicly.
+            $this->remoteOk ??= $url !== null && Http::timeout(10)->head($url)->successful();
+        } catch (Throwable) {
+            $this->remoteOk = false;
+        }
+        if (! $this->remoteOk || $url === null) {
+            $this->remoteOk = false;
+
+            return null;
+        }
+        $this->manifest[$file] = $url;
+        file_put_contents("{$this->siteDir}/media/.oss.json", json_encode($this->manifest, JSON_UNESCAPED_SLASHES));
+
+        return $url;
     }
 
     protected function convert(string $source, int $maxWidth): ?array

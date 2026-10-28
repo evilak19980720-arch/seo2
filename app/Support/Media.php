@@ -75,6 +75,20 @@ class Media
         ], fn ($v) => $v !== null);
     }
 
+    /** Store a file on OSS, or on the public disk when OSS is missing or the upload fails. */
+    public static function put(string $path, string $contents): bool
+    {
+        try {
+            if (Storage::disk(self::DISK)->put($path, $contents)) {
+                return true;
+            }
+        } catch (Throwable) {
+            // fall through to the local disk
+        }
+
+        return (bool) Storage::disk('public')->put($path, $contents);
+    }
+
     public static function exists(?string $path): bool
     {
         return self::get($path) !== null;

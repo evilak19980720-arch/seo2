@@ -31,7 +31,7 @@ class SiteRenderer
     public function __construct(public readonly Site $site, string $siteDir)
     {
         $site->loadMissing(['domain', 'brandProfile']);
-        $this->ctx = new ThemeContext($site, new MediaPublisher($siteDir));
+        $this->ctx = new ThemeContext($site, new MediaPublisher($siteDir, $site->domain?->name));
         // Thin pages stay reachable by URL but are not promoted in menus.
         $this->ctx->hidden = $this->ctx->pages->filter(fn (Page $p) => $this->isNoindex($p))->keys()
             ->when(! $this->blogIsIndexable(), fn ($c) => $c->push('blog'))->values()->all();
@@ -231,7 +231,7 @@ class SiteRenderer
         $ctx->beginPage($article->path());
         $head = SeoHead::for($ctx, $article->path(), $article->meta_title ?: $article->title, $article->meta_description, $article->status === ArticleStatus::Noindex);
         $featured = $article->featured_image ? $ctx->image($article->featured_image, 1400) : null;
-        $head->image = $featured ? $this->site->baseUrl().$featured['src'] : $this->ogImage();
+        $head->image = $featured ? MediaPublisher::absolute($this->site, $featured['src']) : $this->ogImage();
         $head->preloadImage = $featured['src'] ?? null;
         $head->withBreadcrumbs([
             ['name' => $ctx->t('home'), 'url' => $ctx->url()],
@@ -370,7 +370,7 @@ class SiteRenderer
             ->map(fn ($t) => trim(preg_replace('/\s+/u', ' ', (string) $t)))->first(fn ($t) => mb_strlen($t) >= 70) ?? (string) $entry->summary;
         $head = SeoHead::for($ctx, $path, SeoHead::limit($title, 60), SeoHead::limit($description, 155), false);
         $image = $entry->image ? $ctx->image($entry->image, 1400) : null;
-        $head->image = $image ? $this->site->baseUrl().$image['src'] : $this->ogImage();
+        $head->image = $image ? MediaPublisher::absolute($this->site, $image['src']) : $this->ogImage();
         $head->preloadImage = $image['src'] ?? null;
         $head->withWebPage($entry->updated_at)->withBreadcrumbs([
             ['name' => $ctx->t('home'), 'url' => $ctx->url()],
@@ -449,7 +449,7 @@ class SiteRenderer
         $first = collect($this->ctx->brand->media ?? [])->firstWhere('type', 'image') ?? ($this->ctx->brand->media[0] ?? null);
         $img = $first ? $this->ctx->image($first['path'] ?? null, 1200) : null;
 
-        return $img ? $this->site->baseUrl().$img['src'] : null;
+        return $img ? MediaPublisher::absolute($this->site, $img['src']) : null;
     }
 
     protected ?MarkupScrambler $scrambler = null;
@@ -539,7 +539,9 @@ class SiteRenderer
             .'--radius:'.$theme['radius'][$d['radius']].';--space:'.$theme['density'][$d['density']].';--shadow:'.$theme['shadow'][$d['shadow']].'}'."\n";
 
         if (filled($this->site->custom_css)) {
-            $css .= "/* custom */\n".$this->site->custom_css."\n";
+            $css .= "/* custom */\n".$this->site->custom_css."\n"
+                // Custom CSS can restyle the phone menu but never leave it open over the page.
+                .'@media (max-width:900px){.nav .nav__menu{display:none!important}.nav:has(.nav__check:checked) .nav__menu{display:block!important}}'."\n";
         }
 
         return $this->scrambler()?->css($css) ?? $css;

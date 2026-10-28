@@ -765,7 +765,8 @@ class SiteGenerator
 
     protected function defaultTitle(string $type, array $def, string $lang): string
     {
-        return Lang::has("theme.page_titles.{$type}", $lang) ? __("theme.page_titles.{$type}", [], $lang) : $def['label'];
+        // Never the admin's Chinese label: it would end up as a page title and menu item.
+        return Lang::has("theme.page_titles.{$type}", $lang) ? __("theme.page_titles.{$type}", [], $lang) : Str::headline($type);
     }
 
     public function expandKeywords(Site $site): int

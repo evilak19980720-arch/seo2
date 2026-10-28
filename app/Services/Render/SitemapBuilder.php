@@ -46,7 +46,7 @@ class SitemapBuilder
         }
         foreach ($renderer->entryPages() as $entry) {
             $image = $entry->image ? $renderer->ctx->image($entry->image, 1400) : null;
-            $urls[] = [$site->url($renderer->ctx->entryPath($entry)), $entry->updated_at, $image ? [$site->baseUrl().$image['src']] : []];
+            $urls[] = [$site->url($renderer->ctx->entryPath($entry)), $entry->updated_at, $image ? [MediaPublisher::absolute($site, $image['src'])] : []];
         }
         if ($renderer->blogIsIndexable()) {
             $urls[] = [$site->url('blog'), $latestArticle, []];
@@ -54,7 +54,7 @@ class SitemapBuilder
         foreach ($renderer->articles() as $article) {
             if ($article->status === ArticleStatus::Published) {
                 $image = $article->featured_image ? $renderer->ctx->image($article->featured_image, 1400) : null;
-                $urls[] = [$site->url($article->path()), $article->updated_at ?? $article->published_at, $image ? [$site->baseUrl().$image['src']] : []];
+                $urls[] = [$site->url($article->path()), $article->updated_at ?? $article->published_at, $image ? [MediaPublisher::absolute($site, $image['src'])] : []];
             }
         }
 

@@ -519,4 +519,17 @@ p,li,dd,dt,td,th,figcaption,blockquote,.tile__body{overflow-wrap:anywhere}
 .cookie__actions{margin-top:.6rem}
 .cookie__actions .btn{min-height:40px;padding:0 1.1rem;flex:1}
 }
+/* Mobile menu: closed on load (form state is never restored), at most one
+   screen tall and scrollable, sub-pages as compact chips, ✕ to close. */
+.nav:has(.nav__check:checked) .nav__open{display:none}
+.nav:has(.nav__check:checked) .nav__close{display:inline}
+body:has(.nav__check:checked) .cookie{display:none}
+@media (max-width:900px){
+.nav__menu{max-height:calc(100dvh - 72px);overflow-y:auto;overscroll-behavior:contain}
+.has-mobile-bar .nav__menu{max-height:calc(100dvh - 72px - 64px)}
+.nav__links a{min-height:46px;padding:0 .5rem}
+.nav__sub{display:flex;flex-wrap:wrap;gap:.35rem;padding:0 0 .6rem .5rem}
+.nav__sub li{flex:none}
+.nav__sub a{min-height:36px;width:auto;padding:0 .8rem;font-size:.85rem;border:1px solid var(--line);border-radius:999px}
+}
 

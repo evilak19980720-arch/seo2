@@ -5,7 +5,6 @@ namespace App\Services\Sites;
 use App\Models\Site;
 use App\Support\Media;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 /**
@@ -56,9 +55,7 @@ class ReferenceImageImporter
 
             $ext = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_WEBP => 'webp'][$info[2]];
             $path = "brand/ref-{$site->id}/{$hash}.{$ext}";
-            try {
-                Storage::disk(Media::DISK)->put($path, $binary);
-            } catch (Throwable) {
+            if (! Media::put($path, $binary)) {
                 continue;
             }
             $media[] = ['type' => 'image', 'path' => $path, 'alt' => $site->product_name, 'caption' => null, 'source' => 'reference', 'source_url' => $image['url']];
@@ -85,9 +82,7 @@ class ReferenceImageImporter
         }
         $ext = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_WEBP => 'webp'][$info[2]];
         $path = "brand/ref-{$site->id}/".md5($binary).".{$ext}";
-        try {
-            Storage::disk(Media::DISK)->exists($path) || Storage::disk(Media::DISK)->put($path, $binary);
-        } catch (Throwable) {
+        if (! Media::exists($path) && ! Media::put($path, $binary)) {
             return null;
         }
 

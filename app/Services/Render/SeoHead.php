@@ -193,7 +193,7 @@ class SeoHead
                 '@id' => $site->url().'#organization',
                 'name' => $brand->company_name ?: $site->name,
                 'url' => $site->url(),
-                'logo' => $logo ? $site->baseUrl().$logo['src'] : null,
+                'logo' => $logo ? MediaPublisher::absolute($site, $logo['src']) : null,
                 'email' => $brand->company_email,
                 'address' => $brand->company_address,
             ]),
