@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\Domains\Pages;
 
 use App\Filament\Resources\Domains\DomainResource;
-use Filament\Actions\DeleteAction;
+use Filament\Actions\Action;
 use Filament\Resources\Pages\EditRecord;
 
 class EditDomain extends EditRecord
@@ -13,7 +13,7 @@ class EditDomain extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            DeleteAction::make(),
+            Action::make('dns')->label('解析记录')->url(fn () => DomainResource::getUrl('dns', ['record' => $this->record])),
         ];
     }
 }

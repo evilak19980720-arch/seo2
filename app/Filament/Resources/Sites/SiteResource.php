@@ -120,13 +120,14 @@ class SiteResource extends Resource
 
     public static function generateAction(): Action
     {
-        return Action::make('generate')->label('生成网站')->icon(Heroicon::OutlinedSparkles)->color('primary')
+        return Action::make('generate')->label('AI 生成模版和页面')->icon(Heroicon::OutlinedSparkles)->color('primary')
             ->requiresConfirmation()
             ->modalDescription('一次任务覆盖整站：设计配置、全部页面模板与文案、robots/sitemap/图标、Lighthouse 验收；已上线站点不会改动已有 URL。')
             ->disabled(fn (Site $r) => $r->status === SiteStatus::Generating)
             ->action(function (Site $r) {
                 app(SiteManager::class)->generate($r);
-                Notification::make()->success()->title('已加入生成队列，可在「生成任务」查看进度')->send();
+                Notification::make()->success()->title('已加入生成队列，可在「生成任务」查看进度')
+                    ->body('需要服务器上的队列进程在运行（Supervisor），否则任务会一直停在“排队中”。')->send();
             });
     }
 

@@ -9,9 +9,6 @@
 @endif
 <meta name="robots" content="{{ $head->noindex ? 'noindex, follow' : 'index, follow, max-image-preview:large' }}">
 <link rel="canonical" href="{{ $head->canonical }}">
-@foreach ($head->alternates as $alt)
-<link rel="alternate" hreflang="{{ $alt['hreflang'] }}" href="{{ $alt['href'] }}">
-@endforeach
 <meta property="og:type" content="{{ $head->ogType }}">
 <meta property="og:site_name" content="{{ $site->name }}">
 <meta property="og:title" content="{{ $head->title }}">

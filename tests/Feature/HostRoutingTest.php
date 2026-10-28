@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Ad;
 use App\Models\AdStat;
+use App\Models\Domain;
+use App\Models\Site;
 use App\Models\User;
 use App\Services\Render\StaticSiteBuilder;
 use App\Services\Sites\SiteGenerator;
@@ -68,7 +70,8 @@ class HostRoutingTest extends TestCase
         app(SiteManager::class)->delete($site);
 
         $this->get('https://velho.com.br/')->assertStatus(410);
-        $this->assertSame('available', $site->domain->fresh()->status);
+        $this->assertTrue(Domain::available()->whereKey($site->domain_id)->exists());
+        $this->assertNull(Site::withTrashed()->find($site->id));
     }
 
     public function test_preview_requires_login(): void

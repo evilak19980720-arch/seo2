@@ -7,7 +7,6 @@ use App\Filament\Resources\Sites\SiteResource;
 use App\Models\DesignVersion;
 use App\Services\Integrations\Lighthouse;
 use App\Services\Render\StaticSiteBuilder;
-use App\Services\Sites\SiteManager;
 use App\Services\Theme\DesignConfigValidator;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
@@ -76,7 +75,6 @@ class EditSite extends EditRecord
     protected function afterSave(): void
     {
         $site = $this->record;
-        app(SiteManager::class)->syncRelations($site, $this->form->getRawState()['related_site_ids'] ?? []);
 
         if ($site->wasChanged(['design_config', 'custom_css'])) {
             $version = (int) $site->designVersions()->max('version') + 1;

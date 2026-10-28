@@ -67,6 +67,84 @@ class Cloudflare
         }
     }
 
+    /**
+     * All zones the token can see (limited to the configured account when set).
+     *
+     * @return array<int, array{id: string, name: string, status: string, name_servers: array<int, string>}>
+     */
+    public function listZones(): array
+    {
+        $zones = [];
+        $page = 1;
+        do {
+            $json = $this->call('GET', '/zones', array_filter(['per_page' => 50, 'page' => $page, 'account.id' => $this->accountId]));
+            foreach ($json['result'] ?? [] as $zone) {
+                $zones[] = ['id' => $zone['id'], 'name' => $zone['name'], 'status' => $zone['status'], 'name_servers' => $zone['name_servers'] ?? []];
+            }
+            $pages = (int) ($json['result_info']['total_pages'] ?? 1);
+        } while ($page++ < $pages);
+
+        return $zones;
+    }
+
+    /** @return array{id: string, name: string, status: string, name_servers: array<int, string>} */
+    public function createZone(string $domain): array
+    {
+        if (! $this->accountId) {
+            throw new IntegrationException('添加域名到 Cloudflare 需要先在全局配置填写 Account ID');
+        }
+        $zone = $this->call('POST', '/zones', ['name' => $domain, 'account' => ['id' => $this->accountId], 'type' => 'full'])['result'];
+
+        return ['id' => $zone['id'], 'name' => $zone['name'], 'status' => $zone['status'], 'name_servers' => $zone['name_servers'] ?? []];
+    }
+
+    public function deleteZone(string $zoneId): void
+    {
+        $this->call('DELETE', "/zones/{$zoneId}");
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    public function dnsRecords(string $zoneId): array
+    {
+        $records = [];
+        $page = 1;
+        do {
+            $json = $this->call('GET', "/zones/{$zoneId}/dns_records", ['per_page' => 100, 'page' => $page]);
+            $records = array_merge($records, $json['result'] ?? []);
+            $pages = (int) ($json['result_info']['total_pages'] ?? 1);
+        } while ($page++ < $pages);
+
+        return $records;
+    }
+
+    public function createRecord(string $zoneId, array $record): array
+    {
+        return $this->call('POST', "/zones/{$zoneId}/dns_records", self::recordPayload($record))['result'];
+    }
+
+    public function updateRecord(string $zoneId, string $recordId, array $record): array
+    {
+        return $this->call('PUT', "/zones/{$zoneId}/dns_records/{$recordId}", self::recordPayload($record))['result'];
+    }
+
+    public function deleteRecord(string $zoneId, string $recordId): void
+    {
+        $this->call('DELETE', "/zones/{$zoneId}/dns_records/{$recordId}");
+    }
+
+    protected static function recordPayload(array $record): array
+    {
+        $payload = ['type' => $record['type'], 'name' => $record['name'], 'content' => $record['content'], 'ttl' => (int) ($record['ttl'] ?? 1)];
+        if (in_array($record['type'], ['A', 'AAAA', 'CNAME'], true)) {
+            $payload['proxied'] = (bool) ($record['proxied'] ?? false);
+        }
+        if (in_array($record['type'], ['MX', 'SRV', 'URI'], true)) {
+            $payload['priority'] = (int) ($record['priority'] ?? 10);
+        }
+
+        return $payload;
+    }
+
     public function zoneId(string $domain, bool $create = true): string
     {
         $zones = $this->call('GET', '/zones', ['name' => $domain])['result'] ?? [];

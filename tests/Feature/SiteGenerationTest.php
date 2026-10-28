@@ -6,7 +6,6 @@ use App\Enums\SiteStatus;
 use App\Models\GenerationTask;
 use App\Services\Render\StaticSiteBuilder;
 use App\Services\Sites\SiteGenerator;
-use App\Services\Sites\SiteManager;
 use App\Services\Theme\Color;
 use App\Support\Settings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -82,21 +81,13 @@ class SiteGenerationTest extends TestCase
         $this->assertFileExists(StaticSiteBuilder::dirFor($site).'/index.html');
     }
 
-    public function test_hreflang_links_language_sites_both_ways(): void
+    public function test_pages_declare_no_cross_site_hreflang(): void
     {
-        $pt = $this->makeSite(['domain' => 'jogo.com.br', 'status' => 'live']);
-        $en = $this->makeSite(['domain' => 'game.com', 'locale' => 'en-US', 'target_country' => 'US', 'status' => 'live']);
-        app(SiteManager::class)->syncRelations($pt, [$en->id]);
-        foreach ([$pt, $en] as $s) {
-            app(SiteGenerator::class)->generatePages($s);
-        }
+        $site = $this->makeSite(['domain' => 'jogo.com.br', 'status' => 'live']);
+        app(SiteGenerator::class)->generatePages($site);
 
-        app(StaticSiteBuilder::class)->buildAll($pt->fresh());
-        $html = file_get_contents(StaticSiteBuilder::dirFor($pt).'/index.html');
+        app(StaticSiteBuilder::class)->buildAll($site->fresh());
 
-        $this->assertStringContainsString('hreflang="pt-BR" href="https://jogo.com.br/"', $html);
-        $this->assertStringContainsString('hreflang="en-US" href="https://game.com/"', $html);
-        $this->assertStringContainsString('hreflang="x-default" href="https://game.com/"', $html);
-        $this->assertTrue($en->relatedSites()->whereKey($pt->id)->exists());
+        $this->assertStringNotContainsString('hreflang', file_get_contents(StaticSiteBuilder::dirFor($site).'/index.html'));
     }
 }

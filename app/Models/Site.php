@@ -77,12 +77,6 @@ class Site extends Model
         return $this->hasMany(SearchStat::class);
     }
 
-    /** Other-language sites of the same product (hreflang), stored symmetrically. */
-    public function relatedSites(): BelongsToMany
-    {
-        return $this->belongsToMany(Site::class, 'site_relations', 'site_id', 'related_site_id');
-    }
-
     public function host(): string
     {
         return $this->domain->name;

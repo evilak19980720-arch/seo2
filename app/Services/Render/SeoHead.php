@@ -3,11 +3,10 @@
 namespace App\Services\Render;
 
 use App\Models\Article;
-use App\Models\Site;
 
 /**
  * Builds the platform-owned <head> data: title, description, canonical,
- * robots, hreflang, Open Graph/Twitter and JSON-LD. Templates never decide
+ * robots, Open Graph/Twitter and JSON-LD. Templates never decide
  * these, so all sites stay technically consistent.
  */
 class SeoHead
@@ -26,9 +25,6 @@ class SeoHead
 
     public string $ogType = 'website';
 
-    /** @var array<int, array{hreflang: string, href: string}> */
-    public array $alternates = [];
-
     /** @var array<int, array> */
     public array $schema = [];
 
@@ -44,7 +40,6 @@ class SeoHead
         $head->description = self::limit((string) $description, 155);
         $head->canonical = $ctx->url($path);
         $head->noindex = $noindex;
-        $head->alternates = $head->hreflang($path);
         $head->schema = $head->baseSchema();
 
         return $head;
@@ -159,38 +154,6 @@ class SeoHead
                 'publisher' => ['@id' => $site->url().'#organization'],
             ],
         ];
-    }
-
-    /**
-     * Cross-domain hreflang between language sites of the same product.
-     * Only core pages map 1:1 by type; articles are per-language originals,
-     * so they only declare themselves.
-     */
-    protected function hreflang(string $path): array
-    {
-        $site = $this->ctx->site;
-        $related = $site->relatedSites()->with(['domain', 'pages'])->where('status', 'live')->get();
-        if ($related->isEmpty()) {
-            return [];
-        }
-
-        $pageType = $this->ctx->pages->first(fn ($p) => trim($p->slug, '/') === trim($path, '/'))?->type;
-        if ($pageType === null && trim($path, '/') !== '') {
-            return [];
-        }
-
-        $alternates = [['hreflang' => $site->locale, 'href' => $site->url($path)]];
-        foreach ($related as $other) {
-            $otherPage = $other->pages->firstWhere('type', $pageType ?? 'home');
-            if ($otherPage) {
-                $alternates[] = ['hreflang' => $other->locale, 'href' => $other->url($otherPage->slug)];
-            }
-        }
-        // x-default: English site if present, otherwise the current one.
-        $default = collect($alternates)->first(fn ($a) => str_starts_with(strtolower($a['hreflang']), 'en')) ?? $alternates[0];
-        $alternates[] = ['hreflang' => 'x-default', 'href' => $default['href']];
-
-        return $alternates;
     }
 
     public function jsonLd(): string

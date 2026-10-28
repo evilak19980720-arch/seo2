@@ -8,7 +8,6 @@ use App\Jobs\RebuildSiteJob;
 use App\Models\GenerationTask;
 use App\Models\Site;
 use App\Services\Render\StaticSiteBuilder;
-use Illuminate\Support\Facades\DB;
 
 /** Site lifecycle actions used by the admin panel and CLI. */
 class SiteManager
@@ -29,22 +28,6 @@ class SiteManager
         RebuildSiteJob::dispatch($site);
     }
 
-    /** Keep hreflang relations symmetric across all language sites of a product. */
-    public function syncRelations(Site $site, array $relatedIds): void
-    {
-        DB::transaction(function () use ($site, $relatedIds) {
-            $relatedIds = array_values(array_diff(array_map('intval', $relatedIds), [$site->id]));
-            $previous = $site->relatedSites()->pluck('sites.id')->all();
-            $site->relatedSites()->sync($relatedIds);
-            foreach (array_diff($previous, $relatedIds) as $removed) {
-                Site::find($removed)?->relatedSites()->detach($site->id);
-            }
-            foreach ($relatedIds as $id) {
-                Site::find($id)?->relatedSites()->syncWithoutDetaching([$site->id]);
-            }
-        });
-    }
-
     public function launch(Site $site): void
     {
         $site->update(['status' => SiteStatus::Live, 'launched_at' => $site->launched_at ?? now()]);
@@ -61,14 +44,13 @@ class SiteManager
         $site->update(['status' => SiteStatus::Live, 'auto_publish_paused' => false, 'pause_reason' => null]);
     }
 
-    /** Pages answer 410 Gone (not a DNS cut) so search engines drop them cleanly. */
+    /**
+     * Pages answer 410 Gone (not a DNS cut) so search engines drop them cleanly.
+     * The site row is removed for good so the domain can be bound to a new site.
+     */
     public function delete(Site $site): void
     {
         $this->builder->removeSite($site->load('domain'));
-        $site->update(['status' => SiteStatus::Deleted]);
-        $site->domain->update(['status' => 'available']);
-        $site->relatedSites()->detach();
-        DB::table('site_relations')->where('related_site_id', $site->id)->delete();
-        $site->delete();
+        $site->forceDelete();
     }
 }

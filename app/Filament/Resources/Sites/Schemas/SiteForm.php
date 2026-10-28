@@ -57,13 +57,15 @@ class SiteForm
                 TextInput::make('name')->label('网站名称')->required()->maxLength(120),
                 Select::make('domain_id')->label('根域名')->required()->searchable()->native(false)
                     ->options(fn (?Site $record) => Domain::query()
-                        ->where(fn ($q) => $q->where('status', 'available')->when($record, fn ($q) => $q->orWhere('id', $record->domain_id)))
+                        ->where(fn ($q) => $q->available()->when($record, fn ($q) => $q->orWhere('id', $record->domain_id)))
                         ->orderBy('name')->pluck('name', 'id'))
+                    ->unique(ignoreRecord: true)
+                    ->validationMessages(['unique' => '这个域名已经绑定了其他网站'])
                     ->disabledOn('edit')
-                    ->helperText('只列出可用域名；过期域名请确认原站主题与产品相关'),
+                    ->helperText('只列出从 Cloudflare 同步、且未绑定网站的域名；一个域名只能绑定一个网站'),
                 Select::make('locale')->label('网站语言')->required()->searchable()->native(false)->default('pt-BR')
                     ->options(config('locales.languages'))->disabledOn('edit')
-                    ->helperText('每个站点只用一种语言；同一产品的其他语言请另开站点并设为关联站点'),
+                    ->helperText('每个站点只用一种语言'),
                 Select::make('target_country')->label('目标国家')->required()->searchable()->native(false)->default('BR')
                     ->options(config('locales.countries')),
                 FileUpload::make('logo_path')->label('LOGO')->image()->disk('public')->directory('logos')->maxSize(2048)
@@ -78,13 +80,7 @@ class SiteForm
                 Textarea::make('description')->label('首页描述')->rows(2)->maxLength(320)
                     ->helperText(fn (?string $state) => '约 155 字符；当前 '.mb_strlen((string) $state).' 字符')->live(onBlur: true),
             ])->description('留空则在生成网站时由 AI 基于品牌资料生成'),
-            Section::make('关联与统计')->columns(2)->collapsible()->schema([
-                Select::make('related_site_ids')->label('关联站点（hreflang）')->multiple()->searchable()->native(false)
-                    ->options(fn (?Site $record) => Site::with('domain')->when($record, fn ($q) => $q->whereKeyNot($record->id))->get()
-                        ->mapWithKeys(fn ($s) => [$s->id => "{$s->name} · {$s->locale} · {$s->domain->name}"]))
-                    ->afterStateHydrated(fn (Select $component, ?Site $record) => $component->state($record?->relatedSites()->pluck('sites.id')->all() ?? []))
-                    ->dehydrated(false)
-                    ->helperText('同一产品的其他语言站点，互相声明 hreflang；可空'),
+            Section::make('统计')->columns(2)->collapsible()->schema([
                 TextInput::make('ga4_measurement_id')->label('GA4 衡量 ID')->placeholder('G-XXXXXXX'),
                 TextInput::make('ga4_property_id')->label('GA4 媒体资源 ID')->numeric()->helperText('用于 Data API 拉取访问统计'),
             ]),
@@ -135,7 +131,9 @@ class SiteForm
     protected static function design(): array
     {
         return [
-            Text::make('设计配置由 AI 按白名单生成并自动校验（字体白名单、对比度 ≥ 4.5:1、变体必须存在）。保存后需点击「更新」重新渲染静态页。'),
+            Text::make(fn (?Site $record) => blank($record?->design_config)
+                ? '这个网站还没有模版。点击页面右上角「AI 生成模版和页面」，AI 会根据品牌资料和参考网站生成专属设计（配色、字体、版式）和全部核心页面，进度在「生成任务」标签查看。'
+                : '网站模版（设计配置）由 AI 生成并自动校验（字体白名单、对比度 ≥ 4.5:1、变体必须存在），可在下面微调；想整体重做就再点一次右上角「AI 生成模版和页面」，旧版本保存在「设计版本」可回滚。保存后点击「更新」重新渲染静态页。'),
             CodeEditor::make('design_config')->label('设计配置 JSON')->language(Language::Json)
                 ->formatStateUsing(fn ($state) => $state ? json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '')
                 ->dehydrateStateUsing(fn ($state) => $state ? json_decode($state, true) : null)
@@ -216,12 +214,12 @@ class SiteForm
 
     public static function copyBrandAction(): Action
     {
-        return Action::make('copyBrand')->label('从关联站点复制')->icon('heroicon-o-language')
-            ->visible(fn (Site $record) => $record->relatedSites()->exists())
-            ->modalDescription('复制关联站点的品牌资料并由 AI 转为本站语言，之后两份独立维护。')
+        return Action::make('copyBrand')->label('从其他网站复制')->icon('heroicon-o-language')
+            ->visible(fn (Site $record) => Site::whereKeyNot($record->id)->exists())
+            ->modalDescription('复制另一个网站的品牌资料并由 AI 转为本站语言，之后两份独立维护。')
             ->schema([
-                Select::make('source_id')->label('来源站点')->required()
-                    ->options(fn (Site $record) => $record->relatedSites()->get()->mapWithKeys(fn ($s) => [$s->id => "{$s->name} · {$s->locale}"])),
+                Select::make('source_id')->label('来源网站')->required()->searchable()
+                    ->options(fn (Site $record) => Site::with('domain')->whereKeyNot($record->id)->get()->mapWithKeys(fn ($s) => [$s->id => "{$s->name} · {$s->locale} · {$s->domain->name}"])),
             ])
             ->action(function (array $data, Site $record) {
                 try {

@@ -39,7 +39,7 @@ abstract class TestCase extends BaseTestCase
 
     protected function makeSite(array $attrs = [], array $brand = []): Site
     {
-        $domain = Domain::create(['name' => $attrs['domain'] ?? 'jogo-'.uniqid().'.com.br', 'status' => 'used']);
+        $domain = Domain::create(['name' => $attrs['domain'] ?? 'jogo-'.uniqid().'.com.br', 'cf_zone_id' => 'zone-'.uniqid(), 'cf_status' => 'active']);
         unset($attrs['domain']);
         $site = Site::create($attrs + [
             'domain_id' => $domain->id, 'site_type' => 'game', 'product_name' => 'Galaxy Run', 'name' => 'Galaxy Run',
