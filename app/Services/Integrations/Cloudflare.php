@@ -158,14 +158,20 @@ class Cloudflare
         return $this->call('POST', '/zones', ['name' => $domain, 'account' => ['id' => $this->accountId], 'type' => 'full'])['result']['id'];
     }
 
+    /**
+     * Point a name at a value. For A/AAAA/CNAME every other address record on the
+     * same name (other IPs, a CNAME vs A) is removed so the old origin stops
+     * receiving traffic; TXT records are only added when missing.
+     */
     public function upsertRecord(string $zoneId, string $type, string $name, string $content, bool $proxied = false, int $ttl = 1): array
     {
-        $existing = $this->call('GET', "/zones/{$zoneId}/dns_records", ['type' => $type, 'name' => $name])['result'] ?? [];
+        $name = strtolower(rtrim($name, '.'));
+        $sameName = array_values(array_filter($this->dnsRecords($zoneId), fn ($r) => strtolower(rtrim($r['name'], '.')) === $name));
         $payload = ['type' => $type, 'name' => $name, 'content' => $content, 'ttl' => $ttl] + ($type === 'TXT' ? [] : ['proxied' => $proxied]);
 
         if ($type === 'TXT') {
-            foreach ($existing as $record) {
-                if (trim($record['content'], '"') === $content) {
+            foreach ($sameName as $record) {
+                if ($record['type'] === 'TXT' && trim($record['content'], '"') === $content) {
                     return $record;
                 }
             }
@@ -173,8 +179,18 @@ class Cloudflare
             return $this->call('POST', "/zones/{$zoneId}/dns_records", $payload)['result'];
         }
 
-        return $existing !== []
-            ? $this->call('PUT', "/zones/{$zoneId}/dns_records/{$existing[0]['id']}", $payload)['result']
+        $address = ['A', 'AAAA', 'CNAME'];
+        $conflicting = array_filter($sameName, fn ($r) => in_array($r['type'], in_array($type, $address, true) ? $address : [$type], true));
+        $keep = collect($conflicting)->firstWhere('type', $type);
+
+        foreach ($conflicting as $record) {
+            if ($record['id'] !== ($keep['id'] ?? null)) {
+                $this->deleteRecord($zoneId, $record['id']);
+            }
+        }
+
+        return $keep
+            ? $this->call('PUT', "/zones/{$zoneId}/dns_records/{$keep['id']}", $payload)['result']
             : $this->call('POST', "/zones/{$zoneId}/dns_records", $payload)['result'];
     }
 

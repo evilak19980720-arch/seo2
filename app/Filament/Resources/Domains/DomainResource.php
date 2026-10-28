@@ -96,7 +96,7 @@ class DomainResource extends Resource
                     ->url(fn (Domain $record) => self::getUrl('dns', ['record' => $record]))
                     ->visible(fn (Domain $record) => filled($record->cf_zone_id) && $record->cf_status !== 'missing'),
                 Action::make('provision')->label('一键接入')->icon(Heroicon::OutlinedBolt)
-                    ->requiresConfirmation()->modalDescription('@ 和 www 解析到服务器（开启代理）、SSL Full (strict)、签发源站证书。')
+                    ->requiresConfirmation()->modalDescription('@ 和 www 解析到服务器（开启代理，替换原有的 A/AAAA/CNAME 记录）、SSL Full (strict)、签发源站证书。')
                     ->action(fn (Domain $record) => self::provision(collect([$record]))),
                 EditAction::make()->label('编辑'),
                 self::deleteAction(),
@@ -211,7 +211,7 @@ class DomainResource extends Resource
     protected static function bulkDnsAction(): BulkAction
     {
         return BulkAction::make('dns')->label('批量设置解析')->icon(Heroicon::OutlinedListBullet)
-            ->modalDescription('A / AAAA / CNAME 会覆盖同名同类型的已有记录；TXT、MX 等会新增。')
+            ->modalDescription('A / AAAA / CNAME 会替换同名的全部 A / AAAA / CNAME 旧记录；TXT、MX 等会新增。')
             ->schema(self::dnsFields(bulk: true))
             ->action(function (array $data, Collection $records) {
                 $cf = new Cloudflare;
