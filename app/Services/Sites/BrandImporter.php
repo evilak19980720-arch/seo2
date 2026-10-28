@@ -5,8 +5,8 @@ namespace App\Services\Sites;
 use App\Enums\PromptType;
 use App\Models\Site;
 use App\Services\Ai\AiManager;
+use App\Support\Media;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Process\Process;
 
 /**
@@ -38,7 +38,10 @@ class BrandImporter
         }
 
         foreach ($files as $path) {
-            $abs = Storage::disk('public')->path($path);
+            $abs = Media::localPath($path);
+            if (! $abs) {
+                continue;
+            }
             $mime = mime_content_type($abs) ?: '';
             if (str_starts_with($mime, 'image/')) {
                 $images[] = 'data:'.$mime.';base64,'.base64_encode(file_get_contents($abs));

@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Services\Install\ServerConfig;
 use App\Services\Integrations\Cloudflare;
 use App\Services\Integrations\GoogleAuth;
+use App\Support\Media;
 use App\Support\Settings;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -107,6 +108,7 @@ class GlobalSettings extends Page
                         TextInput::make('oss_endpoint')->label('Endpoint'),
                         TextInput::make('oss_cdn_url')->label('CDN 域名')->url(),
                     ]),
+                    Text::make('填写 Access Key、Secret、Bucket 并保存后，后台上传的 LOGO、品牌图片、参考截图、文章图片等都会存到对象存储；未配置时存在服务器本地。阿里云 OSS 的 Region 填 cn-hangzhou 这类地域 ID，Endpoint 可留空自动生成。'),
                 ]),
                 Tab::make('搜索引擎')->schema([
                     Textarea::make('gsc_service_account')->label('Google 服务账号 JSON')->rows(6)->helperText($secretHint('gsc_service_account').'；需启用 Search Console API、Site Verification API、Analytics Data API'),
@@ -133,6 +135,7 @@ class GlobalSettings extends Page
                         Action::make('save')->label('保存')->submit('save'),
                         Action::make('testCloudflare')->label('测试 Cloudflare')->color('gray')->action(fn () => $this->test('cloudflare')),
                         Action::make('testGoogle')->label('测试 Google')->color('gray')->action(fn () => $this->test('google')),
+                        Action::make('testOss')->label('测试对象存储')->color('gray')->action(fn () => $this->test('oss')),
                     ]),
                 ]),
         ]);
@@ -164,10 +167,26 @@ class GlobalSettings extends Page
     protected function test(string $service): void
     {
         try {
-            $result = $service === 'cloudflare' ? 'Token '.(new Cloudflare)->verifyToken() : '获取 token 成功（'.strlen(GoogleAuth::token()).' 字符）';
+            $result = match ($service) {
+                'cloudflare' => 'Token '.(new Cloudflare)->verifyToken(),
+                'oss' => $this->testOss(),
+                default => '获取 token 成功（'.strlen(GoogleAuth::token()).' 字符）',
+            };
             Notification::make()->success()->title($result)->send();
         } catch (Throwable $e) {
             Notification::make()->danger()->title($e->getMessage())->send();
         }
+    }
+
+    protected function testOss(): string
+    {
+        if (! Media::configured()) {
+            throw new \RuntimeException('请先填写 Access Key、Secret、Bucket 并保存');
+        }
+        if ($error = Media::test()) {
+            throw new \RuntimeException('对象存储连接失败：'.$error);
+        }
+
+        return '对象存储读写正常';
     }
 }

@@ -13,6 +13,7 @@ use App\Models\Article;
 use App\Models\Site;
 use App\Services\Content\PublishScheduler;
 use App\Services\Render\HtmlSanitizer;
+use App\Support\Media;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -78,7 +79,7 @@ class ArticleResource extends Resource
                     TextInput::make('author')->label('作者')->placeholder('品牌编辑部'),
                     TextInput::make('meta_title')->label('SEO 标题')->maxLength(70)->helperText('约 60 字符'),
                     Textarea::make('meta_description')->label('SEO 描述')->rows(3)->maxLength(320)->helperText('约 155 字符'),
-                    FileUpload::make('featured_image')->label('特色图')->image()->disk('public')->directory('articles'),
+                    FileUpload::make('featured_image')->label('特色图')->image()->disk(Media::DISK)->directory('articles'),
                     TextInput::make('featured_image_alt')->label('特色图 alt'),
                     Textarea::make('block_reason')->label('拦截原因')->rows(4)->disabled()->visible(fn (?Article $record) => filled($record?->block_reason)),
                     TextInput::make('similarity_score')->label('相似度得分')->disabled(),

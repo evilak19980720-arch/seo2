@@ -11,6 +11,7 @@ use App\Services\Ai\AiManager;
 use App\Services\Render\SeoHead;
 use App\Services\Sites\BrandImporter;
 use App\Services\Theme\CustomCssValidator;
+use App\Support\Media;
 use Filament\Actions\Action;
 use Filament\Forms\Components\CodeEditor;
 use Filament\Forms\Components\CodeEditor\Enums\Language;
@@ -70,12 +71,12 @@ class SiteForm
                     ->helperText('每个站点只用一种语言'),
                 Select::make('target_country')->label('目标国家')->required()->searchable()->native(false)->default('BR')
                     ->options(config('locales.countries')),
-                FileUpload::make('logo_path')->label('LOGO')->image()->disk('public')->directory('logos')->maxSize(2048)
+                FileUpload::make('logo_path')->label('LOGO')->image()->disk(Media::DISK)->directory('logos')->maxSize(2048)
                     ->helperText('自动生成 favicon.ico、apple-touch-icon、192/512 图标和 manifest'),
                 TextInput::make('reference_url')->label('参考网站')->url()
                     ->helperText('只提取配色、字体和布局结构，不复制文案、LOGO 和品牌名'),
                 FileUpload::make('reference_images')->label('参考截图')->image()->multiple()->maxFiles(3)->maxSize(4096)
-                    ->disk('public')->directory('reference')->columnSpanFull()
+                    ->disk(Media::DISK)->directory('reference')->columnSpanFull()
                     ->helperText('参考网站有防护、无法抓取时上传 1-3 张截图（首页首屏最重要）；会从截图中提取配色，有视觉模型时也交给 AI 参考布局'),
             ]),
             Section::make('标题与描述')->schema([
@@ -114,7 +115,7 @@ class SiteForm
                 Repeater::make('media')->label('截图 / 产品图 / 视频')->columns(4)->defaultItems(0)->reorderable()->addActionLabel('添加素材')
                     ->schema([
                         Select::make('type')->label('类型')->options(['image' => '图片', 'video' => '视频'])->default('image')->live(),
-                        FileUpload::make('path')->label('图片')->image()->disk('public')->directory('brand')->maxSize(8192)
+                        FileUpload::make('path')->label('图片')->image()->disk(Media::DISK)->directory('brand')->maxSize(8192)
                             ->visible(fn (Get $get) => $get('type') !== 'video'),
                         TextInput::make('url')->label('视频链接')->url()->visible(fn (Get $get) => $get('type') === 'video'),
                         TextInput::make('alt')->label('alt（站点语言）'),
@@ -205,7 +206,7 @@ class SiteForm
             ->modalDescription('输入应用商店链接或产品页链接，或上传 PDF / 图片，AI 提取后覆盖当前品牌资料中的对应字段。')
             ->schema([
                 TextInput::make('url')->label('链接')->url(),
-                FileUpload::make('files')->label('PDF / 图片')->multiple()->disk('public')->directory('imports')->acceptedFileTypes(['application/pdf', 'image/*']),
+                FileUpload::make('files')->label('PDF / 图片')->multiple()->disk(Media::DISK)->directory('imports')->acceptedFileTypes(['application/pdf', 'image/*']),
             ])
             ->action(function (array $data, Site $record) {
                 try {

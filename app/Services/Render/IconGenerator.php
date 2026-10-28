@@ -4,7 +4,7 @@ namespace App\Services\Render;
 
 use App\Models\Site;
 use App\Services\Theme\Color;
-use Illuminate\Support\Facades\Storage;
+use App\Support\Media;
 
 /**
  * favicon.ico, apple-touch-icon (180), 192/512 PNG icons and the web
@@ -16,7 +16,7 @@ class IconGenerator
     {
         $source = null;
         if ($site->logo_path) {
-            $binary = Storage::disk('public')->exists($site->logo_path) ? Storage::disk('public')->get($site->logo_path) : (is_file($site->logo_path) ? file_get_contents($site->logo_path) : null);
+            $binary = Media::get($site->logo_path) ?? (is_file($site->logo_path) ? file_get_contents($site->logo_path) : null);
             $source = $binary ? @imagecreatefromstring($binary) : null;
         }
         $source ??= self::letterMark($site->name, $colors['primary'], $colors['on_primary']);

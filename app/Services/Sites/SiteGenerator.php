@@ -22,9 +22,9 @@ use App\Services\Theme\CustomCssValidator;
 use App\Services\Theme\DefaultDesign;
 use App\Services\Theme\DesignConfigValidator;
 use App\Services\Theme\ReferenceAnalyzer;
+use App\Support\Media;
 use App\Support\Settings;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -143,7 +143,7 @@ class SiteGenerator
         }
 
         // Uploaded screenshots: their colours fill whatever the HTML/CSS analysis could not find.
-        $shotPaths = collect($site->reference_images ?? [])->map(fn ($p) => Storage::disk('public')->path($p))->filter(fn ($p) => is_file($p))->values()->all();
+        $shotPaths = collect($site->reference_images ?? [])->map(fn ($p) => Media::localPath($p))->filter(fn ($p) => $p && is_file($p))->values()->all();
         if ($shotPaths !== [] && ($fromImages = rescue(fn () => $this->reference->imageColors($shotPaths), null))) {
             $reference ??= ['url' => $site->reference_url, 'title' => null, 'colors' => [], 'fonts' => [], 'menu' => [], 'sections' => []];
             foreach (['primary', 'background', 'text'] as $key) {
@@ -393,10 +393,10 @@ class SiteGenerator
     /** Dominant non-neutral colour of the logo, if any. */
     protected function logoColor(Site $site): ?string
     {
-        if (! $site->logo_path || ! Storage::disk('public')->exists($site->logo_path)) {
+        if (! $site->logo_path || ! ($logo = Media::get($site->logo_path))) {
             return null;
         }
-        $img = @imagecreatefromstring(Storage::disk('public')->get($site->logo_path));
+        $img = @imagecreatefromstring($logo);
         if (! $img) {
             return null;
         }

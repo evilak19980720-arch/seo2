@@ -2,8 +2,8 @@
 
 namespace App\Services\Render;
 
+use App\Support\Media;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 /**
@@ -95,7 +95,7 @@ class MediaPublisher
                 return file_get_contents($source);
             }
 
-            return Storage::disk('public')->exists($source) ? Storage::disk('public')->get($source) : null;
+            return Media::get($source);
         } catch (Throwable) {
             return null;
         }
