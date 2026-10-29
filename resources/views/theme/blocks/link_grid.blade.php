@@ -4,7 +4,10 @@
     $links = [];
     if (is_string($targets) && str_starts_with($targets, 'sections:')) {
         $target = substr($targets, 9);
-        if ($ctx->pages->has($target) && ! in_array($target, $ctx->hidden, true)) {
+        if ($ctx->pages->has($target) && ! in_array($target, $ctx->hidden, true) && $ctx->children($target)->isNotEmpty()) {
+            // A split page's sections are pages of their own (level 3).
+            $links = $ctx->children($target)->map(fn ($c) => ['label' => $c['title'], 'href' => $c['href'], 'count' => $c['count'] ?? 2])->all();
+        } elseif ($ctx->pages->has($target) && ! in_array($target, $ctx->hidden, true)) {
             foreach ($ctx->blocks($target) as $entry) {
                 $def = $ctx->section($target, $entry['key'] ?? null);
                 if (! empty($def['collection']) && $ctx->entries($def['collection'], $def['filter'] ?? 'all')->isNotEmpty()) {

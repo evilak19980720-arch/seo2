@@ -6,6 +6,7 @@
         'provider' => $games->map(fn ($g) => is_string($g->get('provider')) ? trim($g->get('provider')) : null)->filter()->values(),
         'theme' => $values('themes'),
         'mechanic' => $values('mechanics'),
+        'device' => $values('devices'),
     ], fn ($list) => $list->unique()->count() > 1 && $list->countBy()->max() > 1));
     // Tabs that would always be empty are left out. No personal tabs (recently played, favourites): brand sites have no accounts.
     $tabs = collect(['all', 'hot', 'new', 'classic'])->filter(fn ($t) => $t === 'all' || $games->contains(fn ($g) => in_array($t, $g->tags(), true)));
@@ -19,7 +20,7 @@
 <div class="lobby__tools">
 <input class="lobby__search" type="search" data-q placeholder="{{ $ctx->t('search_games') }}" aria-label="{{ $ctx->t('search_games') }}">
 @foreach ($filters as $name => $options)
-<select class="lobby__select" data-filter="{{ $name }}" aria-label="{{ $ctx->t($name) }}"><option value="">{{ $ctx->t($name) }}: {{ $ctx->t('any') }}</option>@foreach ($options as $option)<option value="{{ $option }}">{{ $option }}</option>@endforeach</select>
+<select class="lobby__select" data-filter="{{ $name }}" aria-label="{{ $ctx->t($name) }}"><option value="">{{ $ctx->t($name) }}: {{ $ctx->t('any') }}</option>@foreach ($options as $option)<option value="{{ $option }}">{{ $name === 'device' && \Illuminate\Support\Facades\Lang::has('theme.device_labels.'.$option, $ctx->lang) ? $ctx->t('device_labels.'.$option) : $option }}</option>@endforeach</select>
 @endforeach
 </div>
 </div>
@@ -28,7 +29,7 @@
 @php($shapeStyle = $shape['ratio'] ? '--tile-ratio:'.$shape['ratio'].($shape['cap'] ? ';--tile-cap:'.$shape['cap'].'px' : '') : null)
 <div class="lobby__grid{{ $shapeClass ? ' '.$shapeClass : '' }}"@if ($shapeStyle) style="{{ $shapeStyle }}"@endif>
 @foreach ($games as $game)
-<div class="lobby__item" data-game="{{ $game->slug }}" data-tags="{{ implode(' ', $game->tags()) }}" data-name="{{ mb_strtolower($game->title.' '.$game->get('provider')) }}" data-provider="|{{ is_string($game->get('provider')) ? trim($game->get('provider')) : '' }}|" data-theme="|{{ implode('|', array_map('trim', array_filter((array) $game->get('themes', []), 'is_string'))) }}|" data-mechanic="|{{ implode('|', array_map('trim', array_filter((array) $game->get('mechanics', []), 'is_string'))) }}|">
+<div class="lobby__item" data-game="{{ $game->slug }}" data-tags="{{ implode(' ', $game->tags()) }}" data-name="{{ mb_strtolower($game->title.' '.$game->get('provider')) }}" data-provider="|{{ is_string($game->get('provider')) ? trim($game->get('provider')) : '' }}|" data-theme="|{{ implode('|', array_map('trim', array_filter((array) $game->get('themes', []), 'is_string'))) }}|" data-mechanic="|{{ implode('|', array_map('trim', array_filter((array) $game->get('mechanics', []), 'is_string'))) }}|" data-device="|{{ implode('|', array_map('trim', array_filter((array) $game->get('devices', []), 'is_string'))) }}|">
 @include('theme.partials.entry-card', ['entry' => $game])
 </div>
 @endforeach

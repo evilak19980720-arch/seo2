@@ -143,6 +143,13 @@ class SiteGenerator
                 if ($count === 0) {
                     $task->progress('没有读到游戏、优惠等数据，相关列表页会先不收录（noindex）');
                 }
+                // Type, theme and knowledge pages keep only the level-3 pages the data fills.
+                $fitted = SiteStructure::fit($site, config("site_types.{$site->site_type}"), $site->structure ?? []);
+                if ($fitted !== $site->structure) {
+                    $site->forceFill(['structure' => $fitted])->save();
+                    $task->progress('三级页面：'.collect(config("site_types.{$site->site_type}.pages"))->filter(fn ($d, $t) => ! empty($d['split']) && isset($fitted['pages'][$t]))
+                        ->map(fn ($d, $t) => $d['label'].' '.(count($fitted['pages'][$t]) - count($d['split']['index'] ?? [])).' 个')->implode('，'));
+                }
                 // Inner-page pictures join the home page's, so blocks without their own picture have more to show.
                 $inner = collect($this->referencePages)->flatMap(fn ($p) => $p['images'] ?? [])->filter(fn ($i) => filled($i['url'] ?? null))->unique('url')->values()->all();
                 if ($site->reference_import_images && $inner !== []) {
@@ -613,7 +620,7 @@ class SiteGenerator
             'label' => $this->defaultTitle($type, $p, $lang),
             'default_slug' => $p['slug'][$lang] ?? $p['slug']['en'],
             'blocks' => isset($p['sections']) ? null : $designBlocks($type, $p),
-            'sections' => isset($p['sections']) ? collect($p['sections'])->mapWithKeys(fn ($s) => [$s['key'] => ['block' => $s['block'], 'topic' => $s['topic'].(empty($s['source']) ? '' : ' [sources only]')]])->all() : null,
+            'sections' => isset($p['sections']) ? collect($p['sections'])->mapWithKeys(fn ($s) => [$s['key'] => ['block' => $s['block'], 'topic' => $s['topic'].(empty($s['source']) ? '' : ' [sources only]').$this->ownPageHint($p, $s)]])->all() : null,
             'min_words' => $this->minWords($site, $type) ?: null,
         ]))->all();
         $ai = $this->askPages($site, $spec);
@@ -677,6 +684,9 @@ class SiteGenerator
             }
             $titles[] = $title;
             $content = $this->cleanBlocks($data['blocks'] ?? [], $type, $site, $facts);
+            if (! empty($def['split'])) {
+                $content = $this->childSlugs($content, $def, $existing?->content ?? [], $lang);
+            }
             if ($type === 'home') {
                 $content = $this->homeHeading($site, $content);
             }
@@ -699,9 +709,14 @@ class SiteGenerator
         }
 
         // Pages the site type or design no longer has (extra pages, a changed site type).
-        $site->pages()->whereNotIn('type', array_keys($types))->get()->each(function (Page $page) use ($site) {
+        // A page merged into another (config "moved") sends its old address there (301), else it is gone (410).
+        $moved = (array) ($site->typeConfig()['moved'] ?? []);
+        $slugs = $site->pages()->pluck('slug', 'type');
+        $site->pages()->whereNotIn('type', array_keys($types))->get()->each(function (Page $page) use ($site, $moved, $slugs) {
             if ($site->launched_at) {
-                GoneUrl::firstOrCreate(['host' => $site->domain->name, 'path' => trim($page->slug, '/')]);
+                $to = $moved[$page->type] ?? null;
+                $target = $to === 'blog' ? 'blog' : ($to !== null ? $slugs[$to] ?? null : null);
+                GoneUrl::updateOrCreate(['host' => $site->domain->name, 'path' => trim($page->slug, '/')], ['to' => $target !== null ? '/'.trim($target, '/').'/' : null]);
             }
             $page->delete();
         });
@@ -713,9 +728,26 @@ class SiteGenerator
      *
      * @return array<string, mixed> page type => AI page data
      */
+    /** Sections of a split page become pages of their own, so they are written as such. */
+    protected function ownPageHint(array $page, array $section): string
+    {
+        if (empty($page['split']) || in_array($section['key'], (array) ($page['split']['index'] ?? []), true)) {
+            return '';
+        }
+
+        return $section['block'] === 'prose'
+            ? ' [own page: a complete article of about 250 words with its own heading]'
+            : ' [own page: a heading and an intro of two or three sentences about this group]';
+    }
+
     protected function askPages(Site $site, array $spec): array
     {
-        $chunks = ! empty($site->typeConfig()['sectioned']) ? array_chunk($spec, 4, true) : [$spec];
+        $types = $site->typeConfig()['pages'];
+        // Split pages write many sections: each is asked alone, the others four at a time.
+        $chunks = ! empty($site->typeConfig()['sectioned'])
+            ? [...array_map(fn ($t) => [$t => $spec[$t]], array_keys(array_filter($spec, fn ($_, $t) => ! empty($types[$t]['split']), ARRAY_FILTER_USE_BOTH))),
+                ...array_chunk(array_filter($spec, fn ($_, $t) => empty($types[$t]['split']), ARRAY_FILTER_USE_BOTH), 4, true)]
+            : [$spec];
         $pages = [];
         foreach ($chunks as $chunk) {
             try {
@@ -731,6 +763,24 @@ class SiteGenerator
         }
 
         return $pages;
+    }
+
+    /** Level-3 pages keep the address they first got (from their heading); new ones get one from theirs. */
+    protected function childSlugs(array $content, array $def, array $previous, string $lang): array
+    {
+        $used = [];
+        foreach ($def['sections'] as $section) {
+            $key = $section['key'];
+            if (in_array($key, (array) ($def['split']['index'] ?? []), true) || ! is_array($content[$key] ?? null)) {
+                continue;
+            }
+            $slug = $previous[$key]['slug'] ?? Str::slug((string) ($content[$key]['heading'] ?? ''), '-', $lang);
+            $slug = $slug !== '' && ! in_array($slug, $used, true) && mb_strlen($slug) <= 60 ? $slug : str_replace('_', '-', $key);
+            $used[] = $slug;
+            $content[$key]['slug'] = $slug;
+        }
+
+        return $content;
     }
 
     /** Words a page needs; pool presets set their own per page (scaled by the global setting). */

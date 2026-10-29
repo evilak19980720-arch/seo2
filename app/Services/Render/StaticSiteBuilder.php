@@ -61,6 +61,10 @@ class StaticSiteBuilder
             $written[] = $page->slug;
             $tick("page:{$page->type}");
         }
+        foreach ($renderer->childPages() as [$page, $child]) {
+            $this->write($tmp, $child['path'], $renderer->renderChild($page, $child));
+            $written[] = $child['path'];
+        }
         foreach ($entries as $entry) {
             $path = $renderer->ctx->entryPath($entry);
             $this->write($tmp, $path, $renderer->renderEntry($entry));

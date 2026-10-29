@@ -2,7 +2,9 @@
 
 namespace App\Services\Sites;
 
+use App\Models\Entry;
 use App\Models\Site;
+use Illuminate\Support\Collection;
 use Random\Engine\Mt19937;
 use Random\Randomizer;
 
@@ -262,6 +264,78 @@ class SiteStructure
         }
 
         return $type;
+    }
+
+    /**
+     * Split pages (type, theme, knowledge…) get one level-3 page per section,
+     * so only sections with real content are kept: a collection with at least
+     * "min_items" items, an article about a mechanic the site's games use (or a
+     * core topic). Children a launched site already has stay while they list
+     * anything, so their URLs keep working. The index sections always stay.
+     */
+    public static function fit(Site $site, array $type, array $structure): array
+    {
+        $entries = $site->entries()->get();
+        $launched = $site->exists && $site->launched_at;
+        foreach ($type['pages'] as $pageType => $def) {
+            if (empty($def['split']) || ! isset($structure['pages'][$pageType])) {
+                continue;
+            }
+            $split = $def['split'];
+            $index = (array) ($split['index'] ?? []);
+            $before = $structure['pages'][$pageType];
+            $scores = [];
+            foreach ($def['sections'] as $order => $section) {
+                if (in_array($section['key'], $index, true)) {
+                    continue;
+                }
+                $count = self::itemCount($entries, $section);
+                $kept = $launched && in_array($section['key'], $before, true) && $count > 0;
+                $enough = ! empty($section['collection']) ? $count >= (int) ($split['min_items'] ?? 1) : ($count > 0 || ! empty($section['core']));
+                if ($kept || $enough) {
+                    $scores[$section['key']] = [$kept ? 1 : 0, $count, -$order];
+                }
+            }
+            arsort($scores);
+            $children = array_slice(array_keys($scores), 0, (int) ($split['max'] ?? 12));
+            $order = array_column($def['sections'], 'key');
+            $keys = array_values(array_filter($order, fn ($k) => in_array($k, $index, true) || in_array($k, $children, true)));
+            $structure['pages'][$pageType] = $keys;
+        }
+
+        return $structure;
+    }
+
+    /** How many site items a section is about: the items its list shows, or the games whose mechanics it explains. */
+    public static function itemCount(Collection $entries, array $section): int
+    {
+        if (! empty($section['collection'])) {
+            return $entries->where('collection', $section['collection'])->filter(fn (Entry $e) => self::matches($e, $section['filter'] ?? 'all'))->count();
+        }
+        if (empty($section['match'])) {
+            return 0;
+        }
+        $words = array_map('mb_strtolower', (array) $section['match']);
+
+        return $entries->where('collection', 'game')->filter(function (Entry $e) use ($words) {
+            $text = mb_strtolower(implode(' ', array_filter(array_merge((array) $e->get('mechanics', []), (array) $e->get('types', [])), 'is_string')));
+
+            return $text !== '' && collect($words)->contains(fn ($w) => str_contains($text, $w));
+        })->count();
+    }
+
+    /** Whether an item belongs to a classification filter (type:, theme:, device:, tag:, or everything). */
+    public static function matches(Entry $entry, string $filter): bool
+    {
+        [$kind, $value] = array_pad(explode(':', $filter, 2), 2, null);
+
+        return match ($kind) {
+            'type' => in_array($value, (array) $entry->get('types', []), true),
+            'theme' => in_array($value, (array) $entry->get('theme_keys', []), true),
+            'device' => in_array($value, (array) $entry->get('devices', []), true),
+            'tag' => in_array($value, $entry->tags(), true),
+            default => true,
+        };
     }
 
     /** Page type that hosts a collection's detail pages on this site, if any. */

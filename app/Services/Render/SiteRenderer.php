@@ -57,6 +57,10 @@ class SiteRenderer
         if ($page->noindex) {
             return true;
         }
+        // A type, theme or knowledge index with nothing under it is an empty column.
+        if (! empty($this->site->typeConfig()['pages'][$page->type]['split']) && $this->ctx->children($page->type)->isEmpty()) {
+            return true;
+        }
         $blocks = collect($this->ctx->blocks($page->type))->pluck('block');
         // A page made only of lists of site data with no data to list is empty.
         if ($page->type !== 'home' && $blocks->isNotEmpty() && $blocks->diff(['entry_list', 'game_lobby', 'cta', 'notice'])->isEmpty()) {
@@ -122,10 +126,7 @@ class SiteRenderer
             $head->withProductSchema();
         }
         if (! $isHome) {
-            $head->withBreadcrumbs([
-                ['name' => $ctx->t('home'), 'url' => $ctx->url()],
-                ['name' => $page->title, 'url' => $ctx->url($page->slug)],
-            ]);
+            $head->withBreadcrumbs($ctx->trail($page->type));
         }
 
         $listed = $page->type === 'updates'
@@ -299,6 +300,11 @@ class SiteRenderer
                 $targets[mb_strtolower($entry->title)] ??= $this->ctx->href($this->ctx->entryPath($entry));
             }
         }
+        foreach ($this->ctx->allChildren() as $child) {
+            if (mb_strlen($child['title']) >= 4) {
+                $targets[mb_strtolower($child['title'])] ??= $child['href'];
+            }
+        }
         foreach ($this->ctx->pages as $page) {
             if ($page->type === 'home' || $page->type === 'contact' || in_array($page->type, $this->ctx->legalTypes(), true)) {
                 continue;
@@ -341,15 +347,29 @@ class SiteRenderer
         return $slots;
     }
 
-    protected function renderBlocks(string $pageType, array $content, ?Page $page, array $extra = []): string
+    protected function renderBlocks(string $pageType, array $content, ?Page $page, array $extra = [], ?string $only = null): string
     {
         $html = '';
         $first = $page !== null || $pageType === 'blog';
         // Content pages without a hero open with their cover picture.
-        if ($page && ($cover = $this->ctx->slotPicture('cover', $page->type)) && $this->ctx->useImage($cover['path']) && ($img = $this->ctx->image($cover['path'], 1600))) {
+        if ($page && $only === null && ($cover = $this->ctx->slotPicture('cover', $page->type)) && $this->ctx->useImage($cover['path']) && ($img = $this->ctx->image($cover['path'], 1600))) {
             $html .= View::make('theme.partials.page-cover', ['ctx' => $this->ctx, 'img' => $img, 'alt' => $cover['alt']])->render();
         }
+        // A split page shows its level-3 pages as one grid of links where the first of them stood.
+        $children = $page && $only === null ? $this->ctx->children($pageType)->keyBy('key') : collect();
+        $gridShown = false;
         foreach ($this->ctx->blocks($pageType) as $entry) {
+            if ($only !== null && ($entry['key'] ?? null) !== $only) {
+                continue;
+            }
+            if ($children->has($entry['key'] ?? '') || ($page && $only === null && $this->isChildSection($pageType, $entry['key'] ?? null))) {
+                if (! $gridShown && $children->isNotEmpty()) {
+                    $html .= View::make('theme.partials.child-grid', ['ctx' => $this->ctx, 'children' => $children->values(), 'page' => $page])->render();
+                    $gridShown = true;
+                }
+
+                continue;
+            }
             $section = isset($entry['key']) ? $this->ctx->section($pageType, $entry['key']) : [];
             // A pool section with no copy is left out (no brand-profile filler repeated across sections).
             if ($section !== [] && ($content[$entry['key']] ?? []) === [] && ! in_array($entry['block'], self::SELF_FILLING, true)) {
@@ -379,6 +399,56 @@ class SiteRenderer
         return $html;
     }
 
+    /** Whether a section of a split page lives on its own level-3 page (not on the index). */
+    protected function isChildSection(string $pageType, ?string $key): bool
+    {
+        $def = $this->site->typeConfig()['pages'][$pageType] ?? [];
+
+        return $key !== null && ! empty($def['split']) && ! in_array($key, (array) ($def['split']['index'] ?? []), true);
+    }
+
+    /** A level-3 page: one type, theme or knowledge article of a split page, with its games and its siblings. */
+    public function renderChild(Page $page, array $child): string
+    {
+        $ctx = $this->ctx;
+        $ctx->beginPage($child['path']);
+        $data = $page->content[$child['key']] ?? [];
+        $section = $ctx->section($page->type, $child['key']);
+        $description = $child['excerpt'] !== '' ? $child['excerpt'] : $this->pageDescription($page);
+        $head = SeoHead::for($ctx, $child['path'], SeoHead::limit($child['title'], 60), SeoHead::limit($description, 155), $page->noindex);
+        $head->image = $this->ogImage();
+        $head->withWebPage($page->updated_at)->withBreadcrumbs([...$ctx->trail($page->type), ['name' => $child['title'], 'url' => $ctx->url($child['path'])]]);
+
+        $content = $page->content ?? [];
+        if (($section['block'] ?? null) === 'prose' && filled($data['html'] ?? null)) {
+            $targets = array_filter($this->linkTargets(), fn ($href) => trim($href, '/') !== $child['path']);
+            [$content[$child['key']]['html']] = InternalLinker::link($data['html'], $targets, 4);
+        }
+        $body = $this->renderBlocks($page->type, $content, $page, ['child' => true], $child['key']);
+        $body .= View::make('theme.partials.child-related', [
+            'ctx' => $ctx, 'page' => $page, 'child' => $child,
+            'games' => empty($section['collection']) ? $this->mechanicGames($section) : collect(),
+            'siblings' => $ctx->children($page->type)->reject(fn ($c) => $c['key'] === $child['key'])->take(6)->values(),
+        ])->render();
+
+        return $this->layout($head, $body);
+    }
+
+    /** Games whose mechanics a knowledge article explains. */
+    public function mechanicGames(array $section, int $limit = 8): Collection
+    {
+        if (empty($section['match'])) {
+            return collect();
+        }
+        $words = array_map('mb_strtolower', (array) $section['match']);
+
+        return $this->ctx->entries('game')->filter(function (Entry $e) use ($words) {
+            $text = mb_strtolower(implode(' ', array_filter(array_merge((array) $e->get('mechanics', []), (array) $e->get('types', [])), 'is_string')));
+
+            return $text !== '' && collect($words)->contains(fn ($w) => str_contains($text, $w));
+        })->take($limit)->values();
+    }
+
     /** Detail page of a game, provider, promotion, event, notice or news item. */
     public function renderEntry(Entry $entry): string
     {
@@ -395,8 +465,7 @@ class SiteRenderer
         $head->image = $image ? MediaPublisher::absolute($this->site, $image['src']) : $this->ogImage();
         $head->preloadImage = $image['src'] ?? null;
         $head->withWebPage($entry->updated_at)->withBreadcrumbs([
-            ['name' => $ctx->t('home'), 'url' => $ctx->url()],
-            ['name' => $owner->title, 'url' => $ctx->url($owner->slug)],
+            ...$ctx->trail($owner->type),
             ['name' => SeoHead::limit($entry->title, 70), 'url' => $ctx->url($path)],
         ]);
         if ($entry->collection === 'game') {
@@ -441,6 +510,9 @@ class SiteRenderer
                 $index[] = ['t' => $page->title, 'u' => $this->ctx->href($page->slug), 'd' => SeoHead::limit($this->pageDescription($page), 160)];
             }
         }
+        foreach ($this->childPages() as [, $child]) {
+            $index[] = ['t' => $child['title'], 'u' => $child['href'], 'd' => $child['excerpt']];
+        }
         foreach ($this->entryPages() as $entry) {
             $index[] = ['t' => $entry->title, 'u' => $this->ctx->entryHref($entry), 'd' => SeoHead::limit((string) $entry->summary, 160)];
         }
@@ -449,6 +521,26 @@ class SiteRenderer
         }
 
         return $index;
+    }
+
+    /**
+     * Level-3 pages to write: the children of every indexable split page.
+     *
+     * @return array<int, array{0: Page, 1: array}>
+     */
+    public function childPages(): array
+    {
+        $out = [];
+        foreach ($this->ctx->pages as $type => $page) {
+            if ($this->isNoindex($page)) {
+                continue;
+            }
+            foreach ($this->ctx->children($type) as $child) {
+                $out[] = [$page, $child];
+            }
+        }
+
+        return $out;
     }
 
     /** Entries with a detail page on this site. */

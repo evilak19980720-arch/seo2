@@ -6,6 +6,7 @@ use App\Filament\Resources\Sites\Pages\EditSite;
 use App\Filament\Resources\Sites\RelationManagers\EntriesRelationManager;
 use App\Filament\Resources\Sites\RelationManagers\ReferenceItemsRelationManager;
 use App\Models\GenerationTask;
+use App\Models\GoneUrl;
 use App\Models\Site;
 use App\Models\User;
 use App\Services\Render\MediaPublisher;
@@ -166,9 +167,9 @@ class GameSiteTest extends TestCase
         $this->assertGreaterThan(1, $shapes->count());
 
         // A regenerated structure keeps what the site already had.
-        $again = SiteStructure::choose($a, $type, ['pages' => ['events' => ['list', 'rules']] + $first['pages']] + $first);
+        $again = SiteStructure::choose($a, $type, ['pages' => ['events' => ['ongoing', 'calendar']] + $first['pages']] + $first);
         $this->assertArrayHasKey('events', $again['pages']);
-        $this->assertContains('rules', $again['pages']['events']);
+        $this->assertContains('calendar', $again['pages']['events']);
     }
 
     public function test_regeneration_draws_a_new_combination_and_a_retry_keeps_it(): void
@@ -217,11 +218,11 @@ class GameSiteTest extends TestCase
         $written = (new StaticSiteBuilder)->buildAll($site);
         $dir = StaticSiteBuilder::dirFor($site);
 
-        $lobbySlug = $site->pages()->where('type', 'lobby')->value('slug');
         $gamesSlug = $site->pages()->where('type', 'games')->value('slug');
         $this->assertContains("{$gamesSlug}/fortune-tiger", $written, 'games own the game detail pages');
 
-        $lobby = file_get_contents("{$dir}/{$lobbySlug}/index.html");
+        // The game list is the lobby: one page, with search and filters (no separate lobby column).
+        $lobby = file_get_contents("{$dir}/{$gamesSlug}/index.html");
         $this->assertStringContainsString('data-lobby', $lobby);
         $this->assertStringContainsString('data-filter="provider"', $lobby);
         $this->assertStringNotContainsString('data-tab="favorites"', $lobby, 'no personal tabs');
@@ -325,42 +326,59 @@ class GameSiteTest extends TestCase
         $site = $this->gameSite();
         $structure = SiteStructure::choose($site, config('site_types.game'));
         $structure['pages'] = array_merge($structure['pages'], [
-            'games' => ['overview', 'cards', 'categories'],
+            'games' => ['overview', 'lobby', 'categories'],
             'slot_types' => ['intro', 'megaways', 'cluster', 'ways'],
-            'academy' => ['basics', 'glossary', 'wild'],
-            'game_math' => ['rng', 'probability', 'myths'],
+            'academy' => ['basics', 'glossary', 'wild', 'scatter'],
             'brand_story' => ['story', 'founder', 'history'],
-            'events' => ['list', 'calendar'],
+            'events' => ['ongoing', 'upcoming', 'calendar'],
             'search' => ['search'],
         ]);
         $site->update(['structure' => $structure]);
         $site = $site->fresh(['domain', 'brandProfile']);
         $this->fillPages($site);
-        // "wild" got no copy: it is left out instead of showing filler.
+        // "scatter" got no copy: it gets no page instead of showing filler.
         $academy = $site->pages()->where('type', 'academy')->first();
-        $academy->update(['content' => array_diff_key($academy->content, ['wild' => 1])]);
+        $academy->update(['content' => array_diff_key($academy->content, ['scatter' => 1])]);
         $this->addEntries($site);
-        $site->entries()->where('slug', 'gates-of-olympus')->first()->update(['data' => ['provider' => 'Pragmatic Play', 'types' => ['megaways'], 'theme_keys' => ['greek']]]);
+        $site->entries()->where('slug', 'gates-of-olympus')->first()->update(['data' => ['provider' => 'Pragmatic Play', 'types' => ['megaways'], 'theme_keys' => ['greek'], 'rtp' => '96,5%', 'volatility' => 'Alta', 'max_win' => '5.000x']]);
         $tiger = $site->entries()->where('slug', 'fortune-tiger')->first();
         $tiger->update(['data' => $tiger->data + ['types' => ['ways']]]);
         $site->entries()->create(['collection' => 'event', 'slug' => 'torneio', 'title' => 'Torneio de verão', 'data' => ['starts_at' => now()->addDays(3)->toDateString(), 'ends_at' => now()->addDays(10)->toDateString()]]);
 
-        (new StaticSiteBuilder)->buildAll($site);
+        $written = (new StaticSiteBuilder)->buildAll($site);
         $dir = StaticSiteBuilder::dirFor($site);
-        $page = fn ($type) => file_get_contents("{$dir}/".$site->pages()->where('type', $type)->value('slug').'/index.html');
+        $slug = fn ($type) => $site->pages()->where('type', $type)->value('slug');
+        $page = fn ($type) => file_get_contents("{$dir}/".$slug($type).'/index.html');
 
+        // A type is a level-3 page under the type index, not a section of it.
         $types = $page('slot_types');
-        $this->assertStringContainsString('id="megaways"', $types);
-        $this->assertStringContainsString('Gates of Olympus', $types);
-        $this->assertStringNotContainsString('id="cluster"', $types, 'a category without games is not shown');
-        $this->assertStringNotContainsString('tipos-de-slots/#megaways', $page('games'), 'two categories of one game each make no shortcut list');
+        $this->assertStringContainsString('href="/'.$slug('slot_types').'/megaways/"', $types);
+        $this->assertStringNotContainsString('Gates of Olympus</a></h3>', $types, 'the index lists the types, not their games');
+        $this->assertStringNotContainsString('/cluster/', $types, 'a type without games gets no page');
+        $this->assertContains($slug('slot_types').'/megaways', $written);
+        $this->assertNotContains($slug('slot_types').'/cluster', $written);
+        $megaways = file_get_contents("{$dir}/".$slug('slot_types').'/megaways/index.html');
+        $this->assertStringContainsString('Gates of Olympus', $megaways);
+        $this->assertSame(1, substr_count($megaways, '<h1'));
+        $this->assertMatchesRegularExpression('#breadcrumb.*href="https://[^"]+/'.$slug('games').'/".*href="https://[^"]+/'.$slug('slot_types').'/"#s', $megaways, 'home › games › types › megaways');
 
+        // Item parameters stay on the item: the game page links its type and explains RTP in the glossary.
+        $gates = file_get_contents("{$dir}/".$slug('games').'/gates-of-olympus/index.html');
+        $this->assertStringContainsString('href="/'.$slug('slot_types').'/megaways/"', $gates);
+        $this->assertStringContainsString('href="/'.$slug('academy').'/#glossary"', $gates);
+        foreach ($site->fresh()->typeConfig()['pages'] as $type => $def) {
+            $this->assertNotContains($type, ['game_math', 'lobby', 'news', 'status', 'behind_scenes'], 'no column for an attribute or a duplicate list');
+        }
+
+        // Knowledge: the glossary stays on the index, each mechanic is an article with the games that use it.
         $academy = $page('academy');
         $this->assertStringContainsString('glossary__items', $academy);
-        $this->assertStringNotContainsString('Seção wild', $academy);
-        $math = $page('game_math');
-        $this->assertStringContainsString('callout', $math);
-        $this->assertStringContainsString('checklist__items', $math);
+        $this->assertStringContainsString('href="/'.$slug('academy').'/wild/"', $academy);
+        $this->assertStringNotContainsString('/scatter/', $academy);
+        $wild = file_get_contents("{$dir}/".$slug('academy').'/wild/index.html');
+        $this->assertStringContainsString('Texto da seção wild', $wild);
+        $this->assertStringContainsString('Fortune Tiger', $wild, 'games with a wild symbol are listed under the article');
+
         $story = $page('brand_story');
         $this->assertStringContainsString('<blockquote>', $story);
         $this->assertStringContainsString('timeline__list', $story);
@@ -369,9 +387,35 @@ class GameSiteTest extends TestCase
 
         $index = json_decode(file_get_contents("{$dir}/search.json"), true);
         $this->assertContains('Fortune Tiger', array_column($index, 't'));
-        foreach ([$academy, $math, $story] as $html) {
+        $this->assertContains('Lista megaways', array_column($index, 't'));
+        $this->assertStringContainsString('/'.$slug('slot_types').'/megaways/', file_get_contents("{$dir}/sitemap.xml"));
+        foreach ([$academy, $story, $types] as $html) {
             $this->assertSame(1, substr_count($html, '<h1'));
         }
+    }
+
+    public function test_split_pages_keep_only_children_the_data_fills(): void
+    {
+        $site = $this->gameSite();
+        $this->addEntries($site);
+        foreach (['a', 'b', 'c'] as $n) {
+            $site->entries()->create(['collection' => 'game', 'slug' => "mega-{$n}", 'title' => "Mega {$n}", 'data' => ['types' => ['megaways'], 'mechanics' => ['Free spins']]]);
+        }
+        $site->entries()->create(['collection' => 'game', 'slug' => 'cluster-1', 'title' => 'Cluster 1', 'data' => ['types' => ['cluster']]]);
+        $config = config('site_types.game');
+        $structure = ['pages' => ['slot_types' => ['intro', 'cluster'], 'academy' => ['basics', 'glossary']]];
+
+        $fitted = SiteStructure::fit($site, $config, $structure);
+        $this->assertSame(['intro', 'megaways'], $fitted['pages']['slot_types'], 'three games make a type page, one does not');
+        $this->assertContains('free_spins', $fitted['pages']['academy'], 'a mechanic the games use gets an article');
+        $this->assertContains('cascades', $fitted['pages']['academy'], '"Tumble" counts as cascading reels');
+        $this->assertContains('wild', $fitted['pages']['academy']);
+        $this->assertNotContains('jackpots', $fitted['pages']['academy'], 'no article about a mechanic no game has');
+        $this->assertLessThanOrEqual(2 + 8, count($fitted['pages']['academy']));
+
+        // A launched site keeps a child page that still lists something.
+        $site->update(['launched_at' => now()]);
+        $this->assertContains('cluster', SiteStructure::fit($site, $config, $structure)['pages']['slot_types']);
     }
 
     public function test_admin_shows_site_data_for_game_sites(): void
@@ -390,5 +434,24 @@ class GameSiteTest extends TestCase
         Livewire::actingAs($admin)
             ->test(ReferenceItemsRelationManager::class, ['ownerRecord' => $site, 'pageClass' => EditSite::class])
             ->assertOk()->assertSee('Cashback semanal')->assertSee('600×300');
+    }
+
+    public function test_offer_tags_are_tabs_and_merged_pages_redirect(): void
+    {
+        $site = $this->gameSite();
+        $site->update(['structure' => SiteStructure::choose($site, $this->positioning())]);
+        $site = $site->fresh(['domain', 'brandProfile']);
+        $this->fillPages($site);
+        $this->addEntries($site);
+        $site->entries()->create(['collection' => 'promotion', 'slug' => 'natal', 'title' => 'Especial de Natal', 'data' => ['tags' => ['festival'], 'ends_at' => now()->addMonth()->toDateString()]]);
+        (new StaticSiteBuilder)->buildAll($site);
+
+        $promos = file_get_contents(StaticSiteBuilder::dirFor($site).'/'.$site->pages()->where('type', 'promotions')->value('slug').'/index.html');
+        $this->assertStringContainsString('data-tab="new_user"', $promos);
+        $this->assertStringContainsString('data-tab="festival"', $promos);
+        $this->assertStringNotContainsString('id="new_user"', $promos, 'tags are filters, not sections');
+
+        GoneUrl::create(['host' => $site->domain->name, 'path' => 'rtp-e-volatilidade', 'to' => '/guia-de-slots/']);
+        $this->get('https://'.$site->domain->name.'/rtp-e-volatilidade/')->assertRedirect('https://'.$site->domain->name.'/guia-de-slots/')->assertStatus(301);
     }
 }

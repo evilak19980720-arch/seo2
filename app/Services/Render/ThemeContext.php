@@ -264,11 +264,9 @@ class ThemeContext
                 if (! $this->pages->has($pageType) || in_array($pageType, $this->hidden, true)) {
                     continue;
                 }
-                $content = $this->pages[$pageType]->content ?? [];
                 foreach ((array) $entry->get($field, []) as $key) {
-                    $section = collect($this->blocks($pageType))->firstWhere('key', $key);
-                    if ($section && filled($content[$key]['heading'] ?? null)) {
-                        $links[] = ['label' => $content[$key]['heading'], 'href' => $this->href($this->pages[$pageType]->slug).'#'.$key];
+                    if (is_string($key) && ($child = $this->child($pageType, $key))) {
+                        $links[] = ['label' => $child['title'], 'href' => $child['href']];
                     }
                 }
             }
@@ -722,6 +720,8 @@ class ThemeContext
     }
 
     /** All entries of the site, in their sort order. */
+    protected array $childCache = [];
+
     public function allEntries(): Collection
     {
         return $this->entryCache ??= $this->site->exists
@@ -827,6 +827,80 @@ class ThemeContext
         $path = $this->entryPath($entry);
 
         return $path !== null ? $this->href($path) : null;
+    }
+
+    /**
+     * Level-3 pages of a split page (one per type, theme, knowledge article…):
+     * every chosen section outside the index with its own copy, at
+     * "{page slug}/{child slug}".
+     *
+     * @return Collection<int, array{type: string, key: string, path: string, href: string, title: string, excerpt: string, count: ?int}>
+     */
+    public function children(string $pageType): Collection
+    {
+        $def = $this->site->typeConfig()['pages'][$pageType] ?? [];
+        $page = $this->pages->get($pageType);
+        if (empty($def['split']) || ! $page) {
+            return collect();
+        }
+        $index = (array) ($def['split']['index'] ?? []);
+
+        return $this->childCache[$pageType] ??= collect($def['sections'])
+            ->reject(fn ($s) => in_array($s['key'], $index, true))
+            ->map(function ($s) use ($page, $pageType) {
+                $data = $page->content[$s['key']] ?? [];
+                $count = ! empty($s['collection']) ? $this->entries($s['collection'], $s['filter'] ?? 'all')->count() : null;
+                if (blank($data['heading'] ?? null) || $count === 0) {
+                    return null;
+                }
+                $path = trim($page->slug.'/'.self::childSlug($s['key'], $data), '/');
+                $text = trim(preg_replace('/\s+/u', ' ', strip_tags((string) ($data['intro'] ?? $data['html'] ?? ''))));
+
+                return ['type' => $pageType, 'key' => $s['key'], 'path' => $path, 'href' => $this->href($path), 'title' => $data['heading'], 'excerpt' => SeoHead::limit($text, 140), 'count' => $count];
+            })->filter()->values();
+    }
+
+    /** Every level-3 page of the site. */
+    public function allChildren(): Collection
+    {
+        return $this->pages->keys()->flatMap(fn ($type) => $this->children($type))->values();
+    }
+
+    /** The child page of a split page's section, if the site has it. */
+    public function child(string $pageType, string $key): ?array
+    {
+        return $this->children($pageType)->firstWhere('key', $key);
+    }
+
+    public static function childSlug(string $key, array $data): string
+    {
+        return filled($data['slug'] ?? null) ? (string) $data['slug'] : str_replace('_', '-', $key);
+    }
+
+    /**
+     * Breadcrumb trail down to a page: home, its parent pages (dropdown pages
+     * sit under their menu page), the page itself.
+     *
+     * @return array<int, array{name: string, url: string}>
+     */
+    public function trail(?string $pageType): array
+    {
+        $crumbs = [];
+        $types = $this->site->typeConfig()['pages'];
+        for ($type = $pageType, $guard = 0; $type && $guard < 5; $type = $types[$type]['parent'] ?? null, $guard++) {
+            if ($type === 'blog') {
+                array_unshift($crumbs, ['name' => $this->t('blog'), 'url' => $this->url('blog')]);
+
+                continue;
+            }
+            if ($type === 'home' || ! $this->pages->has($type)) {
+                break;
+            }
+            array_unshift($crumbs, ['name' => SeoRules::navLabel($this->pages[$type]->title, null), 'url' => $this->url($this->pages[$type]->slug)]);
+        }
+        array_unshift($crumbs, ['name' => $this->t('home'), 'url' => $this->url()]);
+
+        return $crumbs;
     }
 
     /** Definition of a page section (collection, filter, link…) from the site type. */

@@ -7,6 +7,14 @@
 @foreach ($ctx->navLinks(all: true) as $link)<li><a href="{{ $link['href'] }}">{{ $link['label'] }}</a></li>@endforeach
 @foreach ($ctx->legalLinks() as $link)@if (trim($link['href'], '/') !== $ctx->currentPath)<li><a href="{{ $link['href'] }}">{{ $link['label'] }}</a></li>@endif @endforeach
 </ul></div>
+@foreach ($ctx->pages as $type => $parent)
+@php($children = in_array($type, $ctx->hidden, true) ? collect() : $ctx->children($type))
+@if ($children->isNotEmpty())
+<div><h2><a href="{{ $ctx->href($parent->slug) }}">{{ $parent->title }}</a></h2><ul>
+@foreach ($children as $child)<li><a href="{{ $child['href'] }}">{{ $child['title'] }}</a></li>@endforeach
+</ul></div>
+@endif
+@endforeach
 @foreach (\App\Models\Entry::COLLECTIONS as $collection)
 @php($items = $ctx->ownerType($collection) ? $ctx->entries($collection) : collect())
 @if ($items->isNotEmpty())

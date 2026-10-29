@@ -44,6 +44,9 @@ class SitemapBuilder
             $lastmod = $hasList && $latestArticle && $latestArticle > $page->updated_at ? $latestArticle : $page->updated_at;
             $urls[] = [$site->url($page->slug), $lastmod, $page->type === 'home' && $og ? [$og] : []];
         }
+        foreach ($renderer->childPages() as [$page, $child]) {
+            $urls[] = [$site->url($child['path']), $page->updated_at, []];
+        }
         foreach ($renderer->entryPages() as $entry) {
             $image = $entry->image ? $renderer->ctx->image($entry->image, 1400) : null;
             $urls[] = [$site->url($renderer->ctx->entryPath($entry)), $entry->updated_at, $image ? [MediaPublisher::absolute($site, $image['src'])] : []];

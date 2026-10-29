@@ -44,6 +44,9 @@ class FrontController
             }
         }
 
+        if ($to = GoneUrl::redirectFor($host, $path)) {
+            return redirect()->away('https://'.$host.$to, 301);
+        }
         if (GoneUrl::isGone($host, $path)) {
             return response($notFound, 410, ['Content-Type' => 'text/html; charset=utf-8', 'X-Robots-Tag' => 'noindex', 'Cache-Control' => 'no-store']);
         }
