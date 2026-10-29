@@ -40,7 +40,7 @@ class GenerateSiteJob implements ShouldQueue
     {
         $task = $this->task->fresh();
         if ($task && in_array($task->status, ['queued', 'running'], true)) {
-            $task->progress('失败：'.($e ? Str::limit($e->getMessage(), 200) : '任务被中止'));
+            $task->progress('失败：'.($e ? Str::limit($e->getMessage(), 2000) : '任务被中止'));
             $task->update(['status' => 'failed', 'finished_at' => now()]);
             if ($task->type !== 'qa' && $task->site?->status === SiteStatus::Generating) {
                 $task->site->update(['status' => SiteStatus::Failed]);

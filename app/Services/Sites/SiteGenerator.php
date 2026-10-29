@@ -186,7 +186,7 @@ class SiteGenerator
             $site->update(['status' => $task->type === 'qa' ? $before : SiteStatus::Failed]);
             $task->progress('失败：'.$e->getMessage());
             $task->update(['status' => 'failed', 'finished_at' => now()]);
-            Alert::raise('generation_failed', "站点 {$site->name} 生成失败：".Str::limit($e->getMessage(), 200), $site->id, 'danger');
+            Alert::raise('generation_failed', "站点 {$site->name} 生成失败：".Str::limit($e->getMessage(), 1000), $site->id, 'danger');
 
             throw $e;
         }
@@ -287,7 +287,7 @@ class SiteGenerator
                 'reference_name' => (string) ($home['title'] ?? '') ?: (string) parse_url($site->reference_url, PHP_URL_HOST),
             ], $site)->json());
         } catch (Throwable $e) {
-            return '品牌资料自动补全失败：'.Str::limit($e->getMessage(), 150);
+            return '品牌资料自动补全失败：'.Str::limit($e->getMessage(), 1000);
         }
 
         $lang = $site->language();
@@ -466,7 +466,7 @@ class SiteGenerator
             }
             $config = $res['design'] ?? $res;
         } catch (Throwable $e) {
-            $this->designNotes[] = 'AI 设计生成失败，已用默认设计：'.Str::limit($e->getMessage(), 150);
+            $this->designNotes[] = 'AI 设计生成失败，已用默认设计：'.Str::limit($e->getMessage(), 1000);
             $config = null;
         }
 
@@ -581,7 +581,7 @@ class SiteGenerator
 
             return "品牌资料不是{$site->locale}，已转为站点语言用于页面展示（后台资料保持原样）";
         } catch (Throwable $e) {
-            return '品牌资料转为站点语言失败：'.Str::limit($e->getMessage(), 150);
+            return '品牌资料转为站点语言失败：'.Str::limit($e->getMessage(), 1000);
         }
     }
 

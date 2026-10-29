@@ -189,10 +189,10 @@ class AiManager
             $res = $this->send($provider, [['role' => 'user', 'content' => 'Reply with OK']], [], false);
             $result = 'OK: '.mb_substr($res->text, 0, 50);
         } catch (Throwable $e) {
-            $result = 'FAIL: '.mb_substr($e->getMessage(), 0, 200);
+            $result = 'FAIL: '.trim($e->getMessage());
         }
         if ($provider->exists) {
-            $provider->update(['last_tested_at' => now(), 'last_test_result' => $result]);
+            $provider->update(['last_tested_at' => now(), 'last_test_result' => mb_substr($result, 0, 255)]);
         }
 
         return $result;

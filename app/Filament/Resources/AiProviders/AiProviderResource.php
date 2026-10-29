@@ -104,13 +104,14 @@ class AiProviderResource extends Resource
                 TextColumn::make('spend')->label('本月用量')
                     ->state(fn (AiProvider $r) => '$'.number_format($r->monthSpend(), 2).($r->monthly_budget ? ' / $'.number_format($r->monthly_budget, 0) : ''))
                     ->color(fn (AiProvider $r) => $r->overBudget() ? 'danger' : null),
-                TextColumn::make('last_test_result')->label('最近测试')->limit(40)->description(fn (AiProvider $r) => $r->last_tested_at?->diffForHumans()),
+                TextColumn::make('last_test_result')->label('最近测试')->limit(40)->tooltip(fn (AiProvider $r) => $r->last_test_result)->description(fn (AiProvider $r) => $r->last_tested_at?->diffForHumans()),
             ])
             ->recordActions([
                 Action::make('test')->label('测试密钥')->icon(Heroicon::OutlinedBolt)
                     ->action(function (AiProvider $record) {
                         $result = app(AiManager::class)->test($record);
-                        Notification::make()->{str_starts_with($result, 'OK') ? 'success' : 'danger'}()->title($result)->send();
+                        $ok = str_starts_with($result, 'OK');
+                        Notification::make()->{$ok ? 'success' : 'danger'}()->title($ok ? $result : '测试失败')->body($ok ? null : $result)->persistent(! $ok)->send();
                     }),
                 EditAction::make(),
             ]);

@@ -36,7 +36,7 @@ class RewriteArticleJob implements ShouldQueue
 
     public function failed(?Throwable $e): void
     {
-        $this->task->step(ArticleTaskStatus::Failed, ['note' => Str::limit($e?->getMessage() ?? '任务超时或被中断', 500)]);
+        $this->task->step(ArticleTaskStatus::Failed, ['note' => Str::limit($e?->getMessage() ?? '任务超时或被中断', 2000)]);
     }
 
     public function handle(ArticlePipeline $pipeline, PublishScheduler $scheduler): void
