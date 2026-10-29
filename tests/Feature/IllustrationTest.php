@@ -25,6 +25,7 @@ class IllustrationTest extends TestCase
     {
         $img = imagecreatetruecolor($w, $h);
         imagefill($img, 0, 0, imagecolorallocate($img, random_int(0, 255), 120, 60));
+        self::paintPhoto($img, random_int(0, 9));
         ob_start();
         imagepng($img);
 

@@ -17,6 +17,7 @@ class PictureFallbackTest extends TestCase
     {
         $img = imagecreatetruecolor(800, 500);
         imagefill($img, 0, 0, imagecolorallocate($img, $seed * 40 % 255, 120, 200));
+        self::paintPhoto($img, $seed);
         ob_start();
         imagepng($img);
 

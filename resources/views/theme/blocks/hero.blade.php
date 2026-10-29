@@ -2,7 +2,7 @@
 @php($heroSrc = $data['image'] ?? $slotPic['path'] ?? collect($ctx->brand->media ?? [])->firstWhere('type', 'image')['path'] ?? ($ctx->brand->media[0]['path'] ?? null))
 @php($heroImg = $ctx->useImage($heroSrc) ? $ctx->image($heroSrc, 1600) : null)
 @php($heroAlt = collect($ctx->brand->media ?? [])->firstWhere('path', $heroSrc)['alt'] ?? ($slotPic && $slotPic['path'] === $heroSrc ? $slotPic['alt'] : null))
-@php($stand = $heroImg ? null : $ctx->fallbackImage('hero:'.($page?->type ?? ''), 1600))
+@php($stand = $heroImg ? null : $ctx->fallbackImage('hero:'.($page?->type ?? ''), 1600, $data['heading'] ?? $page?->title))
 @php($heroImg = $heroImg ?? $stand['image'] ?? null)
 @php($heroAlt = $stand['alt'] ?? $heroAlt)
 @php($cta = $ctx->primaryCta())

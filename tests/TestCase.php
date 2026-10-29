@@ -15,6 +15,18 @@ abstract class TestCase extends BaseTestCase
 
     protected string $tmp;
 
+    /** Paint a photo-like picture (a colour gradient), so it counts as an ordinary picture, not a flat logo. */
+    protected static function paintPhoto(\GdImage $img, int $seed = 0): void
+    {
+        $w = imagesx($img);
+        $h = imagesy($img);
+        for ($x = 0; $x < $w; $x += 4) {
+            $c = imagecolorallocate($img, ($seed * 40 + $x) % 256, (int) (255 * $x / $w), (200 + $seed * 30) % 256);
+            imagefilledrectangle($img, $x, 0, $x + 3, (int) ($h / 2), $c);
+            imagefilledrectangle($img, $x, (int) ($h / 2), $x + 3, $h, imagecolorallocate($img, (int) (255 * $x / $w), ($seed * 70) % 256, 255 - (int) (255 * $x / $w)));
+        }
+    }
+
     protected function setUp(): void
     {
         parent::setUp();

@@ -8,7 +8,7 @@
 <div class="{{ $variant === 'boxed' ? 'container' : '' }}">
 <div class="banner__track">
 @foreach ($slides as $i => $slide)
-@php($img = $images[$i]['image'] ?? $ctx->fallbackImage('banner:'.($page?->type ?? '').':'.$i, 1600)['image'] ?? null)
+@php($img = $images[$i]['image'] ?? $ctx->fallbackImage('banner:'.($page?->type ?? '').':'.$i, 1600, $slide['heading'] ?? null)['image'] ?? null)
 <div class="banner__slide @if (! $img) banner__slide--art @endif">
 @if ($img)<div class="banner__media">@include('theme.partials.picture', ['img' => $img, 'alt' => $images[$i]['alt'], 'eager' => ($isFirst ?? false) && $i === 0])</div>@endif
 <div class="container banner__body">

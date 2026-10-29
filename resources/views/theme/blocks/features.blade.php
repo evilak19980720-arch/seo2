@@ -1,6 +1,7 @@
 @php($items = $data['items'] ?? collect($ctx->brand->selling_points ?? [])->map(fn ($p) => ['title' => $p, 'text' => null])->all())
 @if (count($items))
-@php($mediaList = $variant === 'alternating' ? $ctx->gallery(count($items)) : [])
+{{-- Each point gets the picture that fits its words, else an ordinary stand-in (never a logo or a text banner). --}}
+@php($mediaList = $variant === 'alternating' ? collect($items)->map(fn ($it) => $ctx->fallbackImage('feature:'.($it['title'] ?? ''), 900, ($it['title'] ?? '').' '.($it['text'] ?? '')))->filter()->all() : [])
 {{-- Without images or descriptions these layouts look empty; cards read well with titles alone. --}}
 @php($variant = ($variant === 'alternating' && $mediaList === []) || ($variant === 'list' && collect($items)->every(fn ($it) => empty($it['text']))) ? 'cards' : $variant)
 <section class="section features features--{{ $variant }}">

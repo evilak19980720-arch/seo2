@@ -15,6 +15,7 @@ use App\Models\Site;
 use App\Services\Ai\AiManager;
 use App\Services\Render\HtmlSanitizer;
 use App\Services\Render\SeoHead;
+use App\Services\Sites\PictureRole;
 use App\Services\Sites\ReferenceLibrary;
 use App\Support\Media;
 use App\Support\Settings;
@@ -117,7 +118,7 @@ class ArticlePipeline
             // Polishing is best-effort; guardrails still run on the draft.
         }
 
-        $featured = $existing?->featured_image ?? $this->pickImage($site);
+        $featured = $existing?->featured_image ?? $this->pickImage($site, $keyword->keyword);
         if (str_contains($html, 'data-illustration')) {
             $task?->step(ArticleTaskStatus::Illustrating);
             $html = $this->illustrate($site, $keyword, $html, $featured);
@@ -185,7 +186,7 @@ class ArticlePipeline
      */
     public function illustrate(Site $site, Keyword $keyword, string $html, ?string $featured = null): string
     {
-        $spare = $this->sparePictures($site, $featured);
+        $spare = $this->sparePictures($site, $featured, $keyword->keyword);
         $made = 0;
 
         return preg_replace_callback('/<figure\b[^>]*data-illustration\s*=\s*(["\'])(.*?)\1[^>]*>.*?<\/figure>/is', function ($m) use ($site, $keyword, &$spare, &$made) {
@@ -212,12 +213,35 @@ class ArticlePipeline
     }
 
     /** Brand pictures, then the reference site's pictures large enough for an article, each in random order. */
-    protected function sparePictures(Site $site, ?string $featured = null): Collection
+    protected function sparePictures(Site $site, ?string $featured = null, string $topic = ''): Collection
     {
         // Never the article's own featured picture, which already shows above the text.
-        return collect($site->brandProfile?->media ?? [])->where('type', 'image')->pluck('path')->filter()->shuffle()
-            ->merge(ReferenceLibrary::pictures($site, self::ARTICLE_PICTURE_WIDTH)->pluck('path')->shuffle())
-            ->unique()->reject(fn ($p) => $p === $featured)->values();
+        return $this->articlePictures($site, $topic)->reject(fn ($p) => $p === $featured)->values();
+    }
+
+    /**
+     * Pictures an article may use: the ones whose words fit its topic first,
+     * then ordinary brand and reference pictures in random order. Logos, text
+     * banners and pictures of a past year only when their words fit.
+     *
+     * @return Collection<int, string>
+     */
+    protected function articlePictures(Site $site, string $topic, bool $onlyFitting = false): Collection
+    {
+        $ignore = collect([$site->product_name, $site->name])->flatMap(fn ($n) => explode(' ', SeoRules::normalize((string) $n)))->filter()->all();
+        $all = collect($site->brandProfile?->media ?? [])->where('type', 'image')->filter(fn ($m) => filled($m['path'] ?? null))
+            ->map(fn ($m) => ['path' => $m['path'], 'words' => trim(($m['alt'] ?? '').' '.($m['caption'] ?? '')), 'role' => PictureRole::of($m['path'], $m['alt'] ?? null), 'expired' => false])
+            ->merge(ReferenceLibrary::pictures($site, self::ARTICLE_PICTURE_WIDTH)->map(fn ($p) => ['path' => $p['path'], 'words' => $p['words'] ?? (string) $p['alt'],
+                'role' => PictureRole::of($p['path'], ($p['source'] ?? '').' '.$p['alt'], $p['width'] ?: null, $p['height'] ?: null), 'expired' => PictureRole::expired(($p['source'] ?? '').' '.($p['words'] ?? ''))]))
+            ->unique('path')->values();
+        $scored = $all->map(fn ($p) => $p + ['score' => $topic !== '' ? PictureRole::match($topic, $p['words'], $ignore) : 0.0]);
+        $fitting = $scored->filter(fn ($p) => $p['score'] >= 0.5 && ($p['role'] !== PictureRole::LOGO || $p['score'] >= 1.0))->sortByDesc('score');
+        if ($onlyFitting) {
+            return $fitting->pluck('path')->values();
+        }
+        $plain = $scored->filter(fn ($p) => $p['role'] === PictureRole::PHOTO && ! $p['expired'])->sortBy(fn ($p) => md5($site->id.'|'.$p['path']));
+
+        return $fitting->merge($plain)->pluck('path')->unique()->values();
     }
 
     /**
@@ -230,7 +254,7 @@ class ArticlePipeline
         if (preg_match('/<img\b/i', $html)) {
             return $html;
         }
-        $spare = $this->sparePictures($site, $featured);
+        $spare = $this->sparePictures($site, $featured, $keyword->keyword);
         $sections = preg_match_all('/<h2\b/i', $html);
         if ($spare->isEmpty() || $sections < 2) {
             return $html;
@@ -251,14 +275,14 @@ class ArticlePipeline
         }, $html) ?? $html;
     }
 
-    protected function pickImage(Site $site): ?string
+    protected function pickImage(Site $site, string $topic = ''): ?string
     {
-        $images = collect($site->brandProfile?->media ?? [])->where('type', 'image')->pluck('path')->filter()->values();
-        $images = $images->isNotEmpty() ? $images : ReferenceLibrary::pictures($site, self::ARTICLE_PICTURE_WIDTH)->pluck('path')->values();
-        if ($images->isEmpty()) {
-            return null;
+        // The picture that fits the topic, else the next ordinary one in turn.
+        if ($fit = $this->articlePictures($site, $topic, onlyFitting: true)->first()) {
+            return $fit;
         }
+        $images = $this->articlePictures($site, '');
 
-        return $images[$site->articles()->count() % $images->count()];
+        return $images->isEmpty() ? null : $images[$site->articles()->count() % $images->count()];
     }
 }

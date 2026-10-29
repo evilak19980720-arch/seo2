@@ -151,7 +151,7 @@ class ReferenceLibrary
      * Every uploaded reference picture large enough to show (cards and bare
      * pictures alike), named by its card or alt where it has one.
      *
-     * @return Collection<int, array{path: string, alt: ?string, width: int, height: int}>
+     * @return Collection<int, array{path: string, alt: ?string, width: int, height: int, words: string, source: string}>
      */
     public static function pictures(Site $site, int $minWidth = 200): Collection
     {
@@ -160,7 +160,8 @@ class ReferenceLibrary
         }
 
         return $site->referenceItems()->whereNotNull('image_path')->where(fn ($q) => $q->whereNull('width')->orWhere('width', '>=', $minWidth))->orderBy('id')->get()
-            ->map(fn (ReferenceItem $i) => ['path' => $i->image_path, 'alt' => filled($i->name) ? (string) $i->name : null, 'width' => (int) $i->width, 'height' => (int) $i->height])
+            ->map(fn (ReferenceItem $i) => ['path' => $i->image_path, 'alt' => filled($i->name) ? (string) $i->name : null, 'width' => (int) $i->width, 'height' => (int) $i->height,
+                'words' => trim($i->name.' '.Str::limit((string) $i->text, 300, '')), 'source' => $i->image_url])
             ->unique('path')->values();
     }
 }

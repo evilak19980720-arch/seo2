@@ -7,6 +7,7 @@ use App\Models\Entry;
 use App\Models\Page;
 use App\Models\Site;
 use App\Services\Content\SeoRules;
+use App\Services\Sites\PictureRole;
 use App\Services\Sites\ReferenceLibrary;
 use App\Services\Sites\SiteStructure;
 use App\Services\Theme\DefaultDesign;
@@ -410,9 +411,10 @@ class ThemeContext
 
     /**
      * Pictures downloaded from the reference site that are not among the
-     * real pictures, in a random order stable for the site.
+     * real pictures, in a random order stable for the site, each with its
+     * role (logo, banner, photo) and whether it shows a year already over.
      *
-     * @return Collection<int, array{path: string, alt: string, width: int, height: int}>
+     * @return Collection<int, array{path: string, alt: string, width: int, height: int, words: string, role: string, expired: bool}>
      */
     public function referencePictures(): Collection
     {
@@ -421,17 +423,31 @@ class ThemeContext
         }
         $real = $this->realPictures()->pluck('path')->flip();
         $seed = (string) ($this->site->id ?? $this->site->domain_id ?? '');
+        // A picture named after a provider is that provider's logo.
+        $providers = $this->allEntries()->where('collection', 'provider')->map(fn (Entry $e) => SeoRules::normalize($e->title))->filter()->flip();
 
         return $this->referenceCache = ReferenceLibrary::pictures($this->site)
             ->reject(fn ($p) => isset($real[$p['path']]))
-            ->map(fn ($p) => ['alt' => $p['alt'] ?? $this->brand->product_name] + $p)
+            ->map(fn ($p) => [
+                'alt' => $p['alt'] ?? $this->brand->product_name,
+                'words' => $p['words'] ?? (string) $p['alt'],
+                'role' => filled($p['alt']) && isset($providers[SeoRules::normalize($p['alt'])])
+                    ? PictureRole::LOGO : PictureRole::of($p['path'], ($p['source'] ?? '').' '.$p['alt'], $p['width'] ?: null, $p['height'] ?: null),
+                'expired' => PictureRole::expired(($p['source'] ?? '').' '.($p['words'] ?? $p['alt'])),
+            ] + $p)
             ->sortBy(fn ($p) => md5($seed.'|'.$p['path']))->values();
     }
 
-    /** The n-th reference picture for a hero / banner / cover slot: wide pictures first, then the rest. */
+    /** Reference pictures that may stand in for a card or a block: ordinary pictures, no logos, banners or past years. */
+    public function photoPictures(): Collection
+    {
+        return $this->referencePictures()->filter(fn ($p) => $p['role'] === PictureRole::PHOTO && ! $p['expired'])->values();
+    }
+
+    /** The n-th reference picture for a hero / banner / cover slot: wide pictures first, then the rest; never a logo. */
     protected function referenceSlotPicture(int $n): ?array
     {
-        $pictures = $this->referencePictures();
+        $pictures = $this->referencePictures()->filter(fn ($p) => $p['role'] !== PictureRole::LOGO && ! $p['expired'])->values();
         if ($n < 0 || $pictures->isEmpty()) {
             return null;
         }
@@ -443,30 +459,71 @@ class ThemeContext
     }
 
     /**
-     * Every picture the site has (brand and reference pictures, then the
-     * pictures of games, promotions and other entries), without repeats.
+     * The picture whose own words (card name and text, alt) fit the place's
+     * words best: "Telegram channel" finds the Telegram picture. Logos only
+     * when the place names them. Null when none fits well enough.
+     *
+     * @return array{path: string, alt: string}|null
+     */
+    public function matchPicture(?string $text, bool $onPage = true): ?array
+    {
+        if (blank($text)) {
+            return null;
+        }
+        $ignore = collect([$this->brand->product_name, $this->site->name])->flatMap(fn ($n) => explode(' ', SeoRules::normalize((string) $n)))->filter()->all();
+        $candidates = $this->realPictures()
+            ->map(fn ($m) => ['path' => $m['path'], 'alt' => (string) ($m['alt'] ?? ''), 'words' => trim(($m['alt'] ?? '').' '.($m['caption'] ?? '')), 'role' => PictureRole::PHOTO, 'expired' => false])
+            ->merge($this->referencePictures());
+        $best = null;
+        $score = 0.0;
+        foreach ($candidates as $c) {
+            if ($c['expired'] || ($onPage && isset($this->usedImages[$c['path']]))) {
+                continue;
+            }
+            $s = PictureRole::match($text, $c['words'], $ignore);
+            // A logo must carry the place's name, not just share a word with it.
+            if ($c['role'] === PictureRole::LOGO && $s < 1.0) {
+                continue;
+            }
+            if ($s > $score) {
+                [$best, $score] = [$c, $s];
+            }
+        }
+
+        return $best && $score >= 0.5 ? ['path' => $best['path'], 'alt' => filled($best['alt']) ? $best['alt'] : $this->brand->product_name] : null;
+    }
+
+    /**
+     * Every picture that may stand in for a card (brand pictures, ordinary
+     * reference pictures, then the pictures of games, promotions and other
+     * entries), without repeats, logos or text banners.
      *
      * @return Collection<int, array{path: string, alt: string}>
      */
     public function picturePool(): Collection
     {
         return $this->poolCache ??= $this->realPictures()
+            ->filter(fn ($m) => PictureRole::of($m['path'], $m['alt'] ?? null) === PictureRole::PHOTO)
             ->map(fn ($m) => ['path' => $m['path'], 'alt' => filled($m['alt'] ?? null) ? $m['alt'] : $this->brand->product_name])
-            ->merge($this->referencePictures()->map(fn ($p) => ['path' => $p['path'], 'alt' => $p['alt']]))
-            ->merge($this->allEntries()->filter(fn (Entry $e) => filled($e->image))->map(fn (Entry $e) => ['path' => $e->image, 'alt' => $e->title]))
+            ->merge($this->photoPictures()->map(fn ($p) => ['path' => $p['path'], 'alt' => $p['alt']]))
+            ->merge($this->allEntries()->filter(fn (Entry $e) => filled($e->image) && $e->collection !== 'provider')->map(fn (Entry $e) => ['path' => $e->image, 'alt' => $e->title]))
             ->unique('path')->values();
     }
 
     /**
-     * A stand-in picture for a card or block that has none of its own: a
-     * pool picture not yet shown on this page, starting from a stable spot
-     * for the key so the same card keeps the same picture. Null once every
-     * picture is on the page: a page never shows one picture twice.
+     * A stand-in picture for a card or block that has none of its own: the
+     * picture that fits its words ($text) when there is one, else a pool
+     * picture not yet shown on this page, starting from a stable spot for the
+     * key so the same card keeps the same picture. Null once every picture is
+     * on the page: a page never shows one picture twice.
      *
      * @return array{image: array, alt: string}|null
      */
-    public function fallbackImage(string $key, int $maxWidth = 800): ?array
+    public function fallbackImage(string $key, int $maxWidth = 800, ?string $text = null): ?array
     {
+        if (($match = $this->matchPicture($text)) && $this->useImage($match['path']) && ($image = $this->image($match['path'], $maxWidth))) {
+            return ['image' => $image, 'alt' => $match['alt']];
+        }
         $pool = $this->picturePool();
         if ($pool->isEmpty()) {
             return null;
@@ -483,8 +540,9 @@ class ThemeContext
     }
 
     /**
-     * A picture for an item (game, promotion…) that has none of its own: a
-     * random reference picture not shown on this page, preferring ones no
+     * A picture for an item (game, promotion, notice…) that has none of its
+     * own: the picture that fits its name and summary first, else a random
+     * ordinary reference picture not shown on this page, preferring ones no
      * other item owns, so an item never wears another item's cover while a
      * free picture is left.
      *
@@ -492,8 +550,11 @@ class ThemeContext
      */
     public function entryFallback(Entry $entry, int $maxWidth = 640): ?array
     {
+        if (($match = $this->matchPicture($entry->title.' '.$entry->summary)) && $this->useImage($match['path']) && ($image = $this->image($match['path'], $maxWidth))) {
+            return ['image' => $image, 'alt' => $entry->title];
+        }
         $owned = $this->allEntries()->pluck('image')->filter()->flip();
-        [$free, $taken] = $this->referencePictures()->partition(fn ($p) => ! isset($owned[$p['path']]));
+        [$free, $taken] = $this->photoPictures()->partition(fn ($p) => ! isset($owned[$p['path']]));
         $pool = $free->values()->merge($taken->values());
         if ($pool->isEmpty()) {
             return null;

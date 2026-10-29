@@ -20,6 +20,7 @@ class ReferencePictureTest extends TestCase
     {
         $img = imagecreatetruecolor($w, $h);
         imagefill($img, 0, 0, imagecolorallocate($img, $seed * 40 % 255, 90, 160));
+        self::paintPhoto($img, $seed);
         ob_start();
         imagepng($img);
 
@@ -27,7 +28,7 @@ class ReferencePictureTest extends TestCase
     }
 
     /** A site without brand pictures whose reference left $count pictures (named cards and bare pictures). */
-    private function site(int $count)
+    private function site(int $count, int $h = 500)
     {
         Storage::fake('public');
         $site = $this->makeSite(['status' => 'live', 'domain' => 'refpics-'.$count.'.com.br']);
@@ -35,8 +36,8 @@ class ReferencePictureTest extends TestCase
         $site->pages()->create(['type' => 'home', 'slug' => '', 'title' => 'Galaxy Run', 'content' => []]);
         foreach (range(1, $count) as $i) {
             $path = "brand/ref-{$site->id}/{$i}.png";
-            Storage::disk('public')->put($path, $this->png($i));
-            $site->referenceItems()->create(['kind' => $i % 2 ? 'card' : 'image', 'name' => $i % 2 ? "Jogo {$i}" : null, 'image_url' => "https://ref.test/{$i}.png", 'image_hash' => md5((string) $i), 'image_path' => $path, 'width' => 800, 'height' => 400]);
+            Storage::disk('public')->put($path, $this->png($i, 800, $h));
+            $site->referenceItems()->create(['kind' => $i % 2 ? 'card' : 'image', 'name' => $i % 2 ? "Jogo {$i}" : null, 'image_url' => "https://ref.test/{$i}.png", 'image_hash' => md5((string) $i), 'image_path' => $path, 'width' => 800, 'height' => $h]);
         }
 
         return $site->fresh();
@@ -49,7 +50,7 @@ class ReferencePictureTest extends TestCase
 
     public function test_hero_takes_a_reference_picture_when_the_site_has_no_picture(): void
     {
-        $site = $this->site(4);
+        $site = $this->site(4, 400);
         $pic = $this->ctx($site)->slotPicture('hero', 'home');
 
         $this->assertNotNull($pic);
@@ -95,5 +96,42 @@ class ReferencePictureTest extends TestCase
         $this->assertStringNotContainsString('/1.png', $out, 'never the featured picture again');
         $this->assertStringStartsWith('<p>Intro.</p><h2>Parte 1</h2>', $out, 'nothing above the first section');
         $this->assertSame($out, app(ArticlePipeline::class)->withPictures($site, $keyword, $out), 'an article with pictures is left alone');
+    }
+
+    public function test_logos_banners_and_past_years_never_stand_in_and_matching_pictures_come_first(): void
+    {
+        Storage::fake('public');
+        $site = $this->makeSite(['status' => 'live', 'domain' => 'roles.com.br']);
+        $flat = imagecreatetruecolor(300, 300);
+        imagefill($flat, 0, 0, imagecolorallocate($flat, 255, 255, 255));
+        imagefilledrectangle($flat, 60, 120, 240, 180, imagecolorallocate($flat, 20, 20, 20));
+        ob_start();
+        imagepng($flat);
+        $logo = ob_get_clean();
+        $rows = [
+            ['logo', 'Pragmatic Play', $logo, 300, 300],
+            ['wide', 'Bônus de recarga', $this->png(2, 1200, 400), 1200, 400],
+            ['old', 'Heavyweight Event 2024', $this->png(3, 800, 500), 800, 500],
+            ['telegram', 'Canal oficial no Telegram', $this->png(4, 800, 500), 800, 500],
+            ['photo', null, $this->png(5, 800, 500), 800, 500],
+        ];
+        foreach ($rows as $i => [$key, $name, $binary, $w, $h]) {
+            Storage::disk('public')->put("brand/ref-{$site->id}/{$key}.png", $binary);
+            $site->referenceItems()->create(['kind' => $name ? 'card' : 'image', 'name' => $name, 'image_url' => "https://ref.test/{$key}.png", 'image_hash' => md5($key), 'image_path' => "brand/ref-{$site->id}/{$key}.png", 'width' => $w, 'height' => $h]);
+        }
+        $ctx = $this->ctx($site->fresh());
+        $roles = $ctx->referencePictures()->mapWithKeys(fn ($p) => [basename($p['path'], '.png') => $p['role'].($p['expired'] ? '+old' : '')])->all();
+        $this->assertSame('logo', $roles['logo']);
+        $this->assertSame('banner', $roles['wide']);
+        $this->assertSame('photo+old', $roles['old']);
+        $this->assertEqualsCanonicalizing(['telegram', 'photo'], $ctx->photoPictures()->map(fn ($p) => basename($p['path'], '.png'))->all());
+
+        $ctx->beginPage('/');
+        $notice = $site->entries()->create(['collection' => 'notice', 'slug' => 'tg', 'title' => 'Siga nosso canal no Telegram']);
+        $this->assertSame($ctx->image("brand/ref-{$site->id}/telegram.png", 640)['src'], $ctx->entryFallback($notice)['image']['src'], 'the picture that names it wins');
+        $other = $site->entries()->create(['collection' => 'notice', 'slug' => 'x', 'title' => 'Manutenção programada']);
+        $this->assertSame($ctx->image("brand/ref-{$site->id}/photo.png", 640)['src'], $ctx->entryFallback($other)['image']['src'], 'no fit: an ordinary picture, never the logo, banner or old event');
+        $this->assertNull($ctx->entryFallback($site->entries()->create(['collection' => 'notice', 'slug' => 'y', 'title' => 'Outro aviso'])), 'nothing ordinary left: no picture rather than a wrong one');
+        $this->assertSame("brand/ref-{$site->id}/logo.png", $ctx->matchPicture('Pragmatic Play', false)['path'] ?? null, 'a logo only for its own name');
     }
 }
