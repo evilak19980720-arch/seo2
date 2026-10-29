@@ -349,54 +349,88 @@ class SiteDataGenerator
         return mb_strlen($name) >= 4 && str_contains(str_replace('-', '', $file), str_replace('-', '', $name));
     }
 
-    /** Detail copy, six items per call, with the reference text that mentions each item. */
+    /**
+     * Detail copy, six items per call, with the reference text that mentions
+     * each item. Items that come back thin (a detail page of a heading and a
+     * line) are asked once more, told to use the reference to fill them.
+     */
     protected function writeSections(Site $site, Collection $entries, string $facts, array $pages, string $features): void
     {
-        $definitions = $site->typeConfig()['collections'] ?? [];
         $written = 0;
+        $thin = collect();
         foreach ($entries->chunk(6) as $batch) {
-            $items = [];
-            $reference = '';
-            foreach ($batch as $entry) {
-                $items[$entry->slug] = array_filter([
-                    'collection' => $entry->collection,
-                    'title' => $entry->title,
-                    'summary' => $entry->summary,
-                    'data' => $entry->data ?: null,
-                    'sections' => collect($definitions[$entry->collection]['sections'] ?? [])->mapWithKeys(fn ($s) => [$s['key'] => $s['topic']])->all(),
-                ]);
-                $reference .= self::mentions($pages, $entry->title);
-            }
-            try {
-                $res = $this->ai->prompt(PromptType::EntryContent, [
-                    'brand' => $site->brandProfile?->toPromptContext() ?? "Product: {$site->product_name}",
-                    'reference' => Str::limit($reference, 8000) ?: 'none',
-                    'items' => json_encode($items, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-                    'site_features' => $features,
-                ], $site)->json()['items'] ?? [];
-            } catch (Throwable) {
-                continue;
-            }
-            foreach ($batch as $entry) {
-                $sections = [];
-                foreach ($definitions[$entry->collection]['sections'] ?? [] as $def) {
-                    $section = $res[$entry->slug][$def['key']] ?? null;
-                    if (! is_array($section) || ! is_string($section['html'] ?? null)) {
-                        continue;
-                    }
-                    $html = SeoRules::stripClaimsHtml(HtmlSanitizer::clean($section['html']), $facts);
-                    $heading = Str::limit(trim(strip_tags((string) ($section['heading'] ?? ''))), 120, '');
-                    if (trim(strip_tags($html)) !== '' && LanguageDetector::matches($heading.' '.strip_tags($html), $site->language())) {
-                        $sections[$def['key']] = ['heading' => $heading ?: null, 'html' => $html];
-                    }
+            [$done, $short] = $this->writeBatch($site, $batch, $facts, $pages, $features);
+            $written += $done;
+            $thin = $thin->merge($short);
+        }
+        $filled = 0;
+        foreach ($thin->chunk(6) as $batch) {
+            $before = $batch->mapWithKeys(fn ($e) => [$e->slug => SeoRules::wordCount((array) $e->sections)]);
+            [$done] = $this->writeBatch($site, $batch, $facts, $pages, $features, $before->all());
+            $filled += $done;
+        }
+        $this->notes[] = "详情页文案：{$written} 条".($thin->isNotEmpty() ? "，{$thin->count()} 条偏短已补写 {$filled} 条" : '');
+    }
+
+    /**
+     * One call for a batch. With $words (slug => words so far) the items are
+     * a second attempt: the feedback asks for full sections, and an answer
+     * only replaces the first one when it is longer.
+     *
+     * @return array{0: int, 1: Collection} items written, items still thin
+     */
+    protected function writeBatch(Site $site, Collection $batch, string $facts, array $pages, string $features, ?array $words = null): array
+    {
+        $definitions = $site->typeConfig()['collections'] ?? [];
+        $items = [];
+        $reference = '';
+        foreach ($batch as $entry) {
+            $items[$entry->slug] = array_filter([
+                'collection' => $entry->collection,
+                'title' => $entry->title,
+                'summary' => $entry->summary,
+                'data' => $entry->data ?: null,
+                'sections' => collect($definitions[$entry->collection]['sections'] ?? [])->mapWithKeys(fn ($s) => [$s['key'] => $s['topic']])->all(),
+                'feedback' => $words !== null ? 'The first answer was too thin ('.($words[$entry->slug] ?? 0).' words). Write every section you can support, 80-220 words each, using the reference text, the item data and the brand profile for real details; at least '.SeoRules::THIN_WORDS.' words in all.' : null,
+            ]);
+            $reference .= self::mentions($pages, $entry->title);
+        }
+        try {
+            $res = $this->ai->prompt(PromptType::EntryContent, [
+                'brand' => $site->brandProfile?->toPromptContext() ?? "Product: {$site->product_name}",
+                'reference' => Str::limit($reference, 8000) ?: 'none',
+                'items' => json_encode($items, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                'site_features' => $features,
+            ], $site)->json()['items'] ?? [];
+        } catch (Throwable) {
+            return [0, $words === null ? $batch : collect()];
+        }
+        $written = 0;
+        $thin = collect();
+        foreach ($batch as $entry) {
+            $sections = [];
+            foreach ($definitions[$entry->collection]['sections'] ?? [] as $def) {
+                $section = $res[$entry->slug][$def['key']] ?? null;
+                if (! is_array($section) || ! is_string($section['html'] ?? null)) {
+                    continue;
                 }
-                if ($sections !== []) {
-                    $entry->update(['sections' => $sections]);
-                    $written++;
+                $html = SeoRules::stripClaimsHtml(HtmlSanitizer::clean($section['html']), $facts);
+                $heading = Str::limit(trim(strip_tags((string) ($section['heading'] ?? ''))), 120, '');
+                if (trim(strip_tags($html)) !== '' && LanguageDetector::matches($heading.' '.strip_tags($html), $site->language())) {
+                    $sections[$def['key']] = ['heading' => $heading ?: null, 'html' => $html];
                 }
+            }
+            $count = SeoRules::wordCount($sections);
+            if ($sections !== [] && ($words === null || $count > ($words[$entry->slug] ?? 0))) {
+                $entry->update(['sections' => $sections]);
+                $written++;
+            }
+            if ($count < SeoRules::THIN_WORDS && ! empty($definitions[$entry->collection]['sections'])) {
+                $thin->push($entry);
             }
         }
-        $this->notes[] = "详情页文案：{$written} 条";
+
+        return [$written, $thin];
     }
 
     /** "key = label" list of a game vocabulary for the prompt. */

@@ -2,7 +2,7 @@
 @php($slotImg = $slotPic && $ctx->useImage($slotPic['path']) ? $ctx->image($slotPic['path'], 1600) : null)
 @php($images = array_merge($slotImg ? [['image' => $slotImg, 'alt' => $slotPic['alt']]] : [], $ctx->gallery($slotImg ? 2 : 3)))
 @php($cta = $ctx->primaryCta())
-@php($slides = collect($data['items'] ?? [])->filter(fn ($s) => ! empty($s['title']))->values()->all() ?: [['title' => $data['heading'] ?? $ctx->brand->product_name, 'text' => $data['text'] ?? $ctx->brand->tagline]])
+@php($slides = collect($data['items'] ?? [])->filter(fn ($s) => ! empty($s['title']))->values()->all() ?: [['title' => $data['heading'] ?? $ctx->brand->product_name, 'text' => $data['text'] ?? $ctx->tagline()]])
 @php($slides = array_slice($slides, 0, max(1, $variant === 'slider' ? 3 : 1)))
 <section class="banner banner--{{ $variant }}" @if ($variant === 'slider' && count($slides) > 1) data-slider @endif>
 <div class="{{ $variant === 'boxed' ? 'container' : '' }}">

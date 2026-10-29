@@ -16,7 +16,7 @@
 <div class="hero__text">
 @if (! empty($data['eyebrow']))<span class="hero__eyebrow">{{ $data['eyebrow'] }}</span>@endif
 @if ($isFirst ?? false)<h1>{{ $data['heading'] ?? ($isHome ? $ctx->brand->product_name : ($page?->title ?? $ctx->brand->product_name)) }}</h1>@else<h2>{{ $data['heading'] ?? $ctx->brand->product_name }}</h2>@endif
-@php($lead = $data['subheading'] ?? $ctx->brand->tagline)
+@php($lead = $data['subheading'] ?? $ctx->tagline())
 @if ($lead)<p class="hero__lead">{{ $lead }}</p>@endif
 <div class="hero__actions">
 @if ($cta)<a class="btn btn--lg" href="{{ $cta['url'] }}" @if ($ctx->rel($cta['url'])) rel="{{ $ctx->rel($cta['url']) }}" @endif>{{ $data['cta_label'] ?? $cta['label'] }}</a>@endif

@@ -23,6 +23,7 @@ use App\Services\Integrations\Screenshot;
 use App\Services\Render\HtmlSanitizer;
 use App\Services\Render\SchemaValidator;
 use App\Services\Render\SeoHead;
+use App\Services\Render\SiteRenderer;
 use App\Services\Render\StaticSiteBuilder;
 use App\Services\Render\ThemeStrings;
 use App\Services\Theme\Color;
@@ -617,19 +618,35 @@ class SiteGenerator
         ]))->all();
         $ai = $this->askPages($site, $spec);
 
+        // A page that comes back thin or off gets another attempt with the reason;
+        // a thin page gets a second one, since an empty column looks broken.
         $problems = $this->pageProblems($site, $ai, $facts);
-        if ($problems !== []) {
-            $retry = array_intersect_key($spec, $problems);
-            foreach ($problems as $type => $why) {
-                $retry[$type]['feedback'] = $why;
+        for ($round = 1; $problems !== [] && $round <= 2; $round++) {
+            $retry = array_intersect_key($spec, $round === 1 ? $problems : array_filter($problems, fn ($why) => str_starts_with($why, 'Only ')));
+            if ($retry === []) {
+                break;
+            }
+            foreach ($retry as $type => $_) {
+                $retry[$type]['feedback'] = $problems[$type];
             }
             foreach ($this->askPages($site, $retry) as $type => $data) {
-                if (is_array($data) && ! isset($this->pageProblems($site, [$type => $data], $facts)[$type])) {
+                if (! is_array($data) || ! isset($retry[$type])) {
+                    continue;
+                }
+                $left = $this->pageProblems($site, [$type => $data], $facts)[$type] ?? null;
+                // Keep the longer answer even when it is still short.
+                if ($left === null || SeoRules::wordCount($this->cleanBlocks($data['blocks'] ?? [], $type, $site, $facts)) > SeoRules::wordCount($this->cleanBlocks($ai[$type]['blocks'] ?? [], $type, $site, $facts))) {
                     $ai[$type] = $data;
+                }
+                if ($left === null) {
                     unset($problems[$type]);
+                } else {
+                    $problems[$type] = $left;
                 }
             }
         }
+        // Pages without a length target stay indexed when the extra attempts still came back short.
+        $problems = array_filter($problems, fn ($why, $type) => ! str_starts_with($why, 'Only ') || $this->minWords($site, $type) > 0, ARRAY_FILTER_USE_BOTH);
 
         $usedSlugs = [];
         $titles = [];
@@ -727,6 +744,15 @@ class SiteGenerator
         return SeoRules::minWords($type);
     }
 
+    /** Whether a page has blocks whose copy the AI writes (not only search, sitemap, legal or other self-filling blocks). */
+    protected function writesCopy(Site $site, string $type): bool
+    {
+        $def = $site->typeConfig()['pages'][$type] ?? [];
+        $blocks = isset($def['sections']) ? array_column($def['sections'], 'block') : (collect($site->design_config['pages'][$type] ?? [])->pluck('block')->all() ?: ($def['blocks'] ?? []));
+
+        return collect($blocks)->contains(fn ($b) => ! in_array($b, SiteRenderer::SELF_FILLING, true) && $b !== 'entry_list');
+    }
+
     /** @return array<string, string> content slot => block of a page type (pool presets: section key => block). */
     protected function slots(Site $site, string $type): array
     {
@@ -757,8 +783,12 @@ class SiteGenerator
             $content = $this->cleanBlocks($data['blocks'], $type, $site, $facts);
             $words = SeoRules::wordCount($content);
             $min = $this->minWords($site, $type);
+            // Pages exempt from a length target still need more than a heading and one sentence when they have copy blocks.
+            if ($min === 0 && $this->writesCopy($site, $type)) {
+                $min = SeoRules::THIN_WORDS;
+            }
             if ($min > 0 && $words < $min * 0.8) {
-                $problems[$type] = "Only {$words} words; write at least {$min} words of useful, specific copy for this page.";
+                $problems[$type] = "Only {$words} words; write at least {$min} words of useful, specific copy for this page: use the reference content for topics, details and facts so every section is full, and give each list section an intro that explains it.";
 
                 continue;
             }

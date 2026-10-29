@@ -43,6 +43,8 @@ class ThemeContext
     /** Entries already listed on the current page, so sections show different items where they can. */
     protected array $shownEntries = [];
 
+    protected bool $taglineUsed = false;
+
     protected ?Collection $entryCache = null;
 
     /** Blocks whose picture is a page's main visual (a picture slot). */
@@ -92,6 +94,22 @@ class ThemeContext
         $this->currentPath = trim($path, '/');
         $this->usedImages = [];
         $this->shownEntries = [];
+        $this->taglineUsed = false;
+    }
+
+    /**
+     * The brand tagline as stand-in copy for a block without its own text,
+     * once per page: a second block falls back to nothing instead of
+     * repeating the same promo line (the footer keeps its own).
+     */
+    public function tagline(): ?string
+    {
+        if ($this->taglineUsed || blank($this->brand->tagline ?? null)) {
+            return null;
+        }
+        $this->taglineUsed = true;
+
+        return $this->brand->tagline;
     }
 
     /** html lang / og:locale: the language with the target market, e.g. en + PH = en-PH. */

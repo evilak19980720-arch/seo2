@@ -16,6 +16,9 @@ class SeoRules
     /** Pages whose length is not a quality signal. */
     public const NO_MIN_WORDS = ['contact', 'privacy', 'terms', 'media', 'updates'];
 
+    /** Below this a page or detail page reads as an empty column, whatever its type. */
+    public const THIN_WORDS = 150;
+
     /** Seasonal / event headlines age badly and say nothing about the product. */
     public const SEASONAL = '/\b(spring|summer|autumn|fall season|winter|christmas|xmas|easter|halloween|black friday|cyber monday|new year|valentine|ramadan|diwali|carnival|primavera|ver[aã]o|outono|inverno|natal|p[aá]scoa|carnaval|ano novo|navidad|semana santa|a[nñ]o nuevo|oto[nñ]o|invierno|f[eê]te|no[eë]l|weihnachten|ostern|tết|songkran|lunar new year)\b|春节|圣诞|中秋|国庆|元旦|新年|夏季|春季|冬季|秋季/iu';
 
@@ -24,6 +27,58 @@ class SeoRules
 
     /** Numbers that promise money, speed or odds. */
     public const NUMERIC_CLAIM = '/(?:[$€£¥₱₹₫฿]|R\$|US\$|PHP|BRL|USD)\s?\d|\d[\d.,]*\s?(?:%|k\b|mil\b|million|milh[õo]es|millones|万|亿)|\d+\s?(?:x|倍)\b|\b\d+\s?(?:sec(?:ond)?s?|segundos?|min(?:ute)?s?|minutos?|hours?|horas?|分钟|秒|小时)\b|\b(?:bonus|b[oô]nus|rebate|cashback|jackpot|奖金|返水|彩金)\b[^.!?]{0,30}\d|\d[^.!?]{0,20}\b(?:bonus|b[oô]nus|rebate|cashback|jackpot|free spins|giros gr[aá]tis)\b/iu';
+
+    /**
+     * Traces of how the copy was written: remarks about the input ("the brand
+     * profile does not include…", "based on the information provided"),
+     * self-references and placeholders. Visitors must never read them.
+     */
+    public const TRACE = '/\b(?:(?:brand|company|product|game)(?:\'s)? (?:profile|facts|information|info|data|details|brief)\b[^.!?]{0,40}\b(?:does not|doesn\'t|did not|do not|don\'t|has no|lacks?|without)\b|(?:not|no(?:t yet)?) (?:provided|specified|mentioned|stated|given|disclosed|available|listed) (?:in|by) (?:the |our )?(?:brand |company |source |reference )?(?:profile|facts|data|information|brief|source|reference)|(?:based on|according to|from) the (?:provided|given|supplied|available) (?:information|data|facts|profile|details|context)|(?:as an ai|as a language model|i (?:cannot|can\'t|don\'t have) (?:access|browse|verify))|perfil da (?:marca|empresa)\b[^.!?]{0,40}\bn[ãa]o\b|n[ãa]o (?:foi|foram|está|estão|é|são) (?:informad|fornecid|especificad|mencionad|divulgad)[oa]s?(?: n[oa]s? (?:perfil|dados|informações))|(?:com base n[ao]s?|segundo [ao]s?|de acordo com [ao]s?) (?:informações|dados|fatos) (?:fornecid|disponíve|dad)\w*|perfil de la (?:marca|empresa)\b[^.!?]{0,40}\bno\b|no se (?:proporciona|especifica|menciona|indica)n? en (?:el|los|la) (?:perfil|datos|información)|(?:según|con base en|de acuerdo con) (?:la|los) (?:información|datos) (?:proporcionad|facilitad|disponible)\w*|lorem ipsum)\b|\[(?:brand|link|url|name|product|insert[^\]]*|marca|nome)\]|\{\{[^}]*\}\}/iu';
+
+    public static function hasTrace(string $text): bool
+    {
+        return (bool) preg_match(self::TRACE, $text);
+    }
+
+    /** Drop the sentences of a text that carry writing traces. */
+    public static function stripTraces(string $text): string
+    {
+        if (! self::hasTrace($text)) {
+            return $text;
+        }
+        $sentences = preg_split('/(?<=[.!?。！？…])\s+/u', $text) ?: [$text];
+
+        return trim(implode(' ', array_filter($sentences, fn ($s) => ! self::hasTrace($s))));
+    }
+
+    /** Same for HTML: the sentences go, and a paragraph or item left empty goes with them. */
+    public static function stripTracesHtml(string $html): string
+    {
+        if (trim($html) === '' || ! self::hasTrace(strip_tags($html))) {
+            return $html;
+        }
+        $dom = new DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?><div id="r">'.$html.'</div>', LIBXML_NOERROR | LIBXML_NOWARNING | LIBXML_HTML_NODEFDTD);
+        $xpath = new DOMXPath($dom);
+        foreach (iterator_to_array($xpath->query('//p | //li | //td | //blockquote | //figcaption | //h2 | //h3 | //h4')) as $node) {
+            if ($xpath->query('.//p | .//li', $node)->length || ! self::hasTrace($node->textContent)) {
+                continue;
+            }
+            $clean = self::stripTraces(trim($node->textContent));
+            if ($clean === '' || preg_match('/^h\d$/', $node->nodeName)) {
+                $node->parentNode?->removeChild($node);
+            } else {
+                $node->textContent = $clean;
+            }
+        }
+        $root = $dom->getElementById('r');
+        $out = '';
+        foreach ($root?->childNodes ?? [] as $child) {
+            $out .= $dom->saveHTML($child);
+        }
+
+        return $out;
+    }
 
     public static function normalize(string $text): string
     {
@@ -66,6 +121,9 @@ class SeoRules
     public static function unsupportedClaims(string $text, string $facts): array
     {
         $found = [];
+        if (preg_match_all(self::TRACE, $text, $t)) {
+            $found = $t[0];
+        }
         $facts = mb_strtolower($facts);
         foreach ([self::NUMERIC_CLAIM, self::SUPERLATIVES] as $pattern) {
             if (preg_match_all($pattern, $text, $m)) {

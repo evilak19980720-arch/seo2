@@ -12,6 +12,10 @@
                 }
             }
         }
+        // Section pills only help with several real groups: four or more, and not one item each.
+        if (count($links) < 4 || max(array_column($links, 'count') ?: [0]) < 2) {
+            $links = [];
+        }
     } else {
         foreach ((array) $targets as $type) {
             if ($ctx->pages->has($type) && ! in_array($type, $ctx->hidden, true) && trim($ctx->pages[$type]->slug, '/') !== $ctx->currentPath) {

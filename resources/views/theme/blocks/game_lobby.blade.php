@@ -1,11 +1,12 @@
 @php
     $games = $ctx->entries('game');
-    $values = fn ($key) => $games->flatMap(fn ($g) => (array) $g->get($key, []))->filter(fn ($v) => is_string($v) && trim($v) !== '')->map(fn ($v) => trim($v))->unique()->sort()->values();
-    $filters = array_filter([
-        'provider' => $games->map(fn ($g) => is_string($g->get('provider')) ? trim($g->get('provider')) : null)->filter()->unique()->sort()->values(),
+    $values = fn ($key) => $games->flatMap(fn ($g) => array_unique((array) $g->get($key, [])))->filter(fn ($v) => is_string($v) && trim($v) !== '')->map(fn ($v) => trim($v))->values();
+    // A filter helps when it splits the games: two or more values, at least one shared by several games.
+    $filters = array_map(fn ($list) => $list->unique()->sort()->values(), array_filter([
+        'provider' => $games->map(fn ($g) => is_string($g->get('provider')) ? trim($g->get('provider')) : null)->filter()->values(),
         'theme' => $values('themes'),
         'mechanic' => $values('mechanics'),
-    ], fn ($list) => $list->count() > 1);
+    ], fn ($list) => $list->unique()->count() > 1 && $list->countBy()->max() > 1));
     // Tabs that would always be empty are left out; recent and favourites fill in the visitor's browser.
     $tabs = collect(['all', 'hot', 'new', 'classic'])->filter(fn ($t) => $t === 'all' || $games->contains(fn ($g) => in_array($t, $g->tags(), true)))->push('recent', 'favorites');
 @endphp

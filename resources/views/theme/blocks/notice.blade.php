@@ -1,4 +1,4 @@
-@php($text = $data['text'] ?? $ctx->brand->tagline)
+@php($text = $data['text'] ?? $ctx->tagline())
 @if ($text)
 @php($cta = $ctx->primaryCta())
 <div class="notice notice--{{ $variant }}" role="note">

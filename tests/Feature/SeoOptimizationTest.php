@@ -102,6 +102,17 @@ class SeoOptimizationTest extends TestCase
         $this->assertSame('Member Day Mystery Bonus distribution…', SeoHead::limit('Member Day Mystery Bonus distribution and Reward Center claim', 40));
     }
 
+    public function test_writing_traces_never_reach_visitors(): void
+    {
+        $this->assertSame('Jili makes slots.', SeoRules::stripTraces("The brand profile does not include Jili's founding date or licence. Jili makes slots."));
+        $this->assertSame('It has wilds.', SeoRules::stripTraces('Based on the provided information, the game is fun. It has wilds.'));
+        $this->assertSame('O jogo é divertido.', SeoRules::stripTraces('O perfil da marca não informa a data de fundação. O jogo é divertido.'));
+        $this->assertSame('Boa sorte.', SeoRules::stripTraces('Jogue [brand] agora. Boa sorte.'));
+        $this->assertSame('Our games load fast. Players love the profile page.', SeoRules::stripTraces('Our games load fast. Players love the profile page.'));
+        $this->assertSame('<h2>Note</h2><p>Real copy.</p>', SeoRules::stripTracesHtml('<h2>Note</h2><p>The company information does not mention a founder.</p><p>Real copy.</p>'));
+        $this->assertSame('', SeoRules::stripClaims('No data: not provided in the brand profile.', ''), 'claim filters drop traces too');
+    }
+
     public function test_joined_brand_is_taken_off_column_names(): void
     {
         $this->assertSame('Jogos', SeoRules::bareTitle('Jogos – Galaxy Run', ['Galaxy Run']));
@@ -233,7 +244,7 @@ class SeoOptimizationTest extends TestCase
         $this->assertNotSame($navA[1], $navB[1], 'two sites do not share class names');
     }
 
-    public function test_thin_or_duplicated_pages_are_retried_then_noindexed(): void
+    public function test_thin_or_duplicated_pages_are_retried_twice_then_noindexed(): void
     {
         config(['platform.page_min_words' => 400]);
         $this->fakeAi();
@@ -246,7 +257,7 @@ class SeoOptimizationTest extends TestCase
         $this->assertTrue($product->noindex, 'the fake AI only returns a few words');
         $this->assertFalse($site->pages()->where('type', 'contact')->first()->noindex, 'contact pages have no length rule');
         $calls = collect(Http::recorded())->filter(fn ($r) => str_contains((string) $r[0]->body(), 'Write the core pages'));
-        $this->assertCount(2, $calls, 'one retry with feedback');
+        $this->assertCount(3, $calls, 'a thin page is retried twice with feedback');
         $this->assertStringContainsString('feedback', (string) $calls->last()[0]->body());
 
         $html = (new SiteRenderer($site->fresh(), $this->tmp))->renderPage($site->pages()->where('type', 'home')->first());

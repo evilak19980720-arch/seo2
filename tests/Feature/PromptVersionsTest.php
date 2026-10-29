@@ -6,6 +6,7 @@ use App\Enums\PromptType;
 use App\Filament\Resources\Prompts\PromptResource;
 use App\Models\Prompt;
 use App\Models\User;
+use Database\Seeders\PromptSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -20,7 +21,7 @@ class PromptVersionsTest extends TestCase
 
     public function test_latest_tab_shows_newest_versions_and_history_the_rest(): void
     {
-        $v2 = Prompt::where(['type' => PromptType::ArticleGenerate->value, 'version' => 2])->sole();
+        $v2 = Prompt::where(['type' => PromptType::ArticleGenerate->value, 'version' => PromptSeeder::VERSIONS[PromptType::ArticleGenerate->value]])->sole();
         $v1 = $this->oldVersion();
         $pt = Prompt::create(['type' => PromptType::ArticleGenerate, 'locale' => 'pt-BR', 'version' => 1, 'system' => 's', 'template' => 't', 'is_active' => true]);
 
@@ -40,7 +41,7 @@ class PromptVersionsTest extends TestCase
 
         $restored = PromptResource::copyAsLatest($v1);
 
-        $this->assertSame(3, $restored->version);
+        $this->assertSame(PromptSeeder::VERSIONS[PromptType::ArticleGenerate->value] + 1, $restored->version);
         $this->assertSame($restored->id, Prompt::resolve(PromptType::ArticleGenerate)->id);
         $this->assertSame(1, Prompt::where('type', PromptType::ArticleGenerate->value)->where('is_active', true)->count());
     }

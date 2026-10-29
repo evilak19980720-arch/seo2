@@ -137,7 +137,7 @@ class ArticlePipeline
             'featured_image' => $featured,
             'featured_image_alt' => Str::limit((string) ($data['featured_image_alt'] ?? $title), 120, ''),
             'author' => __('theme.editorial', ['brand' => $site->name], $site->language()),
-            'body' => HtmlSanitizer::clean($html),
+            'body' => SeoRules::stripTracesHtml(HtmlSanitizer::clean($html)),
         ]);
         $article->setRelation('keyword', $keyword);
 

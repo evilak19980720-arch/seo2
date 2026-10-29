@@ -331,7 +331,7 @@ class GameSiteTest extends TestCase
         $this->assertStringContainsString('id="megaways"', $types);
         $this->assertStringContainsString('Gates of Olympus', $types);
         $this->assertStringNotContainsString('id="cluster"', $types, 'a category without games is not shown');
-        $this->assertStringContainsString('tipos-de-slots/#megaways', $page('games'), 'category shortcuts link to filled categories');
+        $this->assertStringNotContainsString('tipos-de-slots/#megaways', $page('games'), 'two categories of one game each make no shortcut list');
 
         $academy = $page('academy');
         $this->assertStringContainsString('glossary__items', $academy);
