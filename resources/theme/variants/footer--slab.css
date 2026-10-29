@@ -3,3 +3,4 @@
 .footer--slab .footer__cols>*{background:var(--c-surface);border:1px solid var(--line);border-radius:var(--r-box);padding:1.25rem 1.35rem}
 .footer--slab .footer__cols>div:first-child{background:linear-gradient(150deg,var(--c-primary),color-mix(in srgb,var(--c-primary) 55%,var(--c-secondary)));color:var(--c-on-primary);border:0;--c-outline:var(--c-on-primary)}
 .footer--slab .footer__cols>div:first-child .btn{background:var(--c-on-primary);color:var(--c-primary)}
+.footer--slab .footer__cols>:first-child{align-self:start}
