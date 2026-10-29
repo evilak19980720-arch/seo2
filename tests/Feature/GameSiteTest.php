@@ -53,6 +53,14 @@ class GameSiteTest extends TestCase
         }
     }
 
+    /** Pin the game preset to one positioning (the "promo" one has games, lobby and promotions). */
+    protected function positioning(string $name = 'promo'): array
+    {
+        config(['site_types.game.positionings' => array_intersect_key(config('site_types.game.positionings'), [$name => 1])]);
+
+        return config('site_types.game');
+    }
+
     protected function addEntries(Site $site): void
     {
         $games = [
@@ -113,9 +121,21 @@ class GameSiteTest extends TestCase
         $first = SiteStructure::choose($a, $type);
         $this->assertSame($first, SiteStructure::choose($a, $type), 'same site, same structure');
 
-        foreach (['home', 'games', 'lobby', 'promotions', 'help', 'about', 'responsible', 'terms', 'privacy', 'sitemap'] as $required) {
+        foreach (['home', 'games', 'help', 'about', 'responsible', 'terms', 'privacy', 'sitemap', 'search'] as $required) {
             $this->assertArrayHasKey($required, $first['pages']);
         }
+        // One positioning decides the menu: 5-7 entries after home, News among them, every entry a chosen page.
+        $this->assertArrayHasKey($first['positioning'], $type['positionings']);
+        $this->assertContains('blog', $first['nav']['menu']);
+        $this->assertGreaterThanOrEqual(5, count($first['nav']['menu']));
+        $this->assertLessThanOrEqual(7, count($first['nav']['menu']));
+        foreach (array_diff($first['nav']['menu'], ['blog']) as $page) {
+            $this->assertArrayHasKey($page, $first['pages']);
+        }
+        $this->assertSame(array_values(array_intersect($type['positionings'][$first['positioning']]['home'], array_column($type['pages']['home']['sections'], 'key'))), $first['pages']['home'], 'home follows the positioning order');
+        $this->assertLessThanOrEqual(30, count($first['pages']));
+        $positionings = collect(range(1, 12))->map(fn () => SiteStructure::choose($this->gameSite(), $type)['positioning'])->unique();
+        $this->assertGreaterThan(1, $positionings->count(), 'positioning is drawn per site');
         // No accounts, no payments, no licence: none of those pages or sections.
         $this->assertArrayNotHasKey('account', $first['pages']);
         $this->assertNotContains('register_login', $first['pages']['guide'] ?? []);
@@ -146,7 +166,7 @@ class GameSiteTest extends TestCase
         $this->assertGreaterThan(1, $shapes->count());
 
         // A regenerated structure keeps what the site already had.
-        $again = SiteStructure::choose($a, $type, ['pages' => ['events' => ['list', 'rules']]] + $first);
+        $again = SiteStructure::choose($a, $type, ['pages' => ['events' => ['list', 'rules']] + $first['pages']] + $first);
         $this->assertArrayHasKey('events', $again['pages']);
         $this->assertContains('rules', $again['pages']['events']);
     }
@@ -189,7 +209,7 @@ class GameSiteTest extends TestCase
     public function test_game_site_renders_sections_lobby_entries_and_sitemap(): void
     {
         $site = $this->gameSite();
-        $site->update(['structure' => SiteStructure::choose($site, config('site_types.game'))]);
+        $site->update(['structure' => SiteStructure::choose($site, $this->positioning())]);
         $site = $site->fresh(['domain', 'brandProfile']);
         $this->fillPages($site);
         $this->addEntries($site);
@@ -231,11 +251,12 @@ class GameSiteTest extends TestCase
 
         // Legal pages sit in the footer's legal list, not the page list; main nav is capped.
         $menu = $site->fresh()->design_config ?? (new ThemeContext($site, new MediaPublisher($dir)))->design;
-        $this->assertLessThanOrEqual(6, count($menu['menu']));
+        $this->assertLessThanOrEqual(7, count($menu['menu']), 'home plus at most 7 entries');
     }
 
     public function test_generation_fills_site_data_from_the_reference_pages(): void
     {
+        $this->positioning();
         $img = imagecreatetruecolor(200, 200);
         imagefill($img, 0, 0, imagecolorallocate($img, 200, 30, 30));
         ob_start();

@@ -3,7 +3,7 @@
 return [
     'skip' => 'Skip to content',
     'home' => 'Home',
-    'blog' => 'Blog',
+    'blog' => 'News',
     'blog_title' => 'News and guides',
     'read_more' => 'Read more',
     'latest' => 'Latest articles',

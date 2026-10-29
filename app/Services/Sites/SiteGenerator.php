@@ -219,7 +219,7 @@ class SiteGenerator
             $round = (int) ($structure['round'] ?? 0);
             $same = fn (array $s) => $s['pages'] === $structure['pages'] && $s['collections'] === ($structure['collections'] ?? []);
             for ($try = 1; $try <= 10; $try++) {
-                $next = SiteStructure::choose($site, $config, null, $round + $try);
+                $next = SiteStructure::choose($site, $config, array_filter(['positioning' => $structure['positioning'] ?? null]) ?: null, $round + $try);
                 if (! $same($next)) {
                     break;
                 }

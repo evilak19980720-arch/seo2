@@ -63,7 +63,45 @@ return [
     'schema' => 'VideoGame',
     'sectioned' => true,
     'responsible_notice' => true,
-    'main_nav_max' => 6,
+    'main_nav_max' => 8,
+    // A site first gets one positioning (drawn at random, a regeneration draws another): it decides the
+    // header menu (6–8 entries with home and News), each menu item's dropdown, and the home page's
+    // sections in order. Footer pages are fixed, plus a few drawn from "footer_optional".
+    // "blog" is the News centre (generated articles); it is always in the menu.
+    'positionings' => [
+        'catalog' => [
+            'label' => '游戏目录型',
+            'menu' => ['games', 'lobby', 'providers', 'guide', 'blog', 'help', 'about'],
+            'children' => ['games' => ['slot_types', 'themes'], 'providers' => ['behind_scenes'], 'guide' => ['academy', 'game_math'], 'help' => ['notices', 'contact'], 'about' => ['brand_story', 'company', 'official_channels']],
+            'home' => ['intro', 'categories', 'featured_games', 'new_games', 'hot_games', 'learn', 'faq', 'support'],
+        ],
+        'brand' => [
+            'label' => '品牌展示型',
+            'menu' => ['games', 'providers', 'blog', 'help', 'about', 'business'],
+            'children' => ['games' => ['themes', 'slot_types', 'lobby'], 'providers' => ['behind_scenes'], 'help' => ['guide', 'notices', 'contact'], 'about' => ['brand_story', 'company', 'press', 'official_channels']],
+            'home' => ['intro', 'about_brand', 'hot_games', 'highlights', 'providers', 'articles', 'faq'],
+        ],
+        'knowledge' => [
+            'label' => '知识内容型',
+            'menu' => ['games', 'guide', 'academy', 'blog', 'help', 'about'],
+            'children' => ['games' => ['slot_types', 'themes', 'providers'], 'academy' => ['game_math'], 'help' => ['notices', 'contact'], 'about' => ['brand_story', 'official_channels']],
+            'home' => ['intro', 'start', 'categories', 'featured_games', 'learn', 'articles', 'support'],
+        ],
+        'promo' => [
+            'label' => '优惠活动型',
+            'menu' => ['games', 'promotions', 'events', 'blog', 'help', 'about'],
+            'children' => ['games' => ['lobby', 'providers', 'slot_types'], 'help' => ['guide', 'notices', 'contact'], 'about' => ['brand_story', 'company', 'official_channels']],
+            'home' => ['intro', 'live_events', 'promos', 'hot_games', 'trust', 'latest_notices', 'faq', 'support'],
+        ],
+    ],
+    // Pages every positioning has (footer and legal), and a few more drawn per site.
+    'footer_pages' => ['responsible', 'terms', 'privacy', 'cookies', 'regions', 'sitemap', 'search'],
+    'footer_optional' => ['security', 'fairness', 'community', 'game_terms', 'ip', 'accessibility', 'status'],
+    'footer_optional_count' => [2, 3],
+    // The app page joins the menu (before help) when the brand has an app.
+    'app_page' => 'download',
+    // Sections per content page (home has its own list).
+    'page_sections' => [3, 6],
     // Phones first: a fixed bottom bar (home, games, download…) even when the reference has none.
     'mobile_bar' => true,
     'main_nav_order' => ['games', 'lobby', 'promotions', 'events', 'providers', 'news', 'download', 'about', 'help'],
@@ -142,6 +180,11 @@ return [
                 $list('live_events', '正在进行的活动', 'events running now', 'event', 'ongoing'),
                 $list('latest_notices', '最新公告', 'latest announcements', 'notice', 'latest'),
                 $list('latest_news', '最新资讯', 'latest news', 'news', 'latest'),
+                $s('articles', 'article_list', '最新文章', 'latest articles from the news centre'),
+                $s('about_brand', 'prose', '品牌简介', 'who the brand is and what it offers players'),
+                $s('start', 'steps', '入门指南', 'how a new visitor gets started, in a few steps'),
+                $s('learn', 'link_grid', '游戏知识入口', 'guides and knowledge pages', ['links' => ['guide', 'academy', 'game_math', 'slot_types', 'themes']]),
+                $s('faq', 'faq', '常见问题', 'a few key questions with short answers'),
                 $list('providers', '合作供应商', 'game providers on the site', 'provider', 'all'),
                 $s('trust', 'checklist', '安全与信任', 'why players can trust the site (only true facts)'),
                 $s('support', 'cta', '客服入口', 'how to reach customer support', ['link' => 'help']),

@@ -165,6 +165,10 @@ class DesignConfigValidator
     /** Main-nav pages of a pool preset, in pool order, capped. */
     protected function sectionedMenu(array $siteTypeConfig): array
     {
+        // A positioning gives the menu in its own order (News included).
+        if (isset($siteTypeConfig['menu'])) {
+            return array_values(array_filter($siteTypeConfig['menu'], fn ($t) => $t === 'blog' || (($siteTypeConfig['pages'][$t]['nav'] ?? null) === 'main')));
+        }
         $main = array_keys(array_filter($siteTypeConfig['pages'], fn ($p) => ($p['nav'] ?? null) === 'main'));
         // Preferred order: what players look for first; the rest keep pool order.
         $order = array_flip($siteTypeConfig['main_nav_order'] ?? []);

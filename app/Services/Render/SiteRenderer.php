@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\View;
 class SiteRenderer
 {
     /** Blocks that show site data or brand data on their own, without page copy. */
-    public const SELF_FILLING = ['entry_list', 'game_lobby', 'html_sitemap', 'event_calendar', 'site_search', 'cookie_settings', 'link_grid', 'download', 'cta', 'contact', 'legal', 'gallery'];
+    public const SELF_FILLING = ['article_list', 'entry_list', 'game_lobby', 'html_sitemap', 'event_calendar', 'site_search', 'cookie_settings', 'link_grid', 'download', 'cta', 'contact', 'legal', 'gallery'];
 
     public readonly ThemeContext $ctx;
 

@@ -3,7 +3,7 @@
 return [
     'skip' => 'Saltar al contenido',
     'home' => 'Inicio',
-    'blog' => 'Blog',
+    'blog' => 'Noticias',
     'blog_title' => 'Novedades y guías',
     'read_more' => 'Leer más',
     'latest' => 'Artículos recientes',
