@@ -219,6 +219,45 @@ class ThemeContext
             ->take($limit)->values()->all();
     }
 
+    /**
+     * The phone bottom bar: home, up to three (four without a CTA) menu pages
+     * with labels short enough to read in a fifth of a phone, and the brand's
+     * own call to action raised in the middle. A stand-in "Read more" link is
+     * no call to action, so it is never raised. The current page is marked.
+     *
+     * @return array{items: array<int, array{label: string, href: string, current: bool}>, cta: ?array{label: string, url: string}, home_current: bool}
+     */
+    public function mobileBar(): array
+    {
+        $cta = $this->ctaLinks(1)[0] ?? null;
+        $types = $this->pages->mapWithKeys(fn ($page, $type) => [$this->href($page->slug) => $type])->put($this->href('blog'), 'blog');
+        $items = collect($this->navLinks())->take($cta ? 3 : 4)->map(function ($link) use ($types) {
+            $type = $types[$link['href']] ?? null;
+            $fallback = $type === 'blog' ? $this->t('blog') : ($type && Lang::has("theme.page_titles.{$type}", $this->lang) ? $this->t("page_titles.{$type}") : null);
+
+            return ['label' => self::shortLabel($link['label'], $fallback), 'href' => $link['href'], 'current' => trim($link['href'], '/') === $this->currentPath];
+        })->values()->all();
+        if ($cta) {
+            $cta['label'] = self::shortLabel($cta['label'], $this->t('get_started'));
+        }
+
+        return ['items' => $items, 'cta' => $cta, 'home_current' => $this->currentPath === ''];
+    }
+
+    /** A label that fits a bottom-bar slot: the page's own if short, else the default name, else its first word. */
+    public static function shortLabel(string $label, ?string $fallback = null, int $max = 12): string
+    {
+        foreach (array_filter([trim($label), trim((string) $fallback)]) as $candidate) {
+            if (mb_strlen($candidate) <= $max) {
+                return $candidate;
+            }
+        }
+        $source = $fallback !== null && trim($fallback) !== '' && mb_strlen(trim($fallback)) < mb_strlen(trim($label)) ? trim($fallback) : trim($label);
+        $first = preg_split('/[\s\-–—|:·,]+/u', $source, -1, PREG_SPLIT_NO_EMPTY)[0] ?? $source;
+
+        return mb_strlen($first) <= $max + 4 ? $first : mb_substr($first, 0, $max);
+    }
+
     /** Header behaviour from the design (see DesignConfigValidator::navigation). */
     public function navigation(): array
     {
@@ -254,6 +293,12 @@ class ThemeContext
         $path = trim($parts['path'] ?? '', '/');
 
         return ! isset($parts['fragment']) && ($path === '' || $path === $this->currentPath);
+    }
+
+    /** Whether a root-relative link is the page being rendered. */
+    public function isCurrent(string $href): bool
+    {
+        return parse_url($href, PHP_URL_HOST) === null && trim((string) parse_url($href, PHP_URL_PATH), '/') === $this->currentPath;
     }
 
     /** rel for a link: external links are nofollow, internal ones need nothing. */
@@ -586,9 +631,25 @@ class ThemeContext
         return collect($this->brand->media ?? [])->where('type', 'video')->filter(fn ($v) => filled($v['url'] ?? null))->values()->all();
     }
 
+    /**
+     * The header logo. A wide wordmark (already showing the name) is shown at
+     * full height on its own, sharp enough for its width; a square mark sits
+     * next to the name.
+     *
+     * @return array{src: string, avif: ?string, width: int, height: int, wordmark: bool}|null
+     */
     public function logo(): ?array
     {
-        return $this->site->logo_path ? $this->image($this->site->logo_path, 160) : null;
+        $logo = $this->site->logo_path ? $this->image($this->site->logo_path, 160) : null;
+        if (! $logo || empty($logo['height'])) {
+            return $logo ? $logo + ['wordmark' => false] : null;
+        }
+        $wordmark = $logo['width'] / $logo['height'] >= 1.6;
+        if ($wordmark) {
+            $logo = $this->image($this->site->logo_path, 480) ?? $logo;
+        }
+
+        return $logo + ['wordmark' => $wordmark];
     }
 
     /** All entries of the site, in their sort order. */

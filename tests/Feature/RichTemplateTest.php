@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\GenerationTask;
 use App\Services\Render\StaticSiteBuilder;
+use App\Services\Render\ThemeContext;
 use App\Services\Sites\SiteGenerator;
 use App\Services\Theme\ReferenceAnalyzer;
 use App\Services\Theme\SiteStyle;
@@ -125,7 +126,10 @@ class RichTemplateTest extends TestCase
         $this->assertSame(2, substr_count($home, 'btn nav__cta'));
         $this->assertMatchesRegularExpression('#class="mobile-bar mobile-bar--[a-z]+"#', $home);
         $this->assertStringContainsString('has-mobile-bar', $home);
-        $this->assertStringContainsString('<li><a href="/">Início</a></li>', $home);
+        $this->assertStringContainsString('<li><a href="/" aria-current="page">Início</a></li>', $home, 'the current page is marked');
+        $this->assertStringContainsString('<a class="mobile-bar__cta" href="https://play.google.com/x"', $home, 'the brand link is the raised button');
+        $this->assertSame('Perguntas', ThemeContext::shortLabel('Perguntas frequentes sobre o jogo', 'Perguntas frequentes'));
+        $this->assertSame('Como jogar', ThemeContext::shortLabel('Guia completo de como jogar', 'Como jogar'));
         // The footer still lists every page.
         $this->assertMatchesRegularExpression('#<footer.*perguntas-frequentes.*</footer>#s', $home);
         // Footer links come in groups that fold on phones: the submenu item heads its own group, legal comes last.
