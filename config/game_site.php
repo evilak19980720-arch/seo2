@@ -10,7 +10,7 @@
 |
 | Section fields: key, block, label (admin), topic (for the AI), and
 |   collection/filter  list of site data (filters: all, hot, new, classic, featured,
-|                      upcoming, demo, active, ongoing, ended, latest, tag:x, type:x,
+|                      upcoming, active, ongoing, ended, latest, tag:x, type:x,
 |                      theme:x, device:x)
 |   links              link_grid targets: page types, or "sections:<page>"
 |   requires           app | company | license | certification
@@ -90,7 +90,7 @@ return [
             $s('faq', 'prose', '游戏常见问题', 'common questions about this game'),
             $s('version', 'prose', '游戏版本说明', 'versions of the game', $src),
             $s('changelog', 'prose', '游戏更新记录', 'updates to the game', $src),
-        ], 'blocks' => ['params' => '游戏参数', 'media' => '游戏画面与视频', 'series' => '同系列 / 相似游戏推荐']],
+        ], 'blocks' => ['params' => '游戏参数', 'media' => '游戏截图', 'series' => '同系列 / 相似游戏推荐']],
         'provider' => ['label' => '供应商', 'owners' => ['providers'], 'sections' => [
             $s('details', 'prose', '供应商详情', 'who the provider is and its style', $req),
             $s('story', 'prose', '供应商品牌故事', 'the provider\'s story', $src),
@@ -244,13 +244,12 @@ return [
         'lobby' => [
             'label' => '游戏大厅', 'slug' => $slug('game-lobby', 'lobby-de-jogos', 'lobby-de-juegos'), 'nav' => 'main', 'required' => true, 'min_words' => 0,
             'sections' => [
-                $s('lobby', 'game_lobby', '全部游戏 / 搜索 / 分类 / 筛选 / 排序 / 最近玩过 / 收藏', 'all games with search, tabs, filters and sorting', $req),
-                $list('demo', '试玩专区', 'games with a free demo', 'game', 'demo'),
+                $s('lobby', 'game_lobby', '全部游戏 / 搜索 / 分类 / 筛选', 'all games with search, tabs and filters', $req),
                 $list('mobile', '手机游戏专区', 'games for phones', 'game', 'device:mobile'),
                 $list('desktop', '桌面游戏专区', 'games for desktop', 'game', 'device:desktop'),
                 $list('upcoming', '新游戏预告', 'upcoming games', 'game', 'upcoming'),
                 $list('maintenance', '游戏维护状态', 'games under maintenance', 'notice', 'tag:game_maintenance'),
-                $s('about_lobby', 'steps', '大厅使用说明', 'how to use the lobby: tabs, search, filters, recently played, favourites'),
+                $s('about_lobby', 'steps', '大厅使用说明', 'how to use the lobby: tabs, search and filters'),
             ],
         ],
 
@@ -285,7 +284,6 @@ return [
                 $s('volatility', 'prose', '波动性说明', 'volatility explained'),
                 $s('hit_frequency', 'prose', '命中频率说明', 'hit frequency'),
                 $s('probability', 'callout', '理论概率与短期结果', 'why short-term results differ from theory'),
-                $s('demo_vs_real', 'table', '试玩与实际游戏的区别', 'demo play compared with normal play'),
                 $s('myths', 'checklist', '常见游戏误区', 'common myths about slots, corrected'),
             ],
         ],
@@ -365,8 +363,6 @@ return [
                 $s('first_use', 'prose', '首次使用指南', 'your first visit'),
                 $s('lobby_guide', 'steps', '游戏大厅使用指南', 'using the game lobby'),
                 $s('search_guide', 'prose', '游戏搜索指南', 'finding a game with search and filters'),
-                $s('favorites_guide', 'prose', '收藏游戏指南', 'saving favourite games'),
-                $s('demo_guide', 'prose', '试玩操作指南', 'playing a demo'),
                 $s('mobile_guide', 'prose', '手机端使用指南', 'using the site on a phone'),
                 $s('desktop_guide', 'prose', '电脑端使用指南', 'using the site on a computer'),
                 $s('support_guide', 'prose', '客服使用指南', 'getting help from support'),
@@ -501,8 +497,6 @@ return [
                 $s('discussions', 'prose', '游戏主题讨论', 'what players talk about', $src),
                 $s('ideas', 'prose', '新功能意见征集', 'how to suggest features'),
                 $s('dev_qa', 'faq', '开发者问答', 'developer Q&A', $src),
-                $s('live', 'prose', '品牌直播', 'live streams', $src),
-                $s('videos', 'gallery', '视频中心', 'videos'),
                 $s('wallpapers', 'gallery', '品牌壁纸与素材', 'wallpapers and assets'),
                 $s('characters', 'card_grid', '游戏角色图鉴', 'game characters', $src),
                 $s('fan_art', 'card_grid', '粉丝作品展示', 'fan creations', $src),

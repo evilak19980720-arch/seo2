@@ -659,11 +659,6 @@ class ThemeContext
         return true;
     }
 
-    public function videos(): array
-    {
-        return collect($this->brand->media ?? [])->where('type', 'video')->filter(fn ($v) => filled($v['url'] ?? null))->values()->all();
-    }
-
     /**
      * The header logo. A wide wordmark (already showing the name) is shown at
      * full height on its own, sharp enough for its width; a square mark sits

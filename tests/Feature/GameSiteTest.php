@@ -204,7 +204,7 @@ class GameSiteTest extends TestCase
         $lobby = file_get_contents("{$dir}/{$lobbySlug}/index.html");
         $this->assertStringContainsString('data-lobby', $lobby);
         $this->assertStringContainsString('data-filter="provider"', $lobby);
-        $this->assertStringContainsString('data-tab="favorites"', $lobby);
+        $this->assertStringNotContainsString('data-tab="favorites"', $lobby, 'no personal tabs');
         $this->assertStringContainsString("/{$gamesSlug}/gates-of-olympus/", $lobby);
         $this->assertSame(1, substr_count($lobby, '<h1'));
 
@@ -306,7 +306,7 @@ class GameSiteTest extends TestCase
             'games' => ['overview', 'cards', 'categories'],
             'slot_types' => ['intro', 'megaways', 'cluster', 'ways'],
             'academy' => ['basics', 'glossary', 'wild'],
-            'game_math' => ['rng', 'probability', 'demo_vs_real', 'myths'],
+            'game_math' => ['rng', 'probability', 'myths'],
             'brand_story' => ['story', 'founder', 'history'],
             'events' => ['list', 'calendar'],
             'search' => ['search'],
@@ -339,7 +339,6 @@ class GameSiteTest extends TestCase
         $math = $page('game_math');
         $this->assertStringContainsString('callout', $math);
         $this->assertStringContainsString('checklist__items', $math);
-        $this->assertStringContainsString('data-table', $math);
         $story = $page('brand_story');
         $this->assertStringContainsString('<blockquote>', $story);
         $this->assertStringContainsString('timeline__list', $story);

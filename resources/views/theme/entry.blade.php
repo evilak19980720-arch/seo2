@@ -2,7 +2,6 @@
     $sections = collect($definition['sections'] ?? [])->map(fn ($s) => ($entry->sections[$s['key']] ?? null) ? ['key' => $s['key']] + (array) $entry->sections[$s['key']] : null)->filter(fn ($s) => filled($s['html'] ?? null))->values();
     $params = $entry->params();
     $media = collect((array) $entry->get('images', []))->filter(fn ($p) => is_string($p) && $p !== $entry->image)->map(fn ($p) => $ctx->image($p, 1200))->filter()->take(6)->values();
-    $video = is_string($entry->get('video')) && str_starts_with($entry->get('video'), 'https://') ? $entry->get('video') : null;
     $status = in_array($entry->collection, ['promotion', 'event'], true) ? $entry->status() : null;
     $date = $entry->date();
     $paramLabel = fn ($key) => in_array($key, ['starts_at', 'ends_at'], true) ? $ctx->t($key === 'starts_at' ? 'starts' : 'ends') : $ctx->t($key);
@@ -42,10 +41,10 @@
 </tbody></table></aside>
 @endif
 </div>
-@if ($media->isNotEmpty() || $video)
-<section class="entry__gallery gallery"><h2>{{ $ctx->t('media') }}</h2><div class="gallery__items">
+@if ($media->isNotEmpty())
+<section class="entry__gallery gallery"><h2>{{ $ctx->t('gallery') }}</h2><div class="gallery__items">
 @foreach ($media as $img)<figure>@include('theme.partials.picture', ['img' => $img, 'alt' => $entry->title.' '.($loop->index + 1)])</figure>@endforeach
-</div>@if ($video)<p><a href="{{ $video }}" rel="nofollow noopener">{{ $ctx->t('media') }}</a></p>@endif</section>
+</div></section>
 @endif
 @if ($related->isNotEmpty())
 <aside class="related entry-list entry-list--compact"><h2>{{ $relatedTitle }}</h2><div class="entry-list__items">
@@ -54,5 +53,4 @@
 @endif
 <p class="entry-list__more"><a class="btn btn--ghost" href="{{ $ctx->href($owner->slug) }}">{{ $ctx->t('view_all') }}</a></p>
 </div>
-@if ($entry->collection === 'game')<script>(function(){try{var k='lobby:recent',r=JSON.parse(localStorage.getItem(k))||[],s=@json($entry->slug),i=r.indexOf(s);if(i>-1)r.splice(i,1);r.unshift(s);localStorage.setItem(k,JSON.stringify(r.slice(0,24)))}catch(e){}})();</script>@endif
 </article>
