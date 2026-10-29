@@ -20,7 +20,9 @@ main{display:block}
 .nav--centered .nav__brand{margin-right:0}
 @media (min-width:901px){.nav--centered .nav__inner{flex-direction:column;gap:0;padding:.4rem 0}.nav--centered .nav__brand{margin:0}}
 .nav--split{background:color-mix(in srgb,var(--c-secondary) 94%,transparent);border-bottom:0}
-.nav--split .nav__brand,.nav--split .nav__links a,.nav--split .nav__toggle{color:var(--c-on-secondary)}
+/* Coloured surfaces redefine the colour tokens for everything inside them (links, dropdowns, phone menus, outline buttons), so text never inherits a colour meant for another background. */
+.nav--split{--c-bg:var(--c-secondary);--c-surface:color-mix(in srgb,var(--c-on-secondary) 8%,var(--c-secondary));--c-text:var(--c-on-secondary);--c-muted:color-mix(in srgb,var(--c-on-secondary) 78%,var(--c-secondary));--c-link:var(--c-on-secondary);--line:color-mix(in srgb,var(--c-on-secondary) 16%,transparent);color:var(--c-text)}
+.nav--split .nav__brand,.nav--split .nav__links a,.nav--split .nav__toggle{color:var(--c-text)}
 @media (max-width:900px){.nav--split .nav__menu{background:var(--c-secondary)}}
 .nav--minimal{border-bottom:0;background:color-mix(in srgb,var(--c-surface) 85%,transparent)}
 
@@ -198,7 +200,8 @@ main{display:block}
 
 /* footer */
 .footer{padding:calc(4rem*var(--space)) 0 calc(1.5rem*var(--space));background:var(--c-secondary);color:var(--c-on-secondary);font-size:.95rem}
-.footer a{color:inherit;opacity:.8;text-decoration:none;display:inline-flex;min-height:36px;align-items:center}
+.footer:where(:not(.footer--simple)){--c-bg:var(--c-secondary);--c-surface:color-mix(in srgb,var(--c-on-secondary) 8%,var(--c-secondary));--c-text:var(--c-on-secondary);--c-muted:color-mix(in srgb,var(--c-on-secondary) 78%,var(--c-secondary));--c-link:var(--c-on-secondary);--line:color-mix(in srgb,var(--c-on-secondary) 16%,transparent)}
+.footer a:not(.btn){color:inherit;opacity:.8;text-decoration:none;display:inline-flex;min-height:36px;align-items:center}
 .footer a:hover{opacity:1}
 .footer p{opacity:.8;margin:.5rem 0 0;max-width:40ch}
 .footer__brand{font-family:var(--f-heading);font-weight:800;font-size:1.3rem}
@@ -231,9 +234,10 @@ main{display:block}
 .nav--portal{border-bottom:0}
 .nav--portal .nav__inner{min-height:68px}
 .nav--portal .nav__brand{margin-right:auto}
+@media (min-width:901px){.nav__bar{--c-bg:var(--c-primary);--c-surface:color-mix(in srgb,var(--c-on-primary) 8%,var(--c-primary));--c-text:var(--c-on-primary);--c-muted:color-mix(in srgb,var(--c-on-primary) 78%,var(--c-primary));--c-link:var(--c-on-primary);--line:color-mix(in srgb,var(--c-on-primary) 16%,transparent);color:var(--c-text)}}
 .nav__bar{background:var(--c-primary)}
-.nav__bar .nav__links a{color:var(--c-on-primary);opacity:.92;border-radius:0;min-height:48px;font-size:.92rem;text-transform:uppercase;letter-spacing:.04em}
-.nav__bar .nav__links a:hover{background:color-mix(in srgb,var(--c-on-primary) 14%,transparent);opacity:1}
+.nav__bar .nav__links a{color:var(--c-text);opacity:.92;border-radius:0;min-height:48px;font-size:.92rem;text-transform:uppercase;letter-spacing:.04em}
+.nav__bar .nav__links a:hover{background:color-mix(in srgb,currentColor 14%,transparent);opacity:1}
 @media (min-width:901px){.nav__bar .nav__links{overflow-x:auto}}
 @media (max-width:900px){.nav--portal .nav__cta{display:inline-flex;min-height:40px;padding:0 .9rem;font-size:.85rem}.nav__bar{background:var(--c-bg)}.nav__bar .nav__links a{color:var(--c-text);text-transform:none}}
 
@@ -340,8 +344,9 @@ main{display:block}
 .st-cards-elevated :is(.tile,.post-card,.features--grid .feature,.features--cards .feature,.faq details,.faq__item,.card){border-color:transparent;box-shadow:0 14px 34px -18px rgba(0,0,0,.35)}
 .st-cards-glass :is(.tile,.post-card,.features--grid .feature,.features--cards .feature,.faq details,.faq__item,.card){background:color-mix(in srgb,var(--c-bg) 55%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-color:color-mix(in srgb,var(--c-text) 14%,transparent)}
 .st-buttons-gradient .btn:not(.btn--ghost):not(.btn--light){background:linear-gradient(135deg,var(--c-primary),color-mix(in srgb,var(--c-primary) 55%,var(--c-accent)))}
-.st-buttons-outline .btn:not(.btn--ghost){background:transparent;color:var(--c-primary);border:2px solid var(--c-primary);box-shadow:none}
-.st-buttons-outline .cta--banner .btn,.st-buttons-outline .nav__bar .btn{color:var(--c-on-primary);border-color:var(--c-on-primary)}
+.st-buttons-outline .btn:not(.btn--ghost){background:transparent;color:var(--c-outline,var(--c-primary));border:2px solid currentColor;box-shadow:none}
+.st-buttons-outline .cta--banner .btn{color:var(--c-on-primary);border-color:var(--c-on-primary)}
+.st-buttons-outline .nav--split .btn:not(.btn--ghost),.st-buttons-outline .nav__bar .btn:not(.btn--ghost),.st-buttons-outline .footer:where(:not(.footer--simple)) .btn:not(.btn--ghost){color:var(--c-text);border-color:currentColor}
 .st-headings-uppercase :is(h1,h2,.nav__links a,.footer__title){text-transform:uppercase;letter-spacing:.03em}
 .st-headings-normal .section__head h2::after,.st-headings-normal .section__head h1::after{display:none}
 .st-headings-accent .section__head h2{display:inline-block;background:linear-gradient(transparent 62%,color-mix(in srgb,var(--c-primary) 30%,transparent) 0)}
@@ -608,7 +613,7 @@ h3{letter-spacing:-.01em}
 .nav__tabs{display:flex;gap:.45rem;overflow-x:auto;padding:.15rem 20px .7rem;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .nav__tabs::-webkit-scrollbar{display:none}
 .nav__tabs a{flex:none;display:inline-flex;align-items:center;min-height:36px;padding:0 .95rem;border-radius:999px;font-weight:700;font-size:.85rem;text-decoration:none;color:var(--c-text);background:color-mix(in srgb,var(--c-text) 7%,transparent)}
-.nav__tabs a:first-child{background:var(--c-primary);color:var(--c-on-primary)}
+.nav .nav__tabs a:first-child{background:var(--c-primary);color:var(--c-on-primary)}
 .nav--split .nav__tabs a,.nav--portal .nav__tabs a{color:inherit}
 .nav--split .nav__tabs a:not(:first-child){color:var(--c-on-secondary);background:rgba(255,255,255,.12)}
 

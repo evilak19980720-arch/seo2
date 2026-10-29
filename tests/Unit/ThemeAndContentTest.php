@@ -84,4 +84,25 @@ class ThemeAndContentTest extends TestCase
         $this->assertSame(['design' => ['nav' => 'bar']], $json('{"design":{"nav":"bar","footer":', true));
         $this->assertSame(['ok' => true], $json("Here you go:\n```json\n{\"ok\":true}\n```"));
     }
+
+    public function test_ai_css_backgrounds_carry_readable_text_and_cannot_move_theme_parts(): void
+    {
+        $colors = ['primary' => '#2563eb', 'on_primary' => '#ffffff', 'secondary' => '#0f172a', 'on_secondary' => '#ffffff', 'accent' => '#f59e0b', 'background' => '#ffffff', 'surface' => '#f8fafc', 'text' => '#111827', 'muted' => '#4b5563', 'link' => '#2563eb'];
+        $css = CustomCssValidator::themeSafe(
+            '.nav{background:var(--c-secondary);position:fixed} .nav__links a{color:#1f2937;background:#0b1020} .hero::before{position:absolute;background:var(--c-primary)}'
+            .' @media (min-width:900px){.card{background:#fde047;float:left}} .nav__menu{display:block;background:#fff;transform:none} .box{background:color-mix(in srgb,var(--c-primary) 20%,transparent)}',
+            $colors,
+        );
+
+        $this->assertStringContainsString('.nav{background:var(--c-secondary);color:#ffffff;--c-text:#ffffff', $css, 'dark header gets white text and tokens');
+        $this->assertStringNotContainsString('fixed', $css);
+        $this->assertMatchesRegularExpression('/\.nav__links a\{color:#[0-9a-f]{6};background:#0b1020/', $css);
+        $this->assertStringNotContainsString('color:#1f2937', $css, 'dark text on a dark background is lightened');
+        $this->assertStringContainsString('.hero::before{position:absolute;background:var(--c-primary)}', $css, 'decorations keep their position');
+        $this->assertStringContainsString('@media (min-width:900px){.card{background:#fde047;color:#111827', $css);
+        $this->assertStringNotContainsString('float', $css);
+        $this->assertStringContainsString('.nav__menu{background:#fff;color:#111827', $css, 'the phone menu keeps its show/hide mechanics');
+        $this->assertStringNotContainsString('display:block', $css);
+        $this->assertStringContainsString('.box{background:color-mix(in srgb,var(--c-primary) 20%,transparent)}', $css, 'see-through backgrounds are left alone');
+    }
 }

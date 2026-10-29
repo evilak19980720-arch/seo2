@@ -9,6 +9,7 @@ use App\Models\Entry;
 use App\Models\Page;
 use App\Models\Site;
 use App\Services\Content\SeoRules;
+use App\Services\Theme\CustomCssValidator;
 use App\Support\Settings;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\View;
@@ -560,9 +561,9 @@ class SiteRenderer
             .'--radius:'.$theme['radius'][$d['radius']].';--space:'.$theme['density'][$d['density']].';--shadow:'.$theme['shadow'][$d['shadow']].'}'."\n";
 
         if (filled($this->site->custom_css)) {
-            $css .= "/* custom */\n".$this->site->custom_css."\n"
+            $css .= "/* custom */\n".CustomCssValidator::themeSafe($this->site->custom_css, $c)."\n"
                 // Custom CSS can restyle the phone menu but never leave it open over the page.
-                .'@media (max-width:900px){.nav .nav__menu{display:none!important}.nav:has(.nav__check:checked) .nav__menu{display:block!important}}'."\n";
+                .'@media (max-width:900px){.nav--mm-dropdown .nav__menu{display:none!important}.nav--mm-dropdown:has(.nav__check:checked) .nav__menu{display:block!important}}'."\n";
         }
 
         return $this->scrambler()?->css($css) ?? $css;
