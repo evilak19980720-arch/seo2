@@ -78,6 +78,8 @@ class SiteQa
 
         try {
             $rounds = max(1, min(3, (int) Settings::get('qa_rounds', 2)));
+            $minDesign = max(0, min(100, (int) Settings::get('qa_min_design', 92)));
+            $minSeo = max(0, min(100, (int) Settings::get('qa_min_seo', 92)));
             $note('截取参考网站');
             $reference = $this->referenceShots($site);
             $current = $this->measure($site, $note);
@@ -87,8 +89,8 @@ class SiteQa
             for ($round = 1; $round <= $rounds; $round++) {
                 $task->progress("AI 质检 第 {$round} 轮：美观 {$review['scores']['design']} / SEO {$review['scores']['seo']}；".$this->checkLine($current)
                     .($review['issues'] ? '；问题：'.Str::limit(implode('；', $review['issues']), 400) : ''));
-                if ($review['scores']['design'] >= 92 && $review['scores']['seo'] >= 92) {
-                    $task->progress('AI 质检：分数已够高，不再修改');
+                if ($review['scores']['design'] >= $minDesign && $review['scores']['seo'] >= $minSeo) {
+                    $task->progress("AI 质检：已达到合格分（美观 {$minDesign} / SEO {$minSeo}），不修改");
 
                     return;
                 }

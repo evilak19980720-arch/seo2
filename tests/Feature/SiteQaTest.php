@@ -143,4 +143,22 @@ class SiteQaTest extends TestCase
         $this->qa([], [])->run($site, $task, fn () => $this->fail('no rebuild'));
         $this->assertCount($count, $task->fresh()->log, 'switched off: nothing runs');
     }
+
+    public function test_the_pass_marks_come_from_the_settings(): void
+    {
+        $site = $this->site();
+        $task = GenerationTask::create(['site_id' => $site->id, 'type' => 'qa', 'status' => 'running']);
+        Settings::set('qa_min_design', 80);
+        Settings::set('qa_min_seo', 85);
+        $this->qa([['scores' => ['design' => 81, 'seo' => 86]] + self::PATCH], [$this->measure()])->run($site, $task, fn () => $this->fail('passed: no change'), force: true);
+        $this->assertStringContainsString('已达到合格分（美观 80 / SEO 85）', collect($task->fresh()->log)->pluck('step')->implode("\n"));
+
+        Settings::set('qa_min_seo', 90);
+        $builds = 0;
+        $this->qa([['scores' => ['design' => 81, 'seo' => 86]] + self::PATCH, ['scores' => ['design' => 85, 'seo' => 92]]], [$this->measure(), $this->measure()])
+            ->run($site->fresh(), $task, function () use (&$builds) {
+                $builds++;
+            }, force: true);
+        $this->assertSame(1, $builds, 'below the SEO mark: changed');
+    }
 }

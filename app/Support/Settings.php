@@ -61,6 +61,8 @@ class Settings
             'qa_enabled' => true,
             'qa_rounds' => 2,
             'qa_max_minutes' => 12,
+            'qa_min_design' => 92,
+            'qa_min_seo' => 92,
 
             // Cloudflare
             'cloudflare_api_token' => null,

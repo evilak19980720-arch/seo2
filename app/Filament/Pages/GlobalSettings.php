@@ -102,6 +102,9 @@ class GlobalSettings extends Page
                             ->helperText('首页大图和内页封面没有真实图片时，由「AI 用途分配」里的图片接口生成；每张只生成一次。填 0 关闭'),
                         Toggle::make('qa_enabled')->label('生成后 AI 质检（美观 + SEO）')
                             ->helperText('截图交给能看图的 AI 打分，并按修改单调整设计选项和标题描述；分数变高且程序检查不变差才保留，否则自动退回。需要服务器装有 Chromium'),
+                        TextInput::make('qa_min_design')->label('AI 质检美观合格分')->numeric()->minValue(0)->maxValue(100)->required()
+                            ->helperText('美观分和 SEO 分都达到合格分就不修改；任一项没达到就按 AI 的修改单调整'),
+                        TextInput::make('qa_min_seo')->label('AI 质检 SEO 合格分')->numeric()->minValue(0)->maxValue(100)->required(),
                         TextInput::make('qa_rounds')->label('AI 质检最多轮数')->numeric()->minValue(1)->maxValue(3)->required()
                             ->helperText('每轮约 1 次看图 AI 调用'),
                         TextInput::make('qa_max_minutes')->label('AI 质检时间上限（分钟）')->numeric()->minValue(3)->maxValue(25)->required()
@@ -168,7 +171,7 @@ class GlobalSettings extends Page
                 unset($data[$key]);
             }
         }
-        foreach (['cap_months_0_3', 'cap_months_3_6', 'cap_after_6', 'cap_step', 'cap_max', 'min_completeness', 'cold_days', 'min_list_articles', 'ai_images_per_site', 'qa_rounds', 'qa_max_minutes'] as $int) {
+        foreach (['cap_months_0_3', 'cap_months_3_6', 'cap_after_6', 'cap_step', 'cap_max', 'min_completeness', 'cold_days', 'min_list_articles', 'ai_images_per_site', 'qa_rounds', 'qa_max_minutes', 'qa_min_design', 'qa_min_seo'] as $int) {
             $data[$int] = (int) $data[$int];
         }
         foreach (['cap_raise_ratio', 'intra_site_similarity', 'cross_site_similarity', 'page_similarity', 'drop_threshold'] as $float) {
