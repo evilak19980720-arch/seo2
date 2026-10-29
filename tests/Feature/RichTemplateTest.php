@@ -6,6 +6,7 @@ use App\Models\GenerationTask;
 use App\Services\Render\StaticSiteBuilder;
 use App\Services\Sites\SiteGenerator;
 use App\Services\Theme\ReferenceAnalyzer;
+use App\Services\Theme\SiteStyle;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -47,7 +48,8 @@ class RichTemplateTest extends TestCase
         app(SiteGenerator::class)->run(GenerationTask::create(['site_id' => $site->id, 'type' => 'full']));
         $site->refresh();
 
-        $this->assertSame(['background' => 'glow', 'cards' => 'glass', 'buttons' => 'gradient', 'headings' => 'normal'], $site->design_config['style']);
+        $style = SiteStyle::for($site->domain_id)->apply([]);
+        $this->assertSame($style['style'], $site->design_config['style'], 'the look is the site\'s own');
         $this->assertCount(2, $site->design_config['extra_pages']);
         $this->assertSame('eventos', $site->pages()->where('type', 'extra_1')->value('slug'));
 
@@ -55,9 +57,9 @@ class RichTemplateTest extends TestCase
         $this->assertFileExists("{$dir}/eventos/index.html");
         $this->assertFileExists("{$dir}/ranking/index.html");
         $home = file_get_contents("{$dir}/index.html");
-        $this->assertStringContainsString('class="st-background-glow st-cards-glass st-buttons-gradient st-headings-normal"', $home);
-        $this->assertStringContainsString('nav nav--portal', $home);
-        $this->assertStringContainsString('notice notice--marquee', $home);
+        $this->assertStringContainsString('class="'.collect($style['style'])->map(fn ($v, $k) => "st-{$k}-{$v}")->implode(' ').'"', $home);
+        $this->assertStringContainsString('nav nav--'.$site->design_config['nav'], $home);
+        $this->assertStringContainsString('notice notice--'.collect($site->design_config['pages']['home'])->firstWhere('block', 'notice')['variant'], $home);
         $this->assertStringContainsString('banner banner--slider', $home);
         $this->assertStringContainsString('href="/eventos/"', $home);
         $this->assertSame(1, substr_count($home, '<h1'), 'the banner after the notice strip carries the h1');

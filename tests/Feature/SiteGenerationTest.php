@@ -34,9 +34,9 @@ class SiteGenerationTest extends TestCase
 
         // Design config was repaired against the whitelist.
         $design = $site->design_config;
-        $this->assertSame('system', $design['fonts']['heading']);
+        $this->assertArrayHasKey($design['fonts']['heading'], config('theme.fonts'));
         $this->assertGreaterThanOrEqual(4.5, Color::contrast($design['colors']['text'], $design['colors']['background']));
-        $this->assertSame('accordion', collect($design['pages']['home'])->firstWhere('block', 'faq')['variant']);
+        $this->assertContains(collect($design['pages']['home'])->firstWhere('block', 'faq')['variant'], config('theme.blocks.faq'));
         $this->assertFalse(collect($design['pages']['home'])->contains('block', 'nonsense'));
         $this->assertNull($site->custom_css, 'invalid AI custom CSS must be dropped');
         $this->assertSame(1, $site->designVersions()->count());

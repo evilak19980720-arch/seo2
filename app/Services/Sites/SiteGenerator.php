@@ -31,6 +31,7 @@ use App\Services\Theme\DefaultDesign;
 use App\Services\Theme\DesignConfigValidator;
 use App\Services\Theme\ExtraPages;
 use App\Services\Theme\ReferenceAnalyzer;
+use App\Services\Theme\SiteStyle;
 use App\Support\Media;
 use App\Support\Settings;
 use Illuminate\Support\Arr;
@@ -457,6 +458,8 @@ class SiteGenerator
         if ($reference) {
             $config = $this->applyReference($config, $reference);
         }
+        // The look is the site's own (header, fonts, corners, block variants…), never the reference's or the model's.
+        $config = SiteStyle::for($site->domain_id ?: $site->id)->apply($config);
         $validated = $validator->validate($config, $site->typeConfig());
 
         if ($onlyPages !== null && $site->design_config) {
@@ -477,7 +480,7 @@ class SiteGenerator
         return $validator->repaired;
     }
 
-    /** The reference's own colours and fonts win over whatever the model picked. */
+    /** The reference's own colours, header behaviour and home sections win over whatever the model picked. */
     protected function applyReference(array $config, array $reference): array
     {
         foreach (['primary', 'background', 'text'] as $key) {
@@ -491,9 +494,6 @@ class SiteGenerator
             }
             // Surface follows the reference background so cards don't clash with it.
             $config['colors']['surface'] = Color::mix($bg, Color::luminance($bg) > 0.4 ? '#000000' : '#ffffff', 0.05);
-        }
-        if ($font = ReferenceAnalyzer::whitelistFont($reference['fonts'])) {
-            $config['fonts'] = ['heading' => $font, 'body' => $font];
         }
 
         // Navigation behaves like the reference's (at least one download button stays).

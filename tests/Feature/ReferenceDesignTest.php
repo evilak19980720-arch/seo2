@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Services\Render\StaticSiteBuilder;
 use App\Services\Sites\SiteGenerator;
 use App\Services\Theme\ReferenceAnalyzer;
+use App\Services\Theme\SiteStyle;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -131,7 +132,7 @@ class ReferenceDesignTest extends TestCase
 
         $this->assertSame('#0b0f1a', $design['colors']['background']);
         $this->assertSame('#e6e9f2', $design['colors']['text']);
-        $this->assertSame('montserrat', $design['fonts']['heading']);
+        $this->assertSame(SiteStyle::for($site->domain_id)->apply([])['fonts'], $design['fonts'], 'fonts are the site\'s own, not the model\'s');
         $this->assertSame(['faq', 'guide', 'updates', 'blog'], $design['menu']);
         $this->assertStringContainsString('#ff3366', implode("\n", $generator->designNotes));
 
