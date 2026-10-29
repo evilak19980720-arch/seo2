@@ -151,6 +151,41 @@ class GameSiteTest extends TestCase
         $this->assertContains('rules', $again['pages']['events']);
     }
 
+    public function test_regeneration_draws_a_new_combination_and_a_retry_keeps_it(): void
+    {
+        $generator = app(SiteGenerator::class);
+        $site = $this->gameSite();
+        $generator->ensureStructure($site);
+        $first = $site->fresh()->structure;
+
+        $seen = [json_encode($first['pages'])];
+        $site->generationTasks()->create(['type' => 'full', 'status' => 'succeeded']);
+        foreach (range(1, 3) as $n) {
+            $generator->ensureStructure($site, reshuffle: true);
+            $site->refresh();
+            $this->assertSame($n, $site->structure['round']);
+            $this->assertNotContains(json_encode($site->structure['pages']), [$seen[count($seen) - 1]], 'each regeneration differs from the last');
+            $seen[] = json_encode($site->structure['pages']);
+            foreach (['home', 'games', 'about', 'terms', 'privacy'] as $required) {
+                $this->assertArrayHasKey($required, $site->structure['pages']);
+            }
+        }
+        $this->assertGreaterThan(2, count(array_unique($seen)));
+
+        // A plain (retry) run keeps the current combination.
+        $kept = $site->structure;
+        $generator->ensureStructure($site);
+        $this->assertSame($kept, $site->fresh()->structure);
+
+        // A launched site keeps every page it has (no URL disappears); sections may change.
+        $site->update(['launched_at' => now()]);
+        foreach (array_keys($kept['pages']) as $type) {
+            $site->pages()->create(['type' => $type, 'slug' => $type === 'home' ? '' : $type, 'title' => $type, 'content' => []]);
+        }
+        $generator->ensureStructure($site, reshuffle: true);
+        $this->assertSame([], array_diff(array_keys($kept['pages']), array_keys($site->fresh()->structure['pages'])));
+    }
+
     public function test_game_site_renders_sections_lobby_entries_and_sitemap(): void
     {
         $site = $this->gameSite();

@@ -28,11 +28,14 @@ class SiteStructure
     }
 
     /**
+     * A new round (regeneration) draws a new combination: only the pages a
+     * launched site already has are kept, everything else is chosen again.
+     *
      * @return array{pages: array<string, array<int, string>>} page type => chosen section keys, in pool order
      */
-    public static function choose(Site $site, array $type, ?array $previous = null): array
+    public static function choose(Site $site, array $type, ?array $previous = null, int $round = 0): array
     {
-        $rand = new Randomizer(new Mt19937(crc32('structure|'.($site->domain_id ?? $site->id).'|'.$site->id)));
+        $rand = new Randomizer(new Mt19937(crc32('structure|'.($site->domain_id ?? $site->id).'|'.$site->id.($round ? "|{$round}" : ''))));
         $met = self::conditions($site);
         $ok = fn (array $def) => empty($def['requires']) || ($met[$def['requires']] ?? false);
         $keep = array_keys($previous['pages'] ?? []);
@@ -45,8 +48,10 @@ class SiteStructure
             if (! $ok($def)) {
                 continue;
             }
+            // Every candidate draws its number, so keeping a page never shifts the other choices.
+            $roll = $rand->nextFloat();
             $wanted = ! empty($def['required']) || in_array($pageType, $keep, true)
-                || $rand->nextFloat() < (float) ($type['optional_page_chance'] ?? 0.65);
+                || $roll < (float) ($type['optional_page_chance'] ?? 0.65);
             if (! $wanted) {
                 continue;
             }
@@ -55,8 +60,9 @@ class SiteStructure
                 if (! $ok($section)) {
                     continue;
                 }
+                $roll = $rand->nextFloat();
                 if (! empty($section['required']) || in_array($section['key'], $previous['pages'][$pageType] ?? [], true)
-                    || $rand->nextFloat() < (float) ($type['optional_section_chance'] ?? 0.6)) {
+                    || $roll < (float) ($type['optional_section_chance'] ?? 0.6)) {
                     $sections[] = $section['key'];
                 }
             }
@@ -93,8 +99,9 @@ class SiteStructure
                 if (! $ok($section)) {
                     continue;
                 }
+                $roll = $rand->nextFloat();
                 if (! empty($section['required']) || in_array($section['key'], $previous['collections'][$name] ?? [], true)
-                    || $rand->nextFloat() < (float) ($type['optional_section_chance'] ?? 0.6)) {
+                    || $roll < (float) ($type['optional_section_chance'] ?? 0.6)) {
                     $chosen[] = $section['key'];
                 }
             }
@@ -112,7 +119,7 @@ class SiteStructure
             }
         }
 
-        return ['pages' => $pages, 'collections' => $collections, 'variants' => $variants];
+        return ['pages' => $pages, 'collections' => $collections, 'variants' => $variants] + ($round ? ['round' => $round] : []);
     }
 
     /** The preset reduced to the chosen pages; each page's "blocks" and "sections" follow the choice. */

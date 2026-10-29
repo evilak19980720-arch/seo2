@@ -112,7 +112,7 @@ class SiteGenerator
                 $task->progress($note);
             }
 
-            if ($note = $this->ensureStructure($site)) {
+            if ($note = $this->ensureStructure($site, $task->type === 'full' && $this->isRegeneration($task))) {
                 $task->progress($note);
             }
 
@@ -192,17 +192,41 @@ class SiteGenerator
         }
     }
 
+    /** A full run on a generated site that was not retrying a failed run. */
+    protected function isRegeneration(GenerationTask $task): bool
+    {
+        $last = GenerationTask::where('site_id', $task->site_id)->where('id', '<', $task->id)
+            ->whereIn('type', ['full', 'design'])->latest('id')->first();
+
+        return $last !== null && $last->status === 'succeeded';
+    }
+
     /**
-     * Pool presets: the site's pages and sections, chosen once (seeded) and
-     * stored; a later run keeps every page and section it had.
+     * Pool presets: the site's pages and sections, seeded and stored. A retry
+     * keeps them; a regeneration draws a new combination (a launched site
+     * keeps its pages, so no URL disappears).
      */
-    public function ensureStructure(Site $site): ?string
+    public function ensureStructure(Site $site, bool $reshuffle = false): ?string
     {
         $config = config("site_types.{$site->site_type}");
         if (empty($config['sectioned'])) {
             return null;
         }
-        $structure = SiteStructure::choose($site, $config, $site->structure);
+        $structure = $site->structure;
+        if ($reshuffle && $structure) {
+            // Regeneration: a new combination of pages and sections, never the same one again.
+            $round = (int) ($structure['round'] ?? 0);
+            $same = fn (array $s) => $s['pages'] === $structure['pages'] && $s['collections'] === ($structure['collections'] ?? []);
+            for ($try = 1; $try <= 10; $try++) {
+                $next = SiteStructure::choose($site, $config, null, $round + $try);
+                if (! $same($next)) {
+                    break;
+                }
+            }
+            $structure = $next;
+        } else {
+            $structure = SiteStructure::choose($site, $config, $structure, (int) ($structure['round'] ?? 0));
+        }
         if ($structure === $site->structure) {
             return null;
         }
