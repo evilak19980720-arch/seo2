@@ -1,0 +1,5 @@
+/* gallery neon: stage grid, pictures in glowing frames with a soft zoom */
+.gallery--neon figure{border:1px solid color-mix(in srgb,var(--c-primary) 55%,transparent);box-shadow:0 0 24px -10px var(--c-primary);padding:4px;background:var(--c-surface)}
+.gallery--neon figure img{border-radius:calc(var(--r-box) - 4px)}
+.gallery--neon figure:hover{box-shadow:0 0 34px -6px var(--c-primary)}
+.gallery--neon figcaption{color:var(--c-muted);padding:.5rem .4rem .25rem}

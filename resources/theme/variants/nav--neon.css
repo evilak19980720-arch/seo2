@@ -1,0 +1,7 @@
+/* nav neon: dark header with a lit gradient bottom edge, glowing hover underlines and CTA */
+.nav--neon{--c-bg:var(--c-secondary);--c-surface:color-mix(in srgb,var(--c-on-secondary) 8%,var(--c-secondary));--c-text:var(--c-on-secondary);--c-muted:color-mix(in srgb,var(--c-on-secondary) 78%,var(--c-secondary));--c-link:var(--c-on-secondary);--c-outline:var(--c-on-secondary);--line:color-mix(in srgb,var(--c-on-secondary) 16%,transparent);background:color-mix(in srgb,var(--c-secondary) 94%,transparent);border-bottom:0;box-shadow:0 1px 0 color-mix(in srgb,var(--c-primary) 70%,transparent),0 10px 30px -14px var(--c-primary)}
+.nav--neon .nav__brand,.nav--neon .nav__links a,.nav--neon .nav__toggle{color:var(--c-text)}
+@media (min-width:901px){.nav--neon .nav__links a{position:relative}.nav--neon .nav__links a::after{content:"";position:absolute;left:.85rem;right:.85rem;bottom:6px;height:2px;border-radius:2px;background:var(--c-primary);box-shadow:0 0 8px var(--c-primary);transform:scaleX(0);transition:transform .2s}.nav--neon .nav__links a:hover{background:transparent}.nav--neon .nav__links a:hover::after,.nav--neon .nav__links a[aria-current]::after{transform:scaleX(1)}}
+.nav--neon .nav__cta:not(.btn--ghost){box-shadow:0 0 20px -4px var(--c-primary)}
+.nav--neon .nav__mark{box-shadow:0 0 16px -2px var(--c-primary)}
+@media (max-width:900px){.nav--neon .nav__menu{background:var(--c-secondary)}}

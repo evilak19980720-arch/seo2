@@ -1,0 +1,4 @@
+/* checklist ticks: a ticket-like list with square ticks and dotted separators */
+.checklist--ticks .checklist__items{max-width:760px;margin:0 auto;gap:0}
+.checklist--ticks .checklist__item{padding:.9rem 0;border-bottom:1px dotted color-mix(in srgb,var(--c-text) 25%,transparent)}
+.checklist--ticks .checklist__icon{border-radius:8px;background:linear-gradient(135deg,var(--c-primary),var(--c-accent));transform:rotate(-6deg)}

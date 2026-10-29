@@ -230,7 +230,7 @@ class DesignConfigValidator
             'buttons' => max(0, min(2, (int) ($nav['buttons'] ?? 1))),
             'mobile_bar' => (bool) ($nav['mobile_bar'] ?? false) || ! empty($siteTypeConfig['mobile_bar']),
             'sticky' => (bool) ($nav['sticky'] ?? true),
-            'home_link' => (bool) ($nav['home_link'] ?? $variant === 'portal'),
+            'home_link' => (bool) ($nav['home_link'] ?? Variants::base('nav', $variant) === 'portal'),
         ] + collect(self::MOBILE)->map(function (array $allowed, string $key) use ($nav, $seed) {
             $value = $nav[$key] ?? null;
 

@@ -304,7 +304,7 @@ class GameSiteTest extends TestCase
         $math = $page('game_math');
         $this->assertStringContainsString('callout', $math);
         $this->assertStringContainsString('checklist__items', $math);
-        $this->assertStringContainsString('<table>', $math);
+        $this->assertStringContainsString('data-table', $math);
         $story = $page('brand_story');
         $this->assertStringContainsString('<blockquote>', $story);
         $this->assertStringContainsString('timeline__list', $story);

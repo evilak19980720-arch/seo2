@@ -13,6 +13,7 @@ use App\Services\Render\StaticSiteBuilder;
 use App\Services\Sites\SiteGenerator;
 use App\Services\Stats\SearchConsoleSync;
 use App\Services\Theme\DesignConfigValidator;
+use App\Services\Theme\Variants;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -245,7 +246,7 @@ class SeoOptimizationTest extends TestCase
     public function test_theme_css_only_selects_classes_by_name_so_scrambled_sites_keep_working(): void
     {
         // Every site gets its own class names; [class*="nav--mm-"] would never match ".c3f9a1".
-        $css = file_get_contents(resource_path('theme/base.css')).file_get_contents(resource_path('theme/critical.css'));
+        $css = file_get_contents(resource_path('theme/base.css')).file_get_contents(resource_path('theme/critical.css')).Variants::allCss();
         $this->assertDoesNotMatchRegularExpression('/\[class\s*[*^$|~]?=/', $css);
         foreach (array_diff(DesignConfigValidator::MOBILE['mobile_menu'], ['dropdown']) as $menu) {
             $this->assertStringContainsString(".nav--mm-{$menu}", $css, "{$menu} opens");

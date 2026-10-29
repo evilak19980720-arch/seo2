@@ -1,0 +1,12 @@
+/* entry list chips: compact round covers in a ring, like a quick-pick row */
+.entry-list--chips .entry-list__items{grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem .6rem}
+@media (min-width:760px){.entry-list--chips .entry-list__items{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.entry-list--chips .entry-card{border:0;background:transparent;align-items:center;text-align:center}
+.entry-list--chips .entry-card:hover{box-shadow:none}
+.entry-list--chips .tile__media{width:min(100%,112px);aspect-ratio:1!important;border-radius:50%;padding:3px;background:conic-gradient(var(--c-primary),var(--c-accent),var(--c-primary))}
+.entry-list--chips .tile__media :is(img,.tile__ph){border-radius:50%;border:3px solid var(--c-bg)}
+.entry-list--chips .tile__ph--named span{font-size:.8rem}
+.entry-list--chips .tile__tag{display:none}
+.entry-list--chips .tile__body{padding:.5rem 0 0!important;align-items:center}
+.entry-list--chips .tile__body h3{font-size:.85rem!important}
+.entry-list--chips .tile__body p{display:none!important}

@@ -1,0 +1,3 @@
+/* checklist neon: stage cards with glowing check marks */
+.checklist--neon .checklist__item{background:var(--c-surface);border-color:color-mix(in srgb,var(--c-primary) 35%,transparent)}
+.checklist--neon .checklist__icon{background:transparent;border:2px solid var(--c-accent);color:var(--c-text);box-shadow:0 0 12px -2px var(--c-accent)}

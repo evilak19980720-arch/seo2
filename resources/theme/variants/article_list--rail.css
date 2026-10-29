@@ -1,0 +1,3 @@
+/* article list rail: swipeable row of post cards on phones, grid on wide screens */
+@media (max-width:959px){.article-list--rail .grid{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 -20px;padding:0 20px .75rem;scroll-padding:0 20px;scrollbar-width:none}.article-list--rail .grid::-webkit-scrollbar{display:none}.article-list--rail .post-card{flex:0 0 min(78%,320px);scroll-snap-align:start}}
+.article-list--rail .post-card img,.article-list--rail .post-card__ph{aspect-ratio:4/3}

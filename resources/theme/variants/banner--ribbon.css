@@ -1,0 +1,6 @@
+/* banner ribbon: wide picture with a slanted colour ribbon carrying the title */
+.banner--ribbon .banner__media::after{background:linear-gradient(0deg,color-mix(in srgb,var(--c-secondary) 70%,transparent),transparent 60%)}
+.banner--ribbon .banner__body{padding-bottom:2.5rem}
+.banner--ribbon .banner__body :is(h1,h2){display:inline-block;max-width:none;padding:.4rem 1.2rem .5rem;background:var(--c-primary);color:var(--c-on-primary);transform:skewX(-8deg);border-radius:6px;box-shadow:6px 6px 0 color-mix(in srgb,var(--c-accent) 85%,transparent);font-size:clamp(1.5rem,4.6vw,3rem)}
+.banner--ribbon .banner__body p{margin-top:1rem;max-width:46ch;padding:.6rem .9rem;border-radius:var(--r-box);background:color-mix(in srgb,var(--c-secondary) 75%,transparent)}
+.banner--ribbon .banner__body .btn{background:var(--c-accent);color:var(--c-on-accent);box-shadow:0 10px 24px -10px var(--c-accent)}

@@ -91,7 +91,7 @@ class SiteStyle
         $config['fonts'] = ['heading' => $heading, 'body' => $body];
         // "minimal" has no header buttons: only for sites that show none.
         $buttons = (int) ($config['navigation']['buttons'] ?? 1) > 0;
-        $config['nav'] = $this->pick('nav', array_diff($theme['blocks']['nav'], $buttons ? ['minimal'] : []));
+        $config['nav'] = $this->pick('nav', array_filter($theme['blocks']['nav'], fn ($v) => ! $buttons || Variants::base('nav', $v) !== 'minimal'));
         $config['footer'] = $this->pick('footer', $theme['blocks']['footer']);
         $config['radius'] = $this->pick('radius', array_keys($theme['radius']));
         $config['shadow'] = $this->pick('shadow', array_keys($theme['shadow']));

@@ -1,0 +1,9 @@
+/* hero vault: full picture, text in a framed glass panel with a gold edge */
+.hero--vault .hero__media::after{background:linear-gradient(0deg,var(--c-secondary) 5%,color-mix(in srgb,var(--c-secondary) 55%,transparent) 55%,color-mix(in srgb,var(--c-secondary) 25%,transparent))}
+.hero--vault .hero__text{padding:1.5rem 1.25rem;border-radius:calc(var(--r-box) + 6px);background:color-mix(in srgb,var(--c-secondary) 72%,transparent);border:1px solid color-mix(in srgb,var(--c-accent) 60%,transparent);box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 18%,transparent),0 30px 60px -30px #000;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.hero--vault :is(h1,h2){text-transform:uppercase;letter-spacing:.02em;font-size:clamp(1.9rem,5.4vw,3.5rem)}
+.hero--vault .hero__eyebrow{background:var(--c-accent);color:var(--c-on-accent)}
+.hero--vault .hero__eyebrow::before{background:currentColor}
+.hero--vault .hero__actions .btn:not(.btn--ghost){border-radius:999px;box-shadow:0 0 0 4px color-mix(in srgb,var(--c-primary) 28%,transparent),0 0 34px -6px var(--c-primary)}
+.hero--vault .hero__points li::before{background:var(--c-accent);color:var(--c-on-accent)}
+@media (min-width:860px){.hero--vault .hero__text{padding:2.25rem 2.5rem}}

@@ -5,43 +5,80 @@
 | listed here; DesignConfigValidator rejects or repairs everything else.
 */
 
+// Slots brand-site variants (resources/theme/variants/{block}--{name}.css). Each one reuses an
+// existing variant's markup (base) and restyles it; stage variants sit on the site's dark
+// secondary colour (text and frames switch to it). A site's stylesheet holds only the ones it uses.
+$variants = [
+    'nav' => ['neon' => ['base' => 'bar'], 'glass' => ['base' => 'bar'], 'gold' => ['base' => 'split'], 'lobby' => ['base' => 'portal']],
+    'hero' => ['jackpot' => ['base' => 'stacked', 'stage' => true], 'casino' => ['base' => 'split', 'stage' => true], 'vault' => ['base' => 'image-bg'], 'marquee' => ['base' => 'stacked', 'stage' => true], 'spotlight' => ['base' => 'stacked'], 'reels' => ['base' => 'split'], 'royal' => ['base' => 'split', 'stage' => true], 'arena' => ['base' => 'image-bg']],
+    'features' => ['badges' => ['base' => 'cards'], 'glow' => ['base' => 'grid', 'stage' => true], 'tiles' => ['base' => 'cards'], 'ribbon' => ['base' => 'list'], 'panels' => ['base' => 'alternating'], 'medals' => ['base' => 'grid']],
+    'gallery' => ['neon' => ['base' => 'grid', 'stage' => true], 'rail' => ['base' => 'strip'], 'polaroid' => ['base' => 'masonry'], 'framed' => ['base' => 'featured']],
+    'specs' => ['neon' => ['base' => 'cards', 'stage' => true], 'chips' => ['base' => 'two-column'], 'scoreboard' => ['base' => 'table'], 'ribbon' => ['base' => 'list']],
+    'faq' => ['glow' => ['base' => 'accordion'], 'neon' => ['base' => 'accordion', 'stage' => true], 'numbered' => ['base' => 'cards'], 'bordered' => ['base' => 'two-column']],
+    'cta' => ['jackpot' => ['base' => 'banner', 'stage' => true], 'ribbon' => ['base' => 'split'], 'glow' => ['base' => 'card'], 'ticket' => ['base' => 'card'], 'stage' => ['base' => 'banner', 'stage' => true], 'vip' => ['base' => 'split']],
+    'article_list' => ['neon' => ['base' => 'cards', 'stage' => true], 'rail' => ['base' => 'cards'], 'magazine' => ['base' => 'featured'], 'glossy' => ['base' => 'cards']],
+    'footer' => ['neon' => ['base' => 'columns'], 'gold' => ['base' => 'dark'], 'slab' => ['base' => 'columns'], 'badges' => ['base' => 'centered']],
+    'banner' => ['showcase' => ['base' => 'slider'], 'ribbon' => ['base' => 'wide'], 'framed' => ['base' => 'boxed'], 'glow' => ['base' => 'boxed'], 'stage' => ['base' => 'slider']],
+    'card_grid' => ['lobby' => ['base' => 'tiles'], 'chips' => ['base' => 'compact'], 'poster' => ['base' => 'cards', 'stage' => true], 'ribbon' => ['base' => 'cards'], 'rail' => ['base' => 'tiles'], 'glossy' => ['base' => 'showcase']],
+    'steps' => ['path' => ['base' => 'numbered'], 'arrows' => ['base' => 'cards'], 'pills' => ['base' => 'timeline'], 'ladder' => ['base' => 'timeline', 'stage' => true], 'glow' => ['base' => 'cards', 'stage' => true]],
+    'stats' => ['jackpot' => ['base' => 'big', 'stage' => true], 'neon' => ['base' => 'strip'], 'rings' => ['base' => 'cards'], 'ticker' => ['base' => 'strip'], 'plaques' => ['base' => 'cards']],
+    'notice' => ['neon' => ['base' => 'bar'], 'ticker' => ['base' => 'marquee'], 'pill' => ['base' => 'bar']],
+    'download' => ['neon' => ['base' => 'card', 'stage' => true], 'glow' => ['base' => 'split'], 'phone' => ['base' => 'split', 'stage' => true], 'ribbon' => ['base' => 'banner', 'stage' => true]],
+    'timeline' => ['neon' => ['base' => 'vertical', 'stage' => true], 'rail' => ['base' => 'compact'], 'glow' => ['base' => 'alternating']],
+    'glossary' => ['chips' => ['base' => 'cards']],
+    'checklist' => ['neon' => ['base' => 'cards', 'stage' => true], 'ticks' => ['base' => 'list'], 'glow' => ['base' => 'columns']],
+    'callout' => ['neon' => ['base' => 'accent', 'stage' => true], 'ribbon' => ['base' => 'info']],
+    'quote' => ['neon' => ['base' => 'card', 'stage' => true], 'glow' => ['base' => 'large']],
+    'table' => ['neon' => ['base' => 'striped', 'stage' => true], 'scoreboard' => ['base' => 'striped'], 'glow' => ['base' => 'cards']],
+    'link_grid' => ['neon' => ['base' => 'tiles', 'stage' => true], 'chips' => ['base' => 'pills']],
+    'entry_list' => ['rail' => ['base' => 'carousel'], 'poster' => ['base' => 'cards'], 'glossy' => ['base' => 'cards'], 'ranked' => ['base' => 'list'], 'mosaic' => ['base' => 'featured'], 'chips' => ['base' => 'compact'], 'neon' => ['base' => 'cards', 'stage' => true]],
+    'game_lobby' => ['neon' => ['base' => 'grid', 'stage' => true], 'poster' => ['base' => 'grid'], 'rail' => ['base' => 'compact'], 'glossy' => ['base' => 'grid']],
+    'event_calendar' => ['neon' => ['base' => 'grid', 'stage' => true]],
+];
+
+$blocks = [
+    'nav' => ['bar', 'centered', 'split', 'minimal', 'portal'],
+    'hero' => ['split', 'centered', 'image-bg', 'stacked'],
+    'features' => ['grid', 'list', 'cards', 'alternating'],
+    'gallery' => ['grid', 'masonry', 'strip', 'featured'],
+    'specs' => ['table', 'cards', 'two-column', 'list'],
+    'faq' => ['accordion', 'two-column', 'cards', 'plain'],
+    'cta' => ['banner', 'card', 'split', 'minimal'],
+    'article_list' => ['cards', 'list', 'compact', 'featured'],
+    'footer' => ['columns', 'simple', 'centered', 'dark'],
+    'banner' => ['slider', 'wide', 'boxed'],
+    'card_grid' => ['tiles', 'cards', 'compact', 'showcase'],
+    'steps' => ['numbered', 'timeline', 'cards'],
+    'stats' => ['strip', 'cards', 'big'],
+    'notice' => ['bar', 'marquee'],
+    'download' => ['banner', 'card', 'split'],
+    'prose' => ['default', 'boxed', 'columns'],
+    'contact' => ['default'],
+    'legal' => ['default'],
+    // Content blocks for pool sites (any page can combine them).
+    'timeline' => ['vertical', 'alternating', 'compact'],
+    'glossary' => ['list', 'columns', 'cards'],
+    'checklist' => ['list', 'cards', 'columns'],
+    'callout' => ['info', 'warning', 'accent'],
+    'quote' => ['default', 'large', 'card'],
+    'table' => ['striped', 'cards', 'plain'],
+    'link_grid' => ['tiles', 'pills', 'list'],
+    // Site data (games, promotions…) and their tools.
+    'entry_list' => ['cards', 'list', 'compact', 'featured', 'carousel'],
+    'game_lobby' => ['grid', 'compact'],
+    'event_calendar' => ['list', 'grid'],
+    'site_search' => ['default'],
+    'cookie_settings' => ['default'],
+    'html_sitemap' => ['default'],
+];
+foreach ($variants as $block => $list) {
+    $blocks[$block] = array_merge($blocks[$block], array_keys($list));
+}
+
 return [
-    // Block => available layout variants (resources/views/theme/blocks/{block}/{variant}.blade.php)
-    'blocks' => [
-        'nav' => ['bar', 'centered', 'split', 'minimal', 'portal'],
-        'hero' => ['split', 'centered', 'image-bg', 'stacked'],
-        'features' => ['grid', 'list', 'cards', 'alternating'],
-        'gallery' => ['grid', 'masonry', 'strip', 'featured'],
-        'specs' => ['table', 'cards', 'two-column', 'list'],
-        'faq' => ['accordion', 'two-column', 'cards', 'plain'],
-        'cta' => ['banner', 'card', 'split', 'minimal'],
-        'article_list' => ['cards', 'list', 'compact', 'featured'],
-        'footer' => ['columns', 'simple', 'centered', 'dark'],
-        'banner' => ['slider', 'wide', 'boxed'],
-        'card_grid' => ['tiles', 'cards', 'compact', 'showcase'],
-        'steps' => ['numbered', 'timeline', 'cards'],
-        'stats' => ['strip', 'cards', 'big'],
-        'notice' => ['bar', 'marquee'],
-        'download' => ['banner', 'card', 'split'],
-        'prose' => ['default', 'boxed', 'columns'],
-        'contact' => ['default'],
-        'legal' => ['default'],
-        // Content blocks for pool sites (any page can combine them).
-        'timeline' => ['vertical', 'alternating', 'compact'],
-        'glossary' => ['list', 'columns', 'cards'],
-        'checklist' => ['list', 'cards', 'columns'],
-        'callout' => ['info', 'warning', 'accent'],
-        'quote' => ['default', 'large', 'card'],
-        'table' => ['striped', 'cards', 'plain'],
-        'link_grid' => ['tiles', 'pills', 'list'],
-        // Site data (games, promotions…) and their tools.
-        'entry_list' => ['cards', 'list', 'compact', 'featured', 'carousel'],
-        'game_lobby' => ['grid', 'compact'],
-        'event_calendar' => ['list', 'grid'],
-        'site_search' => ['default'],
-        'cookie_settings' => ['default'],
-        'html_sitemap' => ['default'],
-    ],
+    // Block => available layout variants (resources/views/theme/blocks/{block}.blade.php)
+    'blocks' => $blocks,
+    'variants' => $variants,
 
     // Blocks every page gets from the layout, not from the page composition.
     'layout_blocks' => ['nav', 'footer'],

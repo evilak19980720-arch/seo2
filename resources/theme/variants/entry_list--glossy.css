@@ -1,0 +1,8 @@
+/* entry list glossy: cards with a gradient frame, glossy shine on the cover and a play button */
+.entry-list--glossy .entry-card{border:0;padding:2px;background:linear-gradient(150deg,var(--c-primary),var(--c-accent));box-shadow:0 16px 30px -22px var(--c-primary)}
+.entry-list--glossy .entry-card>*{background:var(--c-bg)}
+.entry-list--glossy .tile__media{border-radius:calc(var(--r-box) - 2px) calc(var(--r-box) - 2px) 0 0}
+.entry-list--glossy .tile__media::before{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(155deg,rgba(255,255,255,.35),transparent 40%);pointer-events:none}
+.entry-list--glossy .tile__body{border-radius:0 0 calc(var(--r-box) - 2px) calc(var(--r-box) - 2px)}
+.entry-list--glossy .tile__body::after{content:"▶";align-self:flex-start;margin-top:auto;display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--c-primary);color:var(--c-on-primary);font-size:.8rem}
+.entry-list--glossy .tile__tag{z-index:2}

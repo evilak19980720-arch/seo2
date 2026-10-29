@@ -1,0 +1,11 @@
+/* banner showcase: rounded slides that let the next one peek in, glowing active dots */
+.banner--showcase{background:transparent;padding:1rem 0 2.5rem}
+.banner--showcase .banner__track{gap:12px;padding:0 20px;scroll-padding:0 20px}
+.banner--showcase .banner__slide{flex:0 0 88%;border-radius:calc(var(--r-box) + 4px);min-height:clamp(260px,46vw,500px);box-shadow:0 20px 40px -24px rgba(0,0,0,.55)}
+.banner--showcase .banner__slide:only-child{flex-basis:100%}
+.banner--showcase .banner__body{padding-left:clamp(18px,4vw,48px);padding-right:clamp(18px,4vw,48px)}
+.banner--showcase .banner__body :is(h1,h2){font-size:clamp(1.6rem,4.6vw,3rem)}
+.banner--showcase .banner__dots{bottom:6px}
+.banner--showcase .banner__dots button::before{background:color-mix(in srgb,var(--c-text) 25%,transparent)}
+.banner--showcase .banner__dots button[aria-current]::before{background:var(--c-primary);box-shadow:0 0 10px var(--c-primary)}
+@media (min-width:1000px){.banner--showcase .banner__track{padding:0 max(20px,calc((100% - 1160px)/2))}.banner--showcase .banner__slide{flex-basis:min(1060px,86%)}}

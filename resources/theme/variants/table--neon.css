@@ -1,0 +1,5 @@
+/* table neon: stage table, glowing frame and lit row hover */
+.data-table--neon table{background:var(--c-surface);border-color:color-mix(in srgb,var(--c-primary) 45%,transparent);box-shadow:0 0 30px -14px var(--c-primary)}
+.data-table--neon tr:nth-child(odd){background:color-mix(in srgb,var(--c-on-secondary) 4%,transparent)!important}
+.data-table--neon tr:hover{background:color-mix(in srgb,var(--c-primary) 16%,transparent)!important}
+.data-table--neon th{color:var(--c-text)}

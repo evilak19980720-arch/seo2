@@ -1,0 +1,4 @@
+/* specs neon: stage fact cards with glowing values */
+.specs--neon dl div{background:var(--c-surface)!important;border:1px solid color-mix(in srgb,var(--c-primary) 40%,transparent)!important;text-align:center}
+.specs--neon dd{font-size:1.3rem;color:var(--c-text);text-shadow:0 0 14px color-mix(in srgb,var(--c-primary) 70%,transparent)}
+@media (max-width:639px){.specs--neon dl{grid-template-columns:repeat(2,minmax(0,1fr))}}

@@ -1,0 +1,7 @@
+/* nav glass: floating rounded glass bar inset from the page edges, pill links */
+.nav--glass{background:transparent;border-bottom:0;-webkit-backdrop-filter:none;backdrop-filter:none;padding-top:8px}
+.nav--glass .nav__inner{background:color-mix(in srgb,var(--c-bg) 78%,transparent);-webkit-backdrop-filter:saturate(1.4) blur(14px);backdrop-filter:saturate(1.4) blur(14px);border:1px solid var(--line);border-radius:min(var(--r-box),22px);box-shadow:0 10px 30px -18px rgba(0,0,0,.45);min-height:62px;padding:0 10px 0 14px;width:calc(100% - 16px)}
+.nav--glass .nav__links a{border-radius:999px}
+.nav--glass .nav__links a:hover{background:color-mix(in srgb,var(--c-primary) 16%,transparent)}
+.nav--glass .nav__cta{border-radius:999px}
+@media (min-width:901px){.nav--glass .nav__inner{width:calc(100% - 40px)}}

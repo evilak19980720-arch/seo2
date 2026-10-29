@@ -1,0 +1,7 @@
+/* cta jackpot: stage band with a sunburst and a big pulsing 3D button */
+.cta--jackpot{overflow:hidden}
+.cta--jackpot::before{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-conic-gradient(from 0deg at 50% 50%,color-mix(in srgb,var(--c-accent) 12%,transparent) 0 6deg,transparent 6deg 12deg);-webkit-mask-image:radial-gradient(closest-side,#000,transparent);mask-image:radial-gradient(closest-side,#000,transparent)}
+.cta--jackpot :is(h1,h2){font-size:clamp(1.9rem,6vw,3.6rem);text-transform:uppercase;text-shadow:0 0 30px color-mix(in srgb,var(--c-accent) 60%,transparent)}
+.cta--jackpot .btn{min-height:62px;padding:0 2.6rem;font-size:1.15rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;background:linear-gradient(180deg,color-mix(in srgb,var(--c-accent) 80%,#fff),var(--c-accent) 60%)!important;color:var(--c-on-accent)!important;box-shadow:0 6px 0 color-mix(in srgb,var(--c-accent) 50%,#000),0 0 40px -6px var(--c-accent)!important;animation:cta-pulse 2.4s ease-in-out infinite}
+@keyframes cta-pulse{50%{transform:scale(1.04)}}
+@media (prefers-reduced-motion:reduce){.cta--jackpot .btn{animation:none}}

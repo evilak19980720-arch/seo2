@@ -1,0 +1,4 @@
+/* cta vip: split dark card with a gold frame, crown mark and gold button */
+.cta--vip .cta__box{border:1px solid color-mix(in srgb,var(--c-accent) 70%,transparent);outline:1px solid color-mix(in srgb,var(--c-accent) 30%,transparent);outline-offset:-8px;background:radial-gradient(80% 120% at 100% 0,color-mix(in srgb,var(--c-accent) 18%,transparent),transparent 60%),var(--c-secondary)}
+.cta--vip .cta__box>div:first-child::before{content:"♛";display:block;font-size:1.8rem;line-height:1;color:var(--c-accent);margin-bottom:.5rem;text-shadow:0 0 14px color-mix(in srgb,var(--c-accent) 60%,transparent)}
+.cta--vip .btn{background:linear-gradient(180deg,color-mix(in srgb,var(--c-accent) 80%,#fff),var(--c-accent));color:var(--c-on-accent);box-shadow:0 8px 22px -8px var(--c-accent)}

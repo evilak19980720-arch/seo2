@@ -1,0 +1,10 @@
+/* card grid rail: one swipeable row on phones (next card peeks in), grid on wide screens */
+.card-grid--rail .card-grid__items{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:.85rem;margin:0 -20px;padding:0 20px .5rem;scroll-padding:0 20px;scrollbar-width:none}
+.card-grid--rail .card-grid__items::-webkit-scrollbar{display:none}
+.card-grid--rail .tile{flex:0 0 42%;scroll-snap-align:start;border:0;background:transparent}
+.card-grid--rail .tile__media{aspect-ratio:1;border-radius:var(--r-box);box-shadow:0 0 0 2px color-mix(in srgb,var(--c-primary) 40%,transparent)}
+.card-grid--rail .tile__body{padding:.6rem .1rem 0}
+.card-grid--rail .tile__body h3{font-size:.95rem}
+.card-grid--rail .tile__body p{display:none}
+@media (min-width:760px){.card-grid--rail .tile{flex-basis:24%}}
+@media (min-width:1100px){.card-grid--rail .card-grid__items{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));overflow:visible;margin:0;padding:0}}

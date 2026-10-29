@@ -41,7 +41,7 @@
 </head>
 <body class="{{ $ctx->bodyClass() }}@if ($ctx->navigation()['mobile_bar']) has-mobile-bar @endif">
 <a class="skip" href="#main">{{ $ctx->t('skip') }}</a>
-@include('theme.blocks.nav', ['variant' => $ctx->design['nav']])
+@php(ob_start())@include('theme.blocks.nav', ['variant' => \App\Services\Theme\Variants::base('nav', $ctx->design['nav'])]){!! \App\Services\Theme\Variants::tag(ob_get_clean(), 'nav', $ctx->design['nav']) !!}
 @include('theme.partials.ad', ['position' => 'top'])
 <main id="main">
 @if (count($head->breadcrumbs) > 1)
@@ -54,7 +54,7 @@
 {!! $body !!}
 </main>
 @include('theme.partials.ad', ['position' => 'bottom'])
-@include('theme.blocks.footer', ['variant' => $ctx->design['footer']])
+@php(ob_start())@include('theme.blocks.footer', ['variant' => \App\Services\Theme\Variants::base('footer', $ctx->design['footer'])]){!! \App\Services\Theme\Variants::tag(ob_get_clean(), 'footer', $ctx->design['footer']) !!}
 @include('theme.partials.mobile-bar')
 @if ($assets['cookie_banner'])
 <div class="cookie" id="cookie" role="dialog" aria-live="polite"><p>{{ $ctx->t('cookie_text') }} <a href="{{ $ctx->pageHref('privacy') }}">{{ $ctx->pages->get('privacy')?->title }}</a></p><div class="cookie__actions"><button class="btn" data-consent="granted">{{ $ctx->t('cookie_accept') }}</button><button class="btn btn--ghost" data-consent="denied">{{ $ctx->t('cookie_reject') }}</button></div></div>

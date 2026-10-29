@@ -1,0 +1,12 @@
+/* hero casino: split on stage with diagonal light, picture as a tilted card over a glowing card behind */
+.hero--casino{background:linear-gradient(115deg,transparent 0 55%,color-mix(in srgb,var(--c-primary) 12%,transparent) 55% 70%,transparent 70%),radial-gradient(70% 90% at 85% 40%,color-mix(in srgb,var(--c-primary) 34%,transparent),transparent 70%),var(--c-secondary)}
+.hero--casino :is(h1,h2){font-size:clamp(2rem,5.6vw,3.8rem)}
+.hero--casino :is(h1,h2)::after{content:"";display:block;width:84px;height:6px;margin-top:1rem;border-radius:6px;background:linear-gradient(90deg,var(--c-accent),var(--c-primary))}
+.hero--casino .hero__eyebrow{background:transparent;border:1px solid color-mix(in srgb,var(--c-accent) 70%,transparent);color:var(--c-text)}
+.hero--casino .hero__eyebrow::before{background:var(--c-accent);box-shadow:0 0 10px var(--c-accent)}
+.hero--casino .hero__media{position:relative;padding:0 6px}
+.hero--casino .hero__media::before{content:"";position:absolute;inset:6% 2% -4% 10%;border-radius:var(--r-box);background:linear-gradient(135deg,var(--c-primary),var(--c-accent));transform:rotate(5deg);opacity:.85;filter:blur(1px)}
+.hero--casino .hero__media img{position:relative;transform:rotate(-2deg);border:2px solid color-mix(in srgb,var(--c-on-secondary) 25%,transparent);box-shadow:0 30px 60px -24px #000}
+.hero--casino.hero--wide-img .hero__media img{transform:none}
+.hero--casino .hero__points li::before{background:var(--c-accent);color:var(--c-on-accent)}
+.hero--casino .hero__actions .btn:not(.btn--ghost){box-shadow:0 0 0 3px color-mix(in srgb,var(--c-primary) 30%,transparent),0 14px 30px -10px color-mix(in srgb,var(--c-primary) 85%,transparent)}

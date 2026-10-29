@@ -1,0 +1,3 @@
+/* callout ribbon: note box with a folded corner ribbon for the icon */
+.callout--ribbon{position:relative;border-left-width:1px;padding-left:4.5rem;overflow:hidden}
+.callout--ribbon .callout__icon{position:absolute;left:0;top:0;bottom:0;width:3.25rem;height:auto;border-radius:0;clip-path:polygon(0 0,100% 0,100% 100%,50% 85%,0 100%);font-size:1.2rem}

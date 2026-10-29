@@ -3,6 +3,7 @@
 namespace App\Services\Render;
 
 use App\Models\Site;
+use App\Services\Theme\Variants;
 
 /**
  * Gives every site its own class names (".hero__lead" becomes ".c3f9a1"),
@@ -39,7 +40,7 @@ class MarkupScrambler
         if (self::$vocabulary !== null) {
             return self::$vocabulary;
         }
-        $css = file_get_contents(resource_path('theme/base.css')).file_get_contents(resource_path('theme/critical.css'));
+        $css = file_get_contents(resource_path('theme/base.css')).file_get_contents(resource_path('theme/critical.css')).Variants::allCss();
         preg_match_all('/\.(-?[A-Za-z_][\w-]*)/', self::withoutUrls($css), $m);
         $names = array_unique($m[1]);
 
@@ -58,7 +59,8 @@ class MarkupScrambler
         if ($css === '') {
             return $css;
         }
-        // Leave url(...) and strings alone: file names like "x.woff2" are not classes.
+        // Comments go first (an apostrophe in one would pair with a later quote); then url(...) and strings stay as they are: file names like "x.woff2" are not classes.
+        $css = preg_replace('#/\*.*?\*/#s', '', $css) ?? $css;
         $parts = preg_split('/(url\([^)]*\)|"[^"]*"|\'[^\']*\')/', $css, -1, PREG_SPLIT_DELIM_CAPTURE);
         foreach ($parts as $i => $part) {
             if ($i % 2 === 0) {

@@ -1,0 +1,8 @@
+/* cta ribbon: split box with a folded ribbon edge on the left and an accent button */
+.cta--ribbon .cta__box{position:relative;border-radius:var(--r-box);background:linear-gradient(100deg,var(--c-primary),color-mix(in srgb,var(--c-primary) 50%,var(--c-secondary)));color:var(--c-on-primary);--c-outline:var(--c-on-primary);margin:0 8px}
+.cta--ribbon .cta__box::before,.cta--ribbon .cta__box::after{content:"";position:absolute;top:14px;bottom:14px;width:22px;background:color-mix(in srgb,var(--c-primary) 60%,#000);z-index:-1}
+.cta--ribbon .cta__box::before{left:-14px;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,40% 50%)}
+.cta--ribbon .cta__box::after{right:-14px;clip-path:polygon(0 0,100% 0,60% 50%,100% 100%,0 100%)}
+.cta--ribbon .cta__box :is(h1,h2){color:inherit}
+.cta--ribbon .btn{background:var(--c-accent);color:var(--c-on-accent);box-shadow:0 10px 24px -10px rgba(0,0,0,.5)}
+.cta--ribbon{isolation:isolate}

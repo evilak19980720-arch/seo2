@@ -1,0 +1,5 @@
+/* specs scoreboard: dark scoreboard table with bright values */
+.specs--scoreboard table{background:var(--c-secondary);color:var(--c-on-secondary);border:2px solid color-mix(in srgb,var(--c-accent) 60%,transparent);box-shadow:0 0 30px -12px var(--c-accent)}
+.specs--scoreboard th{background:color-mix(in srgb,var(--c-on-secondary) 6%,transparent)!important;color:color-mix(in srgb,var(--c-on-secondary) 80%,transparent);text-transform:uppercase;letter-spacing:.04em;font-size:.74rem;overflow-wrap:normal;word-break:normal}
+.specs--scoreboard :is(th,td){border-bottom-color:color-mix(in srgb,var(--c-on-secondary) 14%,transparent)!important}
+.specs--scoreboard td{font-family:var(--f-heading);font-weight:800;font-size:1.05rem;text-align:right}

@@ -9,7 +9,9 @@ use App\Models\Entry;
 use App\Models\Page;
 use App\Models\Site;
 use App\Services\Content\SeoRules;
+use App\Services\Theme\Color;
 use App\Services\Theme\CustomCssValidator;
+use App\Services\Theme\Variants;
 use App\Support\Settings;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\View;
@@ -357,13 +359,14 @@ class SiteRenderer
             }
             $view = View::make('theme.blocks.'.$entry['block'], [
                 'ctx' => $this->ctx,
-                'variant' => $entry['variant'],
+                'variant' => Variants::base($entry['block'], $entry['variant']),
                 'data' => $content[$entry['key'] ?? $entry['block']] ?? [],
                 'section' => $section,
                 'page' => $page,
                 // Strips (notice, stats) never carry the page's <h1>; the next block does.
                 'isFirst' => $isFirst = $first && ! in_array($entry['block'], ['notice', 'stats'], true),
             ] + $extra)->render();
+            $view = Variants::tag($view, $entry['block'], $entry['variant']);
             // A section with nothing to show (an empty list) leaves the <h1> to the next one.
             if (trim($view) === '' && $isFirst) {
                 continue;
@@ -482,12 +485,17 @@ class SiteRenderer
         return MarkupScrambler::enabled() ? ($this->scrambler ??= new MarkupScrambler($this->site)) : null;
     }
 
-    /** The theme stylesheet as this site serves it (own copy, own class names). */
+    protected ?string $baseCss = null;
+
+    /** The theme stylesheet as this site serves it (own copy, own class names, only the restyled variants it uses). */
     public function baseCss(): string
     {
-        $css = (string) file_get_contents(resource_path('theme/base.css'));
+        if ($this->baseCss !== null) {
+            return $this->baseCss;
+        }
+        $css = (string) file_get_contents(resource_path('theme/base.css')).Variants::css($this->ctx->design);
 
-        return $this->scrambler()?->css($css) ?? $css;
+        return $this->baseCss = $this->scrambler()?->css($css) ?? $css;
     }
 
     /** Content-hashed file name, so each site's copy is cached forever and changes bust it. */
@@ -557,7 +565,8 @@ class SiteRenderer
 
         $css .= ':root{'
             ."--c-primary:{$c['primary']};--c-on-primary:{$c['on_primary']};--c-secondary:{$c['secondary']};--c-on-secondary:{$c['on_secondary']};"
-            ."--c-accent:{$c['accent']};--c-bg:{$c['background']};--c-surface:{$c['surface']};--c-text:{$c['text']};--c-muted:{$c['muted']};--c-link:{$c['link']};"
+            ."--c-accent:{$c['accent']};--c-on-accent:".Color::readableOn($c['accent']).';'
+            ."--c-bg:{$c['background']};--c-surface:{$c['surface']};--c-text:{$c['text']};--c-muted:{$c['muted']};--c-link:{$c['link']};"
             .'--f-heading:'.$fontFamily($d['fonts']['heading']).';--f-body:'.$fontFamily($d['fonts']['body']).';'
             .'--radius:'.$theme['radius'][$d['radius']].';--space:'.$theme['density'][$d['density']].';--shadow:'.$theme['shadow'][$d['shadow']].'}'."\n";
 

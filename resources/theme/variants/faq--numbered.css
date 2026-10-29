@@ -1,0 +1,3 @@
+/* faq numbered: Q&A cards with a big Q badge */
+.faq--numbered .faq__item{position:relative;padding-left:4.25rem!important}
+.faq--numbered .faq__item::before{content:"?";position:absolute;left:1.1rem;top:1.15rem;width:38px;height:38px;display:grid;place-items:center;border-radius:12px;background:linear-gradient(135deg,var(--c-primary),var(--c-accent));color:var(--c-on-primary);font:900 1.15rem/1 var(--f-heading)}

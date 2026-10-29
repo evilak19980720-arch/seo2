@@ -1,0 +1,14 @@
+/* hero jackpot: centred stage under a sunburst, light-bulb frame round the picture, chunky 3D button */
+.hero--jackpot{padding:calc(3.5rem*var(--space)) 0 calc(4rem*var(--space))}
+.hero--jackpot::before{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-conic-gradient(from 0deg at 50% 100%,color-mix(in srgb,var(--c-primary) 16%,transparent) 0 5deg,transparent 5deg 10deg);-webkit-mask-image:linear-gradient(transparent,#000 30%,transparent 95%);mask-image:linear-gradient(transparent,#000 30%,transparent 95%)}
+.hero--jackpot :is(h1,h2){font-size:clamp(2rem,7.2vw,4.4rem);text-transform:uppercase;letter-spacing:.01em;text-shadow:0 0 30px color-mix(in srgb,var(--c-primary) 60%,transparent),0 4px 0 color-mix(in srgb,var(--c-secondary) 55%,#000)}
+.hero--jackpot .hero__eyebrow{background:var(--c-accent);color:var(--c-on-accent);text-transform:uppercase;letter-spacing:.14em;font-weight:900;box-shadow:0 0 22px -4px var(--c-accent)}
+.hero--jackpot .hero__eyebrow::before{background:currentColor}
+.hero--jackpot .hero__actions .btn:not(.btn--ghost){min-height:60px;padding:0 2.4rem;font-size:1.12rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;background:linear-gradient(180deg,color-mix(in srgb,var(--c-primary) 82%,#fff),var(--c-primary) 60%);box-shadow:0 5px 0 color-mix(in srgb,var(--c-primary) 55%,#000),0 16px 34px -10px color-mix(in srgb,var(--c-primary) 85%,transparent)}
+.hero--jackpot .hero__actions .btn:not(.btn--ghost):active{transform:translateY(3px);box-shadow:0 2px 0 color-mix(in srgb,var(--c-primary) 55%,#000)}
+.hero--jackpot .hero__points li{padding:.35rem .85rem;border-radius:999px;background:var(--c-surface);border:1px solid var(--line);color:var(--c-text)}
+.hero--jackpot .hero__points li::before{background:var(--c-accent);color:var(--c-on-accent)}
+.hero--jackpot .hero__media{position:relative;padding:12px;border-radius:calc(var(--r-box) + 12px);background:linear-gradient(135deg,var(--c-accent),var(--c-primary) 50%,var(--c-accent));box-shadow:0 0 50px -8px color-mix(in srgb,var(--c-primary) 75%,transparent)}
+.hero--jackpot .hero__media::before{content:"";position:absolute;inset:3px;border:3px dotted color-mix(in srgb,#fff 88%,transparent);border-radius:calc(var(--r-box) + 9px);pointer-events:none}
+.hero--jackpot .hero__media img{position:relative;box-shadow:none}
+@media (min-width:860px){.hero--jackpot .hero__media{max-width:880px;order:2}}

@@ -1,0 +1,5 @@
+/* event calendar neon: stage month cards, dates in lit badges */
+.event-calendar--neon .event-calendar__month{background:var(--c-surface);border-color:color-mix(in srgb,var(--c-primary) 40%,transparent);box-shadow:0 0 24px -12px var(--c-primary)}
+.event-calendar--neon .event-calendar__month h3{color:var(--c-text);padding-bottom:.5rem;border-bottom:1px solid var(--line)}
+.event-calendar--neon .event-calendar__month time{min-width:0;margin-right:.4rem;padding:.1rem .5rem;border-radius:6px;background:color-mix(in srgb,var(--c-primary) 22%,transparent);color:var(--c-text)}
+.event-calendar--neon .event-calendar__month a{color:var(--c-text)}

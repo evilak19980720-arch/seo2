@@ -1,0 +1,6 @@
+/* cta ticket: a coupon card with punched sides and a dashed tear line */
+.cta--ticket .cta__box{position:relative;max-width:820px;margin:0 auto;background:radial-gradient(circle at 0 50%,transparent 18px,var(--c-surface) 19px) left/51% 100% no-repeat,radial-gradient(circle at 100% 50%,transparent 18px,var(--c-surface) 19px) right/51% 100% no-repeat;border:0;box-shadow:none;filter:drop-shadow(0 16px 26px rgba(0,0,0,.18))}
+.cta--ticket .cta__box::before{content:"";position:absolute;left:36px;right:36px;top:50%;border-top:2px dashed color-mix(in srgb,var(--c-primary) 45%,transparent);display:none}
+.cta--ticket .cta__box>div:first-child{padding-bottom:1rem;border-bottom:2px dashed color-mix(in srgb,var(--c-primary) 40%,transparent)}
+.cta--ticket :is(h1,h2){text-transform:uppercase;letter-spacing:.02em}
+.cta--ticket .btn{background:var(--c-accent);color:var(--c-on-accent)}

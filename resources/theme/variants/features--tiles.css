@@ -1,0 +1,10 @@
+/* features tiles: solid colour tiles, number as a big watermark */
+.features--tiles .feature{background:linear-gradient(150deg,var(--c-primary),color-mix(in srgb,var(--c-primary) 55%,var(--c-secondary)))!important;color:var(--c-on-primary);border:0!important;overflow:hidden;min-height:180px}
+.features--tiles .feature h3{color:var(--c-on-primary)}
+.features--tiles .feature p{color:color-mix(in srgb,var(--c-on-primary) 85%,transparent)}
+.features--tiles .feature__icon{position:absolute;right:-6px;bottom:-18px;width:auto;height:auto;margin:0;background:none;box-shadow:none;font-size:5.5rem;line-height:1;color:color-mix(in srgb,var(--c-on-primary) 16%,transparent)}
+.features--tiles .feature>div{position:relative}
+.features--tiles .grid>.feature:nth-child(even){background:linear-gradient(150deg,var(--c-secondary),color-mix(in srgb,var(--c-secondary) 70%,var(--c-primary)))!important;color:var(--c-on-secondary)}
+.features--tiles .grid>.feature:nth-child(even) h3{color:var(--c-on-secondary)}
+.features--tiles .grid>.feature:nth-child(even) p{color:color-mix(in srgb,var(--c-on-secondary) 85%,transparent)}
+.features--tiles .grid>.feature:nth-child(even) .feature__icon{color:color-mix(in srgb,var(--c-on-secondary) 16%,transparent)}

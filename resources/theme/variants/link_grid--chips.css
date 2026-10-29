@@ -1,0 +1,4 @@
+/* link grid chips: gradient-filled chips, the count as a white bubble */
+.link-grid--chips .link-grid__items a{border:0;background:linear-gradient(135deg,var(--c-primary),color-mix(in srgb,var(--c-primary) 60%,var(--c-secondary)));color:var(--c-on-primary);box-shadow:0 4px 0 color-mix(in srgb,var(--c-primary) 55%,#000)}
+.link-grid--chips .link-grid__items a:hover{color:var(--c-on-primary);transform:translateY(-2px)}
+.link-grid--chips .link-grid__items small{background:var(--c-on-primary);color:var(--c-primary)}

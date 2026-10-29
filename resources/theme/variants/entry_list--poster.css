@@ -1,0 +1,10 @@
+/* entry list poster: tall covers with the title and meta laid over a dark fade */
+.entry-list--poster .entry-card{border:0;border-radius:var(--r-box);box-shadow:0 18px 36px -24px rgba(0,0,0,.7)}
+.entry-list--poster .tile__media{aspect-ratio:3/4}
+.entry-list--poster .tile__body{position:absolute;left:0;right:0;bottom:0;padding:3rem .85rem .85rem!important;background:linear-gradient(0deg,rgba(0,0,0,.9),rgba(0,0,0,.55) 55%,transparent);color:#fff}
+.entry-list--poster .tile__body :is(h3,a){color:#fff}
+.entry-list--poster .tile__body p{color:rgba(255,255,255,.82)!important}
+.entry-list--poster .tile__body p:not(.entry-card__meta){display:none}
+.entry-list--poster .entry-card:hover{transform:translateY(-4px) scale(1.01)}
+@media (min-width:1024px){.entry-list--poster .entry-list__items{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (min-width:1024px){.entry-list--poster .entry-list__items:has(>:last-child:nth-child(3n)){grid-template-columns:repeat(6,minmax(0,1fr))}}

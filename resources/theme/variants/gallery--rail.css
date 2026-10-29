@@ -1,0 +1,6 @@
+/* gallery rail: swipeable full-bleed strip with rounded tall frames and caption chips */
+.gallery--rail .gallery__items{margin:0 -20px;padding:0 20px .75rem;scroll-padding:0 20px;scrollbar-width:none}
+.gallery--rail .gallery__items::-webkit-scrollbar{display:none}
+.gallery--rail figure{position:relative;flex-basis:min(72%,360px)}
+.gallery--rail img{aspect-ratio:4/5;box-shadow:0 16px 30px -20px rgba(0,0,0,.6)}
+.gallery--rail figcaption{position:absolute;left:10px;bottom:10px;padding:.2rem .7rem;border-radius:999px;background:rgba(0,0,0,.65);color:#fff}

@@ -1,0 +1,6 @@
+/* notice ticker: accent marquee with a "live" label block */
+.notice--ticker{background:var(--c-accent);color:var(--c-on-accent)}
+.notice--ticker .notice__inner{min-height:40px}
+.notice--ticker .notice__icon{align-self:stretch;display:grid;place-items:center;padding:0 .8rem;margin-left:-20px;background:var(--c-secondary);color:var(--c-on-secondary);clip-path:polygon(0 0,100% 0,85% 100%,0 100%);padding-right:1.2rem}
+.notice--ticker .notice__text{font-weight:700}
+.notice--ticker .notice__link{color:inherit}

@@ -1,0 +1,5 @@
+/* stats neon: dark strip, glowing values separated by lit dividers */
+.stats-block--neon{background:linear-gradient(90deg,var(--c-secondary),color-mix(in srgb,var(--c-primary) 22%,var(--c-secondary)),var(--c-secondary));border-top:1px solid color-mix(in srgb,var(--c-primary) 60%,transparent);border-bottom:1px solid color-mix(in srgb,var(--c-primary) 60%,transparent);box-shadow:0 0 30px -10px var(--c-primary)}
+.stats-block--neon .stats-block__item dd{color:var(--c-on-secondary);text-shadow:0 0 16px color-mix(in srgb,var(--c-primary) 85%,transparent)}
+.stats-block--neon .stats-block__item+.stats-block__item{border-left-color:color-mix(in srgb,var(--c-primary) 45%,transparent)!important}
+@media (max-width:640px){.stats-block--neon .stats-block__grid{grid-template-columns:repeat(2,minmax(0,1fr))}.stats-block--neon .stats-block__item:nth-child(odd){border-left:0!important}}

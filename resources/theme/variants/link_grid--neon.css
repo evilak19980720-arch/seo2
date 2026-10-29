@@ -1,0 +1,5 @@
+/* link grid neon: stage tiles with glowing borders and an arrow */
+.link-grid--neon .link-grid__items a{background:var(--c-surface);border-color:color-mix(in srgb,var(--c-primary) 40%,transparent);color:var(--c-text)}
+.link-grid--neon .link-grid__items a::after{content:"→";color:var(--c-primary)}
+.link-grid--neon .link-grid__items a:hover{color:var(--c-text);box-shadow:0 0 22px -6px var(--c-primary)}
+.link-grid--neon .link-grid__items small{background:color-mix(in srgb,var(--c-primary) 25%,transparent);color:var(--c-text)}

@@ -1,0 +1,8 @@
+/* steps pills: each step a pill row with its number capsule */
+.steps--pills .steps__list{gap:.75rem}
+.steps--pills .step{align-items:center;padding:.6rem 1.2rem .6rem .6rem;border-radius:999px;background:var(--c-surface);border:1px solid var(--line);padding-bottom:.6rem}
+.steps--pills .step::before{display:none}
+.steps--pills .step h3{font-size:1.02rem;margin:0}
+.steps--pills .step p{font-size:.9rem;line-height:1.45}
+.steps--pills .step__n{box-shadow:none;background:linear-gradient(135deg,var(--c-primary),var(--c-accent))}
+@media (max-width:560px){.steps--pills .step{border-radius:calc(var(--r-box) + 6px);align-items:flex-start}}

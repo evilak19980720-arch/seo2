@@ -1,0 +1,6 @@
+/* faq neon: stage accordion, neon outlines and a lit question number */
+.faq--neon .faq__items{counter-reset:fq}
+.faq--neon details{counter-increment:fq;background:var(--c-surface);border-color:color-mix(in srgb,var(--c-primary) 40%,transparent)}
+.faq--neon details[open]{border-color:var(--c-primary);box-shadow:0 0 26px -8px var(--c-primary)}
+.faq--neon summary::before{content:counter(fq,decimal-leading-zero);flex:none;font:900 .9rem/1 var(--f-heading);color:var(--c-primary);text-shadow:0 0 10px var(--c-primary)}
+.faq--neon summary::after{background:transparent;border:1px solid color-mix(in srgb,var(--c-primary) 60%,transparent);color:var(--c-text)}

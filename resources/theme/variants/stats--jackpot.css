@@ -1,0 +1,6 @@
+/* stats jackpot: stage counters in glowing digit boxes, like a jackpot meter */
+.stats-block--jackpot .stats-block__grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
+@media (min-width:760px){.stats-block--jackpot .stats-block__grid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}}
+.stats-block--jackpot .stats-block__item{padding:1rem .75rem;border-radius:var(--r-box);background:linear-gradient(180deg,color-mix(in srgb,#000 35%,var(--c-secondary)),var(--c-secondary));border:2px solid color-mix(in srgb,var(--c-accent) 65%,transparent);box-shadow:inset 0 0 20px -6px color-mix(in srgb,var(--c-accent) 60%,transparent),0 0 24px -10px var(--c-accent)}
+.stats-block--jackpot .stats-block__item dd{background:none!important;-webkit-background-clip:border-box!important;background-clip:border-box!important;color:var(--c-text)!important;font-variant-numeric:tabular-nums;letter-spacing:.02em;text-shadow:0 0 18px color-mix(in srgb,var(--c-accent) 70%,transparent)}
+.stats-block--jackpot .stats-block__item dt{color:var(--c-muted)}

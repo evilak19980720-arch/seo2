@@ -1,0 +1,12 @@
+/* hero royal: stage with an ornamental double frame round the text and a round medallion picture */
+.hero--royal .hero__text{position:relative;padding:1.75rem 1.25rem;border:1px solid color-mix(in srgb,var(--c-accent) 70%,transparent);border-radius:var(--r-box);outline:1px solid color-mix(in srgb,var(--c-accent) 35%,transparent);outline-offset:6px}
+.hero--royal .hero__eyebrow{background:transparent;color:var(--c-text);padding-left:0;text-transform:uppercase;letter-spacing:.2em}
+.hero--royal .hero__eyebrow::before{width:10px;height:10px;border-radius:2px;transform:rotate(45deg);background:var(--c-accent)}
+.hero--royal :is(h1,h2){font-size:clamp(2rem,5.4vw,3.6rem)}
+.hero--royal .hero__lead{border-top:1px solid var(--line);padding-top:1rem;margin-top:.75rem}
+.hero--royal .hero__media{position:relative;max-width:520px;margin:0 auto;width:100%;padding:10px;border-radius:50%;background:conic-gradient(from 30deg,var(--c-accent),var(--c-primary),var(--c-accent),var(--c-primary),var(--c-accent));box-shadow:0 0 70px -10px color-mix(in srgb,var(--c-accent) 60%,transparent)}
+.hero--royal .hero__media img{aspect-ratio:1;border-radius:50%;border:6px solid var(--c-secondary);box-shadow:none}
+.hero--royal.hero--wide-img .hero__media{max-width:none;border-radius:calc(var(--r-box) + 10px);padding:6px}
+.hero--royal.hero--wide-img .hero__media img{aspect-ratio:auto;border-radius:var(--r-box);border-width:3px}
+.hero--royal .hero__points li::before{background:var(--c-accent);color:var(--c-on-accent)}
+@media (min-width:860px){.hero--royal .hero__text{padding:2.5rem 2.25rem}}

@@ -1,0 +1,3 @@
+/* callout neon: stage note box with a glowing frame */
+.callout--neon{border:1px solid color-mix(in srgb,var(--c-accent) 60%,transparent);border-left-width:1px;box-shadow:0 0 30px -10px var(--c-accent)}
+.callout--neon .callout__icon{background:transparent;border:2px solid var(--c-accent);color:var(--c-text);box-shadow:0 0 12px -2px var(--c-accent)}
