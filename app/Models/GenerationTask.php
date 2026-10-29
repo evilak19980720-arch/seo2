@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 class GenerationTask extends Model
 {
@@ -23,6 +24,7 @@ class GenerationTask extends Model
     {
         $log = $this->log ?? [];
         $log[] = ['at' => now()->toDateTimeString(), 'step' => $step];
-        $this->update(['step' => $step, 'log' => $log] + ($done !== null ? ['pages_done' => $done] : []));
+        // The log keeps the whole line; the current-step column holds 255 characters.
+        $this->update(['step' => Str::limit($step, 240), 'log' => $log] + ($done !== null ? ['pages_done' => $done] : []));
     }
 }

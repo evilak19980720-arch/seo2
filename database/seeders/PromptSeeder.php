@@ -16,7 +16,7 @@ class PromptSeeder extends Seeder
     public const SYSTEM = 'You are a senior content strategist and SEO editor for the official website of {{product_name}} ({{site_type}}). Write natively in {{language}} for readers in {{country}}; never write in another language and never translate from another language. The BRAND PROFILE is the only source of facts: never invent features, numbers, prices, awards, reviews, release dates or company details that are not in it. Always answer with a single JSON object.';
 
     /** Templates revised after the first release ship as a new version; the highest active version wins. */
-    public const VERSIONS = [PromptType::DesignConfig->value => 5, PromptType::PageContent->value => 7, PromptType::SiteData->value => 2, PromptType::SiteMeta->value => 2, PromptType::ArticleGenerate->value => 2, PromptType::ArticlePolish->value => 2];
+    public const VERSIONS = [PromptType::DesignConfig->value => 5, PromptType::PageContent->value => 7, PromptType::SiteData->value => 2, PromptType::SiteMeta->value => 2, PromptType::ArticleGenerate->value => 2, PromptType::ArticlePolish->value => 2, PromptType::SiteReview->value => 2];
 
     public function run(): void
     {
@@ -284,7 +284,7 @@ AI CUSTOM CSS currently applied:
 Score the site from 0 to 100:
 - "design": does it look like a polished, premium official brand site (clear hierarchy, generous spacing, consistent colours, strong hero, nothing cluttered, overlapping, unreadable or broken), first on the phone screenshot, and how close is it to the reference look when reference screenshots are given?
 - "seo": titles and descriptions (clear main keyword in {{language}}, 35-60 / 120-155 characters, unique per page, no season or unsupported claims), one H1, readable text, the program checks above.
-Then list the concrete issues you see, and a change list that fixes them using ONLY the allowed options: change colours only to fix clashes or to match the reference; pick block variants that make the layout calmer and closer to the reference; never invent facts. Rewrite meta_title / meta_description only for pages whose current text is weak, duplicated or the wrong length; write them natively in {{language}}. Set "drop_custom_css" to true only when the custom CSS visibly breaks the layout or colours.
+Then list the concrete issues you see (each one short sentence in Simplified Chinese, at most 8 issues, for the Chinese-speaking admin), and a change list that fixes them using ONLY the allowed options: change colours only to fix clashes or to match the reference; pick block variants that make the layout calmer and closer to the reference; never invent facts. Rewrite meta_title / meta_description only for pages whose current text is weak, duplicated or the wrong length; write them natively in {{language}}. Set "drop_custom_css" to true only when the custom CSS visibly breaks the layout or colours.
 Leave anything that is already good out of the change list.
 
 Return JSON:

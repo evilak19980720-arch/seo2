@@ -653,3 +653,7 @@ body:has(.mobile-bar--pill){padding-bottom:calc(84px + env(safe-area-inset-botto
 .mobile-bar--cta .mobile-bar__home{flex:0 0 48px;height:48px;border-radius:14px;border:1px solid var(--line);color:var(--c-text)}
 .mobile-bar--cta .mobile-bar__button{flex:1;flex-direction:row;min-height:48px;color:var(--c-on-primary);font-size:1rem}
 }
+
+/* Wide banners keep their painted-in text: shown whole, full width, above the headline */
+.hero--wide-img .hero__media{max-width:1200px}
+.hero--wide-img .hero__media img{aspect-ratio:auto!important;height:auto;object-fit:contain}

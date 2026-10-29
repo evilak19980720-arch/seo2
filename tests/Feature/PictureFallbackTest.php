@@ -72,4 +72,19 @@ class PictureFallbackTest extends TestCase
             $this->assertSame('brand/ref-1.png', $ctx->slotPicture($block, $type)['path'] ?? null, $slot);
         }
     }
+
+    public function test_wide_banners_are_shown_whole_instead_of_cropped(): void
+    {
+        Storage::fake('public');
+        $img = imagecreatetruecolor(1600, 500);
+        ob_start();
+        imagepng($img);
+        Storage::disk('public')->put('brand/banner.png', ob_get_clean());
+        $site = $this->makeSite(['status' => 'live', 'domain' => 'wide.com.br'], ['media' => [['type' => 'image', 'path' => 'brand/banner.png', 'alt' => 'Banner']]]);
+        $site->update(['design_config' => ['pages' => ['home' => [['block' => 'hero', 'variant' => 'image-bg']]]]]);
+        $site->pages()->create(['type' => 'home', 'slug' => '', 'title' => 'Galaxy Run', 'content' => []]);
+        app(StaticSiteBuilder::class)->buildAll($site->fresh());
+
+        $this->assertStringContainsString('class="hero hero--stacked hero--wide-img"', file_get_contents(StaticSiteBuilder::dirFor($site).'/index.html'));
+    }
 }
