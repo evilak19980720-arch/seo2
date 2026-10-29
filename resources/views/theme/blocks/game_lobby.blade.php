@@ -22,7 +22,10 @@
 @endforeach
 </div>
 </div>
-<div class="lobby__grid">
+@php($shape = $ctx->tileShape($games))
+@php($shapeClass = trim(($shape['ratio'] ? ' tiles--shaped' : '').($shape['cap'] ? ' tiles--small' : '')))
+@php($shapeStyle = $shape['ratio'] ? '--tile-ratio:'.$shape['ratio'].($shape['cap'] ? ';--tile-cap:'.$shape['cap'].'px' : '') : null)
+<div class="lobby__grid{{ $shapeClass ? ' '.$shapeClass : '' }}"@if ($shapeStyle) style="{{ $shapeStyle }}"@endif>
 @foreach ($games as $game)
 <div class="lobby__item" data-game="{{ $game->slug }}" data-tags="{{ implode(' ', $game->tags()) }}" data-name="{{ mb_strtolower($game->title.' '.$game->get('provider')) }}" data-provider="|{{ is_string($game->get('provider')) ? trim($game->get('provider')) : '' }}|" data-theme="|{{ implode('|', array_map('trim', array_filter((array) $game->get('themes', []), 'is_string'))) }}|" data-mechanic="|{{ implode('|', array_map('trim', array_filter((array) $game->get('mechanics', []), 'is_string'))) }}|">
 @include('theme.partials.entry-card', ['entry' => $game])

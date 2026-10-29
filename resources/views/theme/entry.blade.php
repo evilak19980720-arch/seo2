@@ -20,7 +20,7 @@
 @if ($status || ($date && in_array($entry->collection, ['news', 'notice'], true)))<p class="post-meta">@if ($status)<span class="entry__status entry__status--{{ $status }}">{{ $ctx->t('status_'.$status) }}</span>@endif @if ($date && in_array($entry->collection, ['news', 'notice'], true))<time datetime="{{ $date->toDateString() }}">{{ $date->format('d/m/Y') }}</time>@endif</p>@endif
 @if ($entry->summary)<p class="entry__lead">{{ $entry->summary }}</p>@endif
 </div>
-@if ($image)<div class="entry__media">@include('theme.partials.picture', ['img' => $image, 'alt' => $entry->title, 'eager' => true])</div>@endif
+@if ($image)<div class="entry__media">@include('theme.partials.picture', ['img' => $image, 'alt' => $entry->title, 'eager' => true, 'cap' => true])</div>@endif
 </header>
 <div class="entry__body">
 <div class="prose">

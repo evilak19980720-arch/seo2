@@ -614,7 +614,8 @@ class ThemeContext
 
         $result = match (true) {
             $filter === 'hot' => $tagged('hot')->whenEmpty(fn () => $items),
-            $filter === 'new' => $tagged('new')->whenEmpty(fn () => $byDate($items)),
+            // "New" means tagged new or dated: undated items are not new, the section then stays out.
+            $filter === 'new' => $tagged('new')->whenEmpty(fn () => $byDate($items->filter(fn (Entry $e) => $e->date() !== null))),
             $filter === 'featured' => $items->filter(fn (Entry $e) => $e->get('featured') || in_array('featured', $e->tags(), true))->whenEmpty($live),
             $filter === 'active' => $live(),
             $filter === 'ongoing' => $items->filter(fn (Entry $e) => in_array($e->status(), ['ongoing', null], true)),
@@ -633,12 +634,41 @@ class ThemeContext
         return ($limit ? $result->take($limit) : $result)->values();
     }
 
-    /** Like entries(), preferring items no other section of this page listed yet. */
+    /**
+     * The shape of a list's cards, from its items' own pictures: the most
+     * common picture ratio (square game icons get square cards, so nothing
+     * painted on them is cut off) and, for small pictures, the widest a card
+     * may grow (1.5× the picture) so they are never blown up into a blur.
+     *
+     * @return array{ratio: ?string, cap: ?int} ratio null: too few own pictures, the layout keeps its own shape
+     */
+    public function tileShape(Collection $entries): array
+    {
+        $sizes = $entries->map(fn (Entry $e) => $e->image ? $this->image($e->image, 640) : null)->filter(fn ($i) => ($i['width'] ?? 0) > 0 && ($i['height'] ?? 0) > 0)->values();
+        if ($sizes->count() < max(1, (int) ceil($entries->count() / 2))) {
+            return ['ratio' => null, 'cap' => null];
+        }
+        $ratios = $sizes->map(fn ($i) => $i['width'] / $i['height'])->sort()->values();
+        $median = $ratios[intdiv($ratios->count(), 2)];
+        $ratio = match (true) {
+            $median < 0.85 => '3/4',
+            $median <= 1.18 => '1/1',
+            $median <= 1.55 => '4/3',
+            default => '16/9',
+        };
+        $widths = $sizes->pluck('width')->sort()->values();
+        $width = $widths[intdiv($widths->count(), 2)];
+
+        return ['ratio' => $ratio, 'cap' => $width < 420 ? (int) round($width * 1.5) : null];
+    }
+
+    /** Like entries(), but only items no other section of this page listed yet. */
     public function pickEntries(string $collection, string $filter, int $limit): Collection
     {
         $all = $this->entries($collection, $filter);
         $fresh = $all->reject(fn (Entry $e) => isset($this->shownEntries[$e->id]));
-        $chosen = ($fresh->count() >= min($limit, 3) ? $fresh : $all)->take($limit)->values();
+        // A later section never repeats what an earlier one listed: with nothing new left it stays out.
+        $chosen = $fresh->take($limit)->values();
         foreach ($chosen as $entry) {
             $this->shownEntries[$entry->id] = true;
         }
