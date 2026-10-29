@@ -85,6 +85,6 @@ class PictureFallbackTest extends TestCase
         $site->pages()->create(['type' => 'home', 'slug' => '', 'title' => 'Galaxy Run', 'content' => []]);
         app(StaticSiteBuilder::class)->buildAll($site->fresh());
 
-        $this->assertStringContainsString('class="hero hero--stacked hero--wide-img"', file_get_contents(StaticSiteBuilder::dirFor($site).'/index.html'));
+        $this->assertStringContainsString('class="hero hero--image-bg hero--wide-img"', file_get_contents(StaticSiteBuilder::dirFor($site).'/index.html'));
     }
 }

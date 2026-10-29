@@ -33,7 +33,8 @@ class SiteStyle
     {
         $allowed = array_values($allowed);
 
-        return $allowed[crc32($this->seed.'|'.$key) % count($allowed)];
+        // md5, not crc32: crc32 of nearby seeds (site 1, 2, 3…) gives the same remainders for many keys.
+        return $allowed[hexdec(substr(md5($this->seed.'|'.$key), 0, 8)) % count($allowed)];
     }
 
     public function apply(array $config): array

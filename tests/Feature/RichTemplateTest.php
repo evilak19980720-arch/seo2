@@ -60,7 +60,7 @@ class RichTemplateTest extends TestCase
         $this->assertStringContainsString('class="'.collect($style['style'])->map(fn ($v, $k) => "st-{$k}-{$v}")->implode(' ').'"', $home);
         $this->assertStringContainsString('nav nav--'.$site->design_config['nav'], $home);
         $this->assertStringContainsString('notice notice--'.collect($site->design_config['pages']['home'])->firstWhere('block', 'notice')['variant'], $home);
-        $this->assertStringContainsString('banner banner--slider', $home);
+        $this->assertStringContainsString('banner banner--'.collect($site->design_config['pages']['home'])->firstWhere('block', 'banner')['variant'], $home);
         $this->assertStringContainsString('href="/eventos/"', $home);
         $this->assertSame(1, substr_count($home, '<h1'), 'the banner after the notice strip carries the h1');
         $this->assertStringContainsString('<loc>https://portal.com.br/eventos/</loc>', file_get_contents("{$dir}/sitemap.xml"));

@@ -74,6 +74,8 @@ return [
         'cards' => ['bordered', 'flat', 'elevated', 'glass'],
         'buttons' => ['solid', 'gradient', 'outline'],
         'headings' => ['normal', 'uppercase', 'accent'],
+        // Whole-site schemes (header colour, section rhythm, heading treatment, card frame): the biggest visible difference between sites.
+        'skin' => ['classic', 'bold', 'editorial', 'lobby', 'panels', 'neon'],
     ],
 
     'radius' => ['none' => '0', 'sm' => '4px', 'md' => '8px', 'lg' => '16px', 'pill' => '999px'],

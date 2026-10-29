@@ -9,9 +9,9 @@
 @php($logo = $ctx->site->logo_path ? $ctx->image($ctx->site->logo_path, 480) : null)
 @php($points = array_slice(array_values(array_filter($data['points'] ?? ($ctx->brand->selling_points ?? []), 'is_string')), 0, 3))
 @php($isHome = ($page?->type ?? null) === 'home')
-{{-- A wide banner (2:1 or wider) usually has its own text painted in: show it whole above the text, never cropped. --}}
+{{-- A wide banner (2:1 or wider) usually has its own text painted in: shown whole, never cropped, in the site's own hero layout. --}}
 @php($wide = $heroImg && ($heroImg['width'] ?? 0) >= 2 * max(1, (int) ($heroImg['height'] ?? 0)))
-<section class="hero hero--{{ $wide ? 'stacked hero--wide-img' : $variant }}">
+<section class="hero hero--{{ $variant }}{{ $wide ? ' hero--wide-img' : '' }}">
 <div class="container hero__grid">
 <div class="hero__text">
 @if (! empty($data['eyebrow']))<span class="hero__eyebrow">{{ $data['eyebrow'] }}</span>@endif
