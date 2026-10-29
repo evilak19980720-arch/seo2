@@ -313,6 +313,21 @@ class ThemeContext
         return ! isset($parts['fragment']) && ($path === '' || $path === $this->currentPath);
     }
 
+    /**
+     * Size step for a big heading by its length, so a long hero title stays
+     * within about three lines on a phone: ' class="title--long"' or ''.
+     */
+    public function titleClass(?string $title): string
+    {
+        $length = mb_strlen(trim((string) $title));
+
+        return match (true) {
+            $length > 70 => ' class="title--xlong"',
+            $length > 42 => ' class="title--long"',
+            default => '',
+        };
+    }
+
     /** Whether a root-relative link is the page being rendered. */
     public function isCurrent(string $href): bool
     {

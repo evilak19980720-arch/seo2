@@ -6,8 +6,13 @@
     $status = in_array($entry->collection, ['promotion', 'event'], true) ? $entry->status() : null;
     $date = $entry->date();
     $paramLabel = fn ($key) => in_array($key, ['starts_at', 'ends_at'], true) ? $ctx->t($key === 'starts_at' ? 'starts' : 'ends') : $ctx->t($key);
+    // The brand's own link (an app or the product) gives a game or offer page its next step.
+    $action = in_array($entry->collection, ['game', 'promotion', 'event'], true) ? ($ctx->ctaLinks(1)[0] ?? null) : null;
+    // One or two facts read better as a line under the intro than as a table.
+    $fewParams = count($params) < 3;
+    $sameProvider = filled($entry->get('provider')) && $related->isNotEmpty() && $related->every(fn ($e) => \App\Services\Content\SeoRules::normalize((string) $e->get('provider')) === \App\Services\Content\SeoRules::normalize((string) $entry->get('provider')));
     $relatedTitle = match ($entry->collection) {
-        'game' => filled($entry->get('provider')) ? $ctx->t('more_from', ['name' => $entry->get('provider')]) : $ctx->t('more_items'),
+        'game' => $sameProvider ? $ctx->t('more_from', ['name' => $entry->get('provider')]) : $ctx->t('more_items'),
         'provider' => $ctx->t('games_by', ['name' => $entry->title]),
         default => $ctx->t('more_items'),
     };
@@ -19,6 +24,8 @@
 <h1>{{ $entry->title }}</h1>
 @if ($status || ($date && in_array($entry->collection, ['news', 'notice'], true)))<p class="post-meta">@if ($status)<span class="entry__status entry__status--{{ $status }}">{{ $ctx->t('status_'.$status) }}</span>@endif @if ($date && in_array($entry->collection, ['news', 'notice'], true))<time datetime="{{ $date->toDateString() }}">{{ $date->format('d/m/Y') }}</time>@endif</p>@endif
 @if ($entry->summary)<p class="entry__lead">{{ $entry->summary }}</p>@endif
+@if ($params && $fewParams)<ul class="entry__facts">@foreach ($params as $key => $value)<li><span>{{ $paramLabel($key) }}</span> {{ $value }}</li>@endforeach</ul>@endif
+@if ($action)<p class="entry__action"><a class="btn btn--lg" href="{{ $action['url'] }}" @if ($ctx->rel($action['url'])) rel="{{ $ctx->rel($action['url']) }}" @endif>{{ $action['label'] }}</a></p>@endif
 </div>
 @if ($image)<div class="entry__media">@include('theme.partials.picture', ['img' => $image, 'alt' => $entry->title, 'eager' => true, 'cap' => true])</div>@endif
 </header>
@@ -29,7 +36,7 @@
 {!! $section['html'] !!}
 @endforeach
 </div>
-@if ($params)
+@if ($params && ! $fewParams)
 <aside class="entry__params specs"><h2>{{ $entry->collection === 'game' ? $ctx->t('parameters') : $ctx->t('details') }}</h2><table><tbody>
 @foreach ($params as $key => $value)<tr><th scope="row">{{ $paramLabel($key) }}</th><td>{{ $value }}</td></tr>@endforeach
 </tbody></table></aside>

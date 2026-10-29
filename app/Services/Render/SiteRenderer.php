@@ -412,16 +412,21 @@ class SiteRenderer
         return $this->layout($head, $html);
     }
 
-    /** Same provider's games for a game, a provider's games, else the newest of the collection. */
-    public function relatedEntries(Entry $entry, int $limit = 6): Collection
+    /**
+     * For a game: the same provider's games, then games sharing a theme or
+     * mechanic, then other games, so the page always ends with a full row.
+     * A provider's games for a provider, else the newest of the collection.
+     */
+    public function relatedEntries(Entry $entry, int $limit = 4): Collection
     {
         $all = $this->ctx->allEntries()->where('id', '!=', $entry->id);
         $same = fn (?string $a, ?string $b) => $a && $b && SeoRules::normalize($a) === SeoRules::normalize($b);
+        $shared = fn (Entry $e, string $key) => array_intersect(array_map(fn ($v) => SeoRules::normalize((string) $v), (array) $e->get($key, [])), array_map(fn ($v) => SeoRules::normalize((string) $v), (array) $entry->get($key, []))) !== [];
 
         return match ($entry->collection) {
-            'game' => $all->where('collection', 'game')->filter(fn (Entry $e) => $same($e->get('provider'), $entry->get('provider')))
-                ->whenEmpty(fn () => $all->where('collection', 'game')->filter(fn (Entry $e) => array_intersect((array) $e->get('themes', []), (array) $entry->get('themes', []))))
-                ->take($limit)->values(),
+            'game' => ($games = $all->where('collection', 'game'))->filter(fn (Entry $e) => $same($e->get('provider'), $entry->get('provider')))
+                ->merge($games->filter(fn (Entry $e) => $shared($e, 'themes') || $shared($e, 'mechanics') || $shared($e, 'theme_keys')))
+                ->merge($games)->unique('id')->take($limit)->values(),
             'provider' => $all->where('collection', 'game')->filter(fn (Entry $e) => $same($e->get('provider'), $entry->title))->take(12)->values(),
             default => $this->ctx->entries($entry->collection, 'latest')->where('id', '!=', $entry->id)->take(3)->values(),
         };

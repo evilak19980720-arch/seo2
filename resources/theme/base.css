@@ -433,8 +433,13 @@ main{display:block}
 .lobby__fav{position:absolute;top:8px;right:8px;z-index:2;width:36px;height:36px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:1.1rem;line-height:1;cursor:pointer}
 .lobby__fav[aria-pressed=true]{background:var(--c-accent);color:#111}
 .entry__head{display:grid;gap:2rem;align-items:center;margin-bottom:2rem}
-@media (min-width:860px){.entry__head{grid-template-columns:1.1fr .9fr}.entry__body{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:2.5rem;align-items:start}}
+@media (min-width:860px){.entry__head{grid-template-columns:1.1fr .9fr}.entry__body:has(>.entry__params){display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:2.5rem;align-items:start}}
 .entry__lead{font-size:1.12rem;color:var(--c-muted)}
+.entry__facts{display:flex;flex-wrap:wrap;gap:.5rem;list-style:none;padding:0;margin:1rem 0 0}
+.entry__facts li{padding:.35rem .8rem;border-radius:999px;background:color-mix(in srgb,var(--c-primary) 12%,transparent);font-weight:700;font-size:.9rem}
+.entry__facts span{color:var(--c-muted);font-weight:600}
+.entry__action{margin:1.5rem 0 0}
+@media (max-width:759px){.entry__action .btn{width:100%}}
 .entry__media img{width:100%;border-radius:var(--r-box)}
 .entry__params h2{font-size:1.1rem;margin:0 0 .75rem}
 .entry__params table{max-width:none}
@@ -582,7 +587,7 @@ h3{letter-spacing:-.01em}
 .hero--image-bg .hero__media::after,.hero--centered:has(.hero__media) .hero__media::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,color-mix(in srgb,var(--c-secondary) 30%,#05070c) 0%,color-mix(in srgb,color-mix(in srgb,var(--c-secondary) 30%,#05070c) 70%,transparent) 45%,transparent 80%)}
 .hero--image-bg .hero__grid,.hero--centered:has(.hero__media) .hero__grid{position:static}
 .hero--image-bg .hero__text,.hero--centered:has(.hero__media) .hero__text{position:relative;z-index:1}
-.hero--image-bg h1,.hero--image-bg h2,.hero--centered:has(.hero__media) h1,.hero--centered:has(.hero__media) h2{color:#fff;text-shadow:0 2px 30px rgba(0,0,0,.35)}
+.hero--image-bg h1,.hero--image-bg h2,.hero--centered:has(.hero__media) h1,.hero--centered:has(.hero__media) h2{color:#fff;text-shadow:0 1px 14px rgba(0,0,0,.28)}
 .hero--image-bg .hero__lead,.hero--centered:has(.hero__media) .hero__lead{color:rgba(255,255,255,.86)}
 .hero--image-bg .hero__eyebrow,.hero--centered:has(.hero__media) .hero__eyebrow{background:rgba(255,255,255,.14);color:#fff;backdrop-filter:blur(6px)}
 .hero--image-bg .hero__points,.hero--centered:has(.hero__media) .hero__points{color:rgba(255,255,255,.92)}
@@ -824,3 +829,16 @@ body:has(.mobile-bar--pill){padding-bottom:calc(84px + env(safe-area-inset-botto
 .section .items--2{grid-template-columns:repeat(2,minmax(0,1fr))!important;display:grid}
 @media (max-width:519px){.section .items--2{grid-template-columns:minmax(0,1fr)!important}}
 @media (min-width:640px){.section .items--1>.tile{flex-direction:row;max-width:920px;margin-inline:auto;width:100%}.section .items--1>.tile>.tile__media{flex:0 0 46%;aspect-ratio:auto;min-height:220px}.section .items--1>.tile>.tile__media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.section .items--1>.tile>.tile__body{justify-content:center;padding:1.5rem 1.75rem}}
+
+/* Big headings: long titles step down so a phone shows them in about three lines; balanced lines everywhere */
+:is(.hero,.banner) :is(h1,h2){text-wrap:balance}
+body :is(.hero,.banner) .title--long{font-size:clamp(1.7rem,4.6vw,3rem)}
+body :is(.hero,.banner) .title--xlong{font-size:clamp(1.5rem,3.8vw,2.5rem)}
+@media (max-width:759px){
+body :is(.hero,.banner) :is(h1,h2){font-size:clamp(1.75rem,8.4vw,2.4rem);line-height:1.12;letter-spacing:-.015em}
+body :is(.hero,.banner) .title--long{font-size:clamp(1.5rem,6.6vw,1.95rem)}
+body :is(.hero,.banner) .title--xlong{font-size:clamp(1.3rem,5.6vw,1.65rem)}
+/* Hero points wrap and stay readable on any background */
+body .hero__points{gap:.45rem .6rem}
+body .hero__points li{min-width:0;white-space:normal;line-height:1.35;font-size:.88rem}
+}

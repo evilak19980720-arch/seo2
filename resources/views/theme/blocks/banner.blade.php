@@ -12,7 +12,7 @@
 <div class="banner__slide @if (! $img) banner__slide--art @endif">
 @if ($img)<div class="banner__media">@include('theme.partials.picture', ['img' => $img, 'alt' => $images[$i]['alt'], 'eager' => ($isFirst ?? false) && $i === 0])</div>@endif
 <div class="container banner__body">
-@if (($isFirst ?? false) && $i === 0)<h1>{{ $slide['title'] }}</h1>@else<h2>{{ $slide['title'] }}</h2>@endif
+@if (($isFirst ?? false) && $i === 0)<h1{!! $ctx->titleClass($slide['title']) !!}>{{ $slide['title'] }}</h1>@else<h2{!! $ctx->titleClass($slide['title']) !!}>{{ $slide['title'] }}</h2>@endif
 @if (! empty($slide['text']))<p>{{ $slide['text'] }}</p>@endif
 @if ($cta)<a class="btn btn--lg" href="{{ $cta['url'] }}" @if ($ctx->rel($cta['url'])) rel="{{ $ctx->rel($cta['url']) }}" @endif>{{ $data['cta_label'] ?? $cta['label'] }}</a>@endif
 </div>
