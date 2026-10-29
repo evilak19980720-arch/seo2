@@ -60,6 +60,7 @@ class Settings
             'ai_images_per_site' => 8,
             'qa_enabled' => true,
             'qa_rounds' => 2,
+            'qa_max_minutes' => 12,
 
             // Cloudflare
             'cloudflare_api_token' => null,

@@ -2,12 +2,15 @@
 
 namespace App\Jobs;
 
+use App\Enums\SiteStatus;
 use App\Models\GenerationTask;
 use App\Services\Sites\SiteGenerator;
 use App\Services\Sites\SiteProvisioner;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
+use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * Full "生成网站" run: Cloudflare + Search Console provisioning, whole-site
@@ -30,6 +33,19 @@ class GenerateSiteJob implements ShouldQueue
     public function middleware(): array
     {
         return [(new WithoutOverlapping('site-'.$this->task->site_id))->expireAfter(1800)];
+    }
+
+    /** A worker killed by the time limit never reaches the generator's own error handling: close the task here. */
+    public function failed(?Throwable $e): void
+    {
+        $task = $this->task->fresh();
+        if ($task && in_array($task->status, ['queued', 'running'], true)) {
+            $task->progress('失败：'.($e ? Str::limit($e->getMessage(), 200) : '任务被中止'));
+            $task->update(['status' => 'failed', 'finished_at' => now()]);
+            if ($task->type !== 'qa' && $task->site?->status === SiteStatus::Generating) {
+                $task->site->update(['status' => SiteStatus::Failed]);
+            }
+        }
     }
 
     public function handle(SiteProvisioner $provisioner, SiteGenerator $generator): void

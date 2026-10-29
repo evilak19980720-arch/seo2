@@ -57,59 +57,74 @@ class SiteQa
             return;
         }
 
-        $rounds = max(1, min(3, (int) Settings::get('qa_rounds', 2)));
-        $reference = $this->referenceShots($site);
-        $current = $this->measure($site);
+        // A check that runs too long must never hold up the site: it stops between steps and keeps what is proven.
+        $deadline = microtime(true) + 60 * max(3, (int) Settings::get('qa_max_minutes', 12));
+        $late = fn () => microtime(true) > $deadline;
+        $note = fn (string $step) => $task->progress('AI 质检 · '.$step);
+        $snapshot = null;
+
         try {
+            $rounds = max(1, min(3, (int) Settings::get('qa_rounds', 2)));
+            $note('截取参考网站');
+            $reference = $this->referenceShots($site);
+            $current = $this->measure($site, $note);
+            $note('AI 看图打分中');
             $review = $this->review($site, $current, $reference);
-        } catch (Throwable $e) {
-            $task->progress('AI 质检失败：'.Str::limit($e->getMessage(), 150));
 
-            return;
-        }
+            for ($round = 1; $round <= $rounds; $round++) {
+                $task->progress("AI 质检 第 {$round} 轮：美观 {$review['scores']['design']} / SEO {$review['scores']['seo']}；".$this->checkLine($current)
+                    .($review['issues'] ? '；问题：'.Str::limit(implode('；', $review['issues']), 400) : ''));
+                if ($review['scores']['design'] >= 92 && $review['scores']['seo'] >= 92) {
+                    $task->progress('AI 质检：分数已够高，不再修改');
 
-        for ($round = 1; $round <= $rounds; $round++) {
-            $task->progress("AI 质检 第 {$round} 轮：美观 {$review['scores']['design']} / SEO {$review['scores']['seo']}；".$this->checkLine($current)
-                .($review['issues'] ? '；问题：'.Str::limit(implode('；', $review['issues']), 400) : ''));
-            if ($review['scores']['design'] >= 92 && $review['scores']['seo'] >= 92) {
-                $task->progress('AI 质检：分数已够高，不再修改');
+                    return;
+                }
+                if ($late()) {
+                    $task->progress('AI 质检：已到时间上限，停止修改');
 
-                return;
-            }
+                    return;
+                }
 
-            $snapshot = $this->snapshot($site);
-            $changes = $this->apply($site, $review);
-            if ($changes === []) {
-                $task->progress('AI 质检：没有可用的修改建议');
+                $snapshot = $this->snapshot($site);
+                $changes = $this->apply($site, $review);
+                if ($changes === []) {
+                    $task->progress('AI 质检：没有可用的修改建议');
 
-                return;
-            }
-            $task->progress('AI 质检 修改：'.Str::limit(implode('；', $changes), 500));
-            $rebuild($site->refresh());
+                    return;
+                }
+                $task->progress('AI 质检 修改：'.Str::limit(implode('；', $changes), 500));
+                $note('按修改重新渲染');
+                $rebuild($site->refresh());
 
-            $after = $this->measure($site);
-            try {
+                $after = $this->measure($site, $note);
+                $note('AI 复评中');
                 $next = $this->review($site, $after, $reference);
-            } catch (Throwable $e) {
-                $this->restore($site, $snapshot);
-                $rebuild($site->refresh());
-                $task->progress('AI 质检：复评失败，已退回修改前（'.Str::limit($e->getMessage(), 120).'）');
 
-                return;
+                $better = $this->total($next) > $this->total($review) && $this->problems($after) <= $this->problems($current);
+                if (! $better) {
+                    $this->undo($site, $snapshot, $rebuild);
+                    $task->progress("AI 质检：修改后 美观 {$next['scores']['design']} / SEO {$next['scores']['seo']}，".$this->checkLine($after).'，没有变好，已退回修改前');
+
+                    return;
+                }
+                $snapshot = null;
+                $task->progress("AI 质检：修改后 美观 {$next['scores']['design']} / SEO {$next['scores']['seo']}，已保留");
+                $current = $after;
+                $review = $next;
             }
-
-            $better = $this->total($next) > $this->total($review) && $this->problems($after) <= $this->problems($current);
-            if (! $better) {
-                $this->restore($site, $snapshot);
-                $rebuild($site->refresh());
-                $task->progress("AI 质检：修改后 美观 {$next['scores']['design']} / SEO {$next['scores']['seo']}，".$this->checkLine($after).'，没有变好，已退回修改前');
-
-                return;
+        } catch (Throwable $e) {
+            report($e);
+            if ($snapshot) {
+                $this->undo($site, $snapshot, $rebuild);
             }
-            $task->progress("AI 质检：修改后 美观 {$next['scores']['design']} / SEO {$next['scores']['seo']}，已保留");
-            $current = $after;
-            $review = $next;
+            $task->progress('AI 质检失败，'.($snapshot ? '已退回修改前，' : '').'网站按原样继续：'.Str::limit($e->getMessage(), 150));
         }
+    }
+
+    protected function undo(Site $site, array $snapshot, callable $rebuild): void
+    {
+        $this->restore($site, $snapshot);
+        $rebuild($site->refresh());
     }
 
     /** Why the check cannot run here, or null when it can. */
@@ -132,26 +147,50 @@ class SiteQa
      *
      * @return array{seo: array<int, string>, browser: array<string, array>, shots: array<int, string>}
      */
-    public function measure(Site $site): array
+    public function measure(Site $site, ?callable $note = null): array
     {
+        $note ??= fn () => null;
         $dir = StaticSiteBuilder::dirFor($site);
         $pages = $site->pages()->where('noindex', false)->get(['type', 'slug']);
         $seo = $this->seoChecks($site, $dir, $pages->pluck('slug', 'type')->all());
         // Home plus the first menu pages: what visitors see most.
         $menu = array_flip((array) ($site->design_config['menu'] ?? []));
-        $inner = $pages->where('type', '!=', 'home')->sortBy(fn ($p) => $menu[$p->type] ?? PHP_INT_MAX)->pluck('slug')->take(3)->all();
+        $inner = $pages->where('type', '!=', 'home')->sortBy(fn ($p) => $menu[$p->type] ?? PHP_INT_MAX)->pluck('slug')->take(1)->all();
         $paths = array_values(array_unique(array_merge([''], $inner)));
 
-        return PreviewServer::with($dir, function (string $base) use ($paths, $seo) {
+        return PreviewServer::with($dir, function (string $base) use ($paths, $seo, $note) {
             $browser = [];
             foreach ($paths as $path) {
                 foreach (['mobile' => '412,3000', 'desktop' => '1366,3000'] as $device => $size) {
-                    $browser['/'.ltrim($path, '/')." {$device}"] = $this->audit($base.'/'.($path === '' ? '' : trim($path, '/').'/').'?__qa=1', $size);
+                    $label = '/'.ltrim($path, '/')." {$device}";
+                    $note("浏览器检查 {$label}");
+                    $browser[$label] = $this->audit($base.'/'.($path === '' ? '' : trim($path, '/').'/').'?__qa=1', $size);
                 }
             }
+            $note('截图');
+            $shots = array_values(array_filter(array_map(fn ($shot) => $this->shrink($shot), $this->screenshot->capture($base.'/'))));
 
-            return ['seo' => $seo, 'browser' => array_filter($browser), 'shots' => $this->screenshot->capture($base.'/')];
+            return ['seo' => $seo, 'browser' => array_filter($browser), 'shots' => $shots];
         });
+    }
+
+    /** A screenshot made small enough to send quickly: at most 900 px wide and 2000 px tall, as JPEG. */
+    public function shrink(string $dataUri): ?string
+    {
+        $binary = base64_decode((string) preg_replace('#^data:[^,]+,#', '', $dataUri), true);
+        $img = $binary !== false ? @imagecreatefromstring($binary) : false;
+        if (! $img) {
+            return null;
+        }
+        $w = imagesx($img);
+        $h = imagesy($img);
+        $scale = min(1, 900 / $w);
+        $out = imagecreatetruecolor((int) round($w * $scale), (int) round(min($h, 2000 / $scale) * $scale));
+        imagecopyresampled($out, $img, 0, 0, 0, 0, imagesx($out), imagesy($out), $w, (int) round(imagesy($out) / $scale));
+        ob_start();
+        imagejpeg($out, null, 72);
+
+        return 'data:image/jpeg;base64,'.base64_encode((string) ob_get_clean());
     }
 
     /** @return array<string, mixed>|null what qa-audit.js found on one page */
@@ -259,7 +298,7 @@ class SiteQa
             $shots = rescue(fn () => $this->screenshot->capture($site->reference_url), [], false);
         }
 
-        return $shots;
+        return array_values(array_filter(array_map(fn ($shot) => $this->shrink($shot), $shots)));
     }
 
     /**

@@ -31,7 +31,7 @@ class SiteQaTest extends TestCase
                 return null;
             }
 
-            public function measure(Site $site): array
+            public function measure(Site $site, ?callable $note = null): array
             {
                 return array_shift($this->measures);
             }
@@ -125,8 +125,9 @@ class SiteQaTest extends TestCase
         $this->qa([['scores' => ['design' => 95, 'seo' => 93]] + self::PATCH], [$this->measure()])->run($site, $task, fn () => $this->fail('no rebuild'));
         $this->assertSame('split', $site->fresh()->design_config['nav']);
 
+        $count = count($task->fresh()->log);
         Settings::set('qa_enabled', false);
         $this->qa([], [])->run($site, $task, fn () => $this->fail('no rebuild'));
-        $this->assertCount(2, $task->fresh()->log);
+        $this->assertCount($count, $task->fresh()->log, 'switched off: nothing runs');
     }
 }
