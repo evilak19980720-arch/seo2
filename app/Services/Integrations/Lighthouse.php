@@ -4,6 +4,7 @@ namespace App\Services\Integrations;
 
 use App\Support\Binary;
 use App\Support\PreviewServer;
+use App\Support\Settings;
 use Symfony\Component\Process\Process;
 
 /**
@@ -12,6 +13,12 @@ use Symfony\Component\Process\Process;
  */
 class Lighthouse
 {
+    /** Switched on in the global settings and installed on the server. */
+    public static function enabled(): bool
+    {
+        return (bool) Settings::get('lighthouse_enabled', true) && self::available();
+    }
+
     public static function available(): bool
     {
         return Binary::find(config('platform.lighthouse.bin')) !== null;

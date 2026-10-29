@@ -100,6 +100,8 @@ class GlobalSettings extends Page
                         TextInput::make('server_ip')->label('服务器公网 IP')->ip(),
                         TextInput::make('ai_images_per_site')->label('每站最多 AI 配图数')->numeric()->minValue(0)->required()
                             ->helperText('首页大图和内页封面没有真实图片时，由「AI 用途分配」里的图片接口生成；每张只生成一次。填 0 关闭'),
+                        Toggle::make('lighthouse_enabled')->label('Lighthouse 检测')
+                            ->helperText('抽查页面的性能和 SEO 分，不达标就自动调整设计后重测；也用于检查自定义 CSS 和重建后的抽查。需要服务器装有 Lighthouse，关闭后跳过'),
                         Toggle::make('qa_enabled')->label('生成后 AI 质检（美观 + SEO）')
                             ->helperText('截图交给能看图的 AI 打分，并按修改单调整设计选项和标题描述；分数变高且程序检查不变差才保留，否则自动退回。需要服务器装有 Chromium'),
                         TextInput::make('qa_min_design')->label('AI 质检美观合格分')->numeric()->minValue(0)->maxValue(100)->required()

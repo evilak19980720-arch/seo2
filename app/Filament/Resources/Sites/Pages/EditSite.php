@@ -52,7 +52,7 @@ class EditSite extends EditRecord
     {
         $this->previousCss = $this->record->getOriginal('custom_css');
         $newCss = $this->data['custom_css'] ?? null;
-        if ($newCss === $this->previousCss || ! filled($newCss) || ! Lighthouse::available() || ! $this->record->built_at) {
+        if ($newCss === $this->previousCss || ! filled($newCss) || ! Lighthouse::enabled() || ! $this->record->built_at) {
             return;
         }
 

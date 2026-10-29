@@ -55,7 +55,7 @@ class RebuildSiteJob implements ShouldQueue
             Alert::raise('schema', "站点 {$site->name} 结构化数据有问题：".collect($schema)->map(fn ($p, $path) => $path.' '.implode('、', $p))->implode('；'), $site->id);
         }
 
-        if (! Lighthouse::available()) {
+        if (! Lighthouse::enabled()) {
             return;
         }
         $min = config('platform.lighthouse');

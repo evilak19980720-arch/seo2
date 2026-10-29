@@ -993,6 +993,11 @@ class SiteGenerator
             $task->progress("结构化数据 {$path}：".implode('；', $problems));
         }
 
+        if (! Settings::get('lighthouse_enabled', true)) {
+            $task->progress('Lighthouse 验收已在全局配置中关闭，跳过');
+
+            return;
+        }
         if (! Lighthouse::available()) {
             $task->progress('未安装 Lighthouse，跳过验收');
 

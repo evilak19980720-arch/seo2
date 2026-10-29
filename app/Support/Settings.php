@@ -59,6 +59,7 @@ class Settings
             'articles_generated_per_run' => 1,
             'ai_images_per_site' => 8,
             'qa_enabled' => true,
+            'lighthouse_enabled' => true,
             'qa_rounds' => 2,
             'qa_max_minutes' => 12,
             'qa_min_design' => 92,
