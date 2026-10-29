@@ -459,7 +459,8 @@ class SiteGenerator
             $config = $this->applyReference($config, $reference);
         }
         // The look is the site's own (header, fonts, corners, block variants…), never the reference's or the model's.
-        $config = SiteStyle::for($site->domain_id ?: $site->id)->apply($config);
+        $others = Site::whereKeyNot($site->id)->whereNotNull('design_config')->get(['id', 'design_config'])->pluck('design_config');
+        $config = SiteStyle::for($site->domain_id ?: $site->id, $others, $site->design_config['look'] ?? [])->apply($config);
         $validated = $validator->validate($config, $site->typeConfig());
 
         if ($onlyPages !== null && $site->design_config) {

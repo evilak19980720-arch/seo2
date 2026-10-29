@@ -76,6 +76,11 @@ return [
         'headings' => ['normal', 'uppercase', 'accent'],
         // Whole-site schemes (header colour, section rhythm, heading treatment, card frame): the biggest visible difference between sites.
         'skin' => ['classic', 'bold', 'editorial', 'lobby', 'panels', 'neon'],
+        // Phone skeleton: hero order, the facts strip under it, footer layout, section heading alignment.
+        'mhero' => ['image-top', 'text-top', 'card', 'compact'],
+        'facts' => ['grid', 'scroll', 'list', 'hidden'],
+        'mfooter' => ['stack', 'center', 'split'],
+        'mheads' => ['center', 'left'],
     ],
 
     'radius' => ['none' => '0', 'sm' => '4px', 'md' => '8px', 'lg' => '16px', 'pill' => '999px'],

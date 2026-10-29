@@ -38,4 +38,21 @@ class SiteStyleTest extends TestCase
         $this->assertTrue($one['navigation']['mobile_bar']);
         $this->assertNotContains('minimal', $looks->pluck('nav')->all(), 'a header without buttons only for sites that show none');
     }
+
+    public function test_a_new_site_takes_what_the_other_sites_use_least_and_keeps_it(): void
+    {
+        $first = SiteStyle::for(1)->apply(self::SAME_ANSWER);
+        $second = SiteStyle::for(2, [$first])->apply(self::SAME_ANSWER);
+
+        foreach ($first['look'] as $key => $value) {
+            $this->assertNotSame($value, $second['look'][$key], "{$key}: two sites never share a choice while others are free");
+        }
+        $this->assertNotSame($first['navigation']['mobile_header'], $second['navigation']['mobile_header']);
+        $this->assertNotSame($first['style']['mhero'], $second['style']['mhero']);
+
+        // Generated again (other sites changed since): the site keeps its look.
+        $again = SiteStyle::for(2, [$first, $second, $second], $second['look'])->apply(self::SAME_ANSWER);
+        $this->assertSame($second['look'], $again['look']);
+        $this->assertSame($second['nav'], $again['nav']);
+    }
 }

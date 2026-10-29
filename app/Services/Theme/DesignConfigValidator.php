@@ -108,6 +108,8 @@ class DesignConfigValidator
             'menu' => $this->menu($config['menu'] ?? [], $siteTypeConfig),
             'extra_pages' => $extraPages,
             'pages' => [],
+            // The site's own look picks (SiteStyle), kept across regenerations.
+            'look' => array_filter((array) ($config['look'] ?? []), 'is_scalar'),
         ];
         if (! empty($siteTypeConfig['sectioned'])) {
             // Pool presets decide their menu: main pages in the header, the rest under their parent or in the footer.
@@ -202,7 +204,7 @@ class DesignConfigValidator
     public const MOBILE = [
         'mobile_header' => ['standard', 'center', 'cta', 'tabs'],
         'mobile_menu' => ['dropdown', 'drawer', 'drawer-left', 'fullscreen', 'sheet'],
-        'mobile_bar_style' => ['raised', 'flat', 'pill', 'cta'],
+        'mobile_bar_style' => ['raised', 'flat', 'pill', 'cta', 'icons', 'labels'],
     ];
 
     protected function navigation(mixed $nav, array $menu, array $siteTypeConfig, string $variant, int $seed = 0): array
