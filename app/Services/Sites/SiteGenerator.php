@@ -459,8 +459,18 @@ class SiteGenerator
             $config = $this->applyReference($config, $reference);
         }
         // The look is the site's own (header, fonts, corners, block variants…), never the reference's or the model's.
+        // Generating the template again gives a new look: a new round of the seed, and the old picks count as the
+        // most used, so every option that has an alternative changes. A redesign of a few pages keeps the look.
         $others = Site::whereKeyNot($site->id)->whereNotNull('design_config')->get(['id', 'design_config'])->pluck('design_config');
-        $config = SiteStyle::for($site->domain_id ?: $site->id, $others, $site->design_config['look'] ?? [])->apply($config);
+        $old = (array) ($site->design_config['look'] ?? []);
+        $fresh = $onlyPages === null;
+        $round = (int) ($old['round'] ?? 0) + ($fresh && $site->design_config ? 1 : 0);
+        if ($fresh && $old !== []) {
+            $others = $others->concat(array_fill(0, $others->count() + 1, ['look' => $old]));
+        }
+        // Validated first so every page and section is listed and gets the look's variant, not only the ones the model named.
+        $config = SiteStyle::for(($site->domain_id ?: $site->id).($round ? "#{$round}" : ''), $others, $fresh ? [] : $old)->apply((new DesignConfigValidator)->validate($config, $site->typeConfig()) + $config);
+        $config['look']['round'] = $round;
         $validated = $validator->validate($config, $site->typeConfig());
 
         if ($onlyPages !== null && $site->design_config) {

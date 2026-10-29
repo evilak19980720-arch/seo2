@@ -11,8 +11,8 @@ namespace App\Services\Theme;
  *
  * Each choice prefers the value the fewest other sites use (ties broken by
  * the site's seed), so sites differ as much as the options allow instead of
- * colliding by chance. The picks are stored in design_config.look and kept
- * when the site is generated again.
+ * colliding by chance. The picks are stored in design_config.look; a page
+ * redesign keeps them, a new template generation draws a new look.
  */
 class SiteStyle
 {
@@ -49,7 +49,7 @@ class SiteStyle
     public static function lookOf(array $config): array
     {
         if (! empty($config['look']) && is_array($config['look'])) {
-            return array_filter($config['look'], 'is_scalar');
+            return array_filter(array_diff_key($config['look'], ['round' => 0]), 'is_scalar');
         }
         $look = array_filter([
             'fonts' => isset($config['fonts']['heading'], $config['fonts']['body']) ? $config['fonts']['heading'].'+'.$config['fonts']['body'] : null,

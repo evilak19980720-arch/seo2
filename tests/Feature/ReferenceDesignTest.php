@@ -178,4 +178,25 @@ class ReferenceDesignTest extends TestCase
         $this->assertSame('VIP345是一款面向巴西用户的娱乐应用', $site->brandProfile->fresh()->tagline, 'admin copy stays as typed');
         $this->assertNull(app(SiteGenerator::class)->localizeBrand($site->fresh()), 'unchanged profile is not re-translated');
     }
+
+    public function test_generating_the_template_again_draws_a_new_look_and_a_page_redesign_keeps_it(): void
+    {
+        $this->fakeAi(['design' => ['design' => ['colors' => ['primary' => '#2255ff']]]]);
+        $site = $this->makeSite();
+        $generator = app(SiteGenerator::class);
+
+        $generator->generateDesign($site);
+        $first = $site->fresh()->design_config;
+        $generator->generateDesign($site->fresh());
+        $second = $site->fresh()->design_config;
+
+        $this->assertSame(1, $second['look']['round']);
+        $changed = collect($first['look'])->except('round')->filter(fn ($v, $k) => ($second['look'][$k] ?? null) !== $v);
+        $this->assertSame(collect($first['look'])->except('round')->keys()->all(), $changed->keys()->all(), 'every choice changes');
+        $variants = fn ($c) => collect($c['pages'])->flatMap(fn ($blocks) => array_column($blocks, 'variant'))->all();
+        $this->assertNotSame($variants($first), $variants($second), 'block variants are drawn again');
+
+        $generator->generateDesign($site->fresh(), 'lighter', ['home']);
+        $this->assertSame($second['look'], $site->fresh()->design_config['look'], 'a page redesign keeps the look');
+    }
 }
