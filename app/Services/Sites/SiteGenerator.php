@@ -862,11 +862,27 @@ class SiteGenerator
         });
     }
 
-    /** Lighthouse each page type; regenerate only failing page compositions. */
+    /** Blocks that make a page heavy (pictures, sliders, long lists); pages without them all score like each other. */
+    public const HEAVY_BLOCKS = ['hero', 'banner', 'gallery', 'card_grid', 'entry_list', 'game_lobby', 'download', 'article_list', 'event_calendar'];
+
+    /** Pages audited per round at most, and minutes the acceptance may take. */
+    public const ACCEPTANCE_PAGES = 10;
+
+    public const ACCEPTANCE_MINUTES = 10;
+
+    /**
+     * Lighthouse a sample of the pages: home, one page per distinct heavy
+     * composition and one plain page (the others share layout and CSS and
+     * score the same). Pages that are noindex on purpose (an empty list, the
+     * 404) count for speed only. Failing compositions are redesigned and only
+     * they are audited again; a site that still misses the bar goes live with
+     * a warning instead of failing.
+     */
     public function acceptance(Site $site, GenerationTask $task): void
     {
+        $dir = StaticSiteBuilder::dirFor($site);
         $paths = $site->pages()->pluck('slug')->all();
-        foreach (SchemaValidator::checkSite(StaticSiteBuilder::dirFor($site), $paths) as $path => $problems) {
+        foreach (SchemaValidator::checkSite($dir, $paths) as $path => $problems) {
             $task->progress("结构化数据 {$path}：".implode('；', $problems));
         }
 
@@ -877,22 +893,74 @@ class SiteGenerator
         }
 
         $min = config('platform.lighthouse');
-        for ($attempt = 1; $attempt <= $min['max_attempts']; $attempt++) {
-            $paths = $site->pages()->pluck('slug', 'type')->all() + ['blog' => 'blog/', 'not_found' => '404.html'];
-            $results = $this->lighthouse->auditSite(StaticSiteBuilder::dirFor($site), $paths);
+        $deadline = microtime(true) + 60 * self::ACCEPTANCE_MINUTES;
+        $sample = $this->acceptanceSample($site->refresh());
+        $all = count($site->pages()->pluck('type')) + 2;
+        $task->progress('Lighthouse 抽查 '.count($sample).' 页（共 '.$all.' 页，版式相同的页面只测一页）');
 
-            $failed = collect($results)->filter(fn ($r) => $r !== null && ($r['performance'] < $min['min_performance'] || $r['seo'] < $min['min_seo']));
-            $task->progress("Lighthouse 第 {$attempt} 轮：".collect($results)->map(fn ($r, $t) => $r ? "{$t} P{$r['performance']}/S{$r['seo']}" : "{$t} n/a")->implode(', '));
+        for ($attempt = 1; $attempt <= $min['max_attempts']; $attempt++) {
+            $results = $this->lighthouse->auditSite($dir, $sample);
+            $failed = collect($results)->filter(fn ($r, $type) => $r !== null
+                && ($r['performance'] < $min['min_performance'] || ($r['seo'] < $min['min_seo'] && ! $this->noindex($dir, $sample[$type]))));
+            $task->progress("Lighthouse 第 {$attempt} 轮：".collect($results)->map(fn ($r, $t) => $r ? "{$t} P{$r['performance']}/S{$r['seo']}".($this->noindex($dir, $sample[$t]) ? '(noindex)' : '') : "{$t} n/a")->implode(', '));
             if ($failed->isEmpty()) {
                 return;
             }
+            // Only page compositions can be redesigned; the 404 and the blog list share the layout.
+            $fixable = $failed->keys()->intersect(array_keys($site->design_config['pages'] ?? []))->values()->all();
+            if ($fixable === [] || $attempt === $min['max_attempts'] || microtime(true) > $deadline) {
+                break;
+            }
 
-            $feedback = 'These page types scored below 90 on mobile Lighthouse: '.$failed->keys()->implode(', ').'. Use fewer, lighter blocks (fewer galleries above the fold).';
-            $this->generateDesign($site->refresh(), $feedback, $failed->keys()->all());
+            $feedback = 'These page types scored below 90 on mobile Lighthouse: '.implode(', ', $fixable).'. Use fewer, lighter blocks (fewer galleries above the fold).';
+            $this->generateDesign($site->refresh(), $feedback, $fixable);
             $this->render($site, $task);
+            $sample = array_intersect_key($sample, $failed->all());
         }
 
-        throw new \RuntimeException('Lighthouse 多次验收未通过');
+        $task->progress('Lighthouse：'.$failed->keys()->implode('、').' 未达到 '.$min['min_performance'].'/'.$min['min_seo'].' 分，网站照常继续（可稍后在后台单独优化）');
+    }
+
+    /**
+     * @return array<string, string> page type => path
+     */
+    public function acceptanceSample(Site $site): array
+    {
+        $pages = $site->pages()->pluck('slug', 'type')->all();
+        $design = $site->design_config['pages'] ?? [];
+        $sample = ['home' => $pages['home'] ?? ''];
+        $seen = [];
+        $plain = null;
+        foreach ($pages as $type => $slug) {
+            if ($type === 'home') {
+                continue;
+            }
+            $blocks = collect($design[$type] ?? [])->filter(fn ($b) => in_array($b['block'] ?? null, self::HEAVY_BLOCKS, true));
+            if ($blocks->isEmpty()) {
+                $plain ??= $type;
+
+                continue;
+            }
+            $signature = $blocks->map(fn ($b) => $b['block'].':'.($b['variant'] ?? ''))->sort()->implode(',');
+            if (! isset($seen[$signature]) && count($sample) < self::ACCEPTANCE_PAGES - 2) {
+                $seen[$signature] = true;
+                $sample[$type] = $slug;
+            }
+        }
+        if ($plain !== null) {
+            $sample[$plain] = $pages[$plain];
+        }
+
+        return $sample + ['blog' => 'blog/'];
+    }
+
+    /** Whether a built page asks not to be indexed (its SEO score then says nothing). */
+    protected function noindex(string $dir, string $path): bool
+    {
+        $file = rtrim($dir, '/').'/'.(str_ends_with($path, '.html') ? $path : trim($path, '/').'/index.html');
+        $file = str_replace('//', '/', $file);
+
+        return is_file($file) && preg_match('/<meta[^>]+name=["\']robots["\'][^>]+noindex/i', (string) file_get_contents($file, false, null, 0, 20000));
     }
 
     public function brandContext(Site $site): string

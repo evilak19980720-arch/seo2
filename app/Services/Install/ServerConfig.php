@@ -98,7 +98,7 @@ NGINX;
         return <<<CONF
 ; /etc/supervisor/conf.d/site-network.conf
 [program:site-network-generation]
-command=php {$base}/artisan queue:work redis --queue=generation --sleep=3 --tries=1 --timeout=1800
+command=php {$base}/artisan queue:work redis --queue=generation --sleep=3 --tries=1 --timeout=3600
 numprocs=2                      ; = max concurrent site generations
 process_name=%(program_name)s_%(process_num)02d
 autostart=true
