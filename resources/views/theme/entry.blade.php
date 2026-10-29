@@ -45,7 +45,7 @@
 @foreach ($related as $item)@include('theme.partials.entry-card', ['entry' => $item])@endforeach
 </div></aside>
 @endif
-<p class="entry-list__more"><a class="btn btn--ghost" href="{{ $ctx->href($owner->slug) }}">{{ $ctx->t('view_all') }} · {{ $ctx->link($owner->type)['label'] }}</a></p>
+<p class="entry-list__more"><a class="btn btn--ghost" href="{{ $ctx->href($owner->slug) }}">{{ $ctx->t('view_all') }}</a></p>
 </div>
 @if ($entry->collection === 'game')<script>(function(){try{var k='lobby:recent',r=JSON.parse(localStorage.getItem(k))||[],s=@json($entry->slug),i=r.indexOf(s);if(i>-1)r.splice(i,1);r.unshift(s);localStorage.setItem(k,JSON.stringify(r.slice(0,24)))}catch(e){}})();</script>@endif
 </article>

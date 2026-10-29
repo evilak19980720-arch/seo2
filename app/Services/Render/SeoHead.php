@@ -35,11 +35,12 @@ class SeoHead
 
     public function __construct(public readonly ThemeContext $ctx) {}
 
-    public static function for(ThemeContext $ctx, string $path, string $title, ?string $description, bool $noindex = false): self
+    public static function for(ThemeContext $ctx, string $path, string $title, ?string $description, bool $noindex = false, bool $exact = false): self
     {
+        // Pages show their title and description as written (admin fields, column names).
         $head = new self($ctx);
-        $head->title = self::limit($title, 60);
-        $head->description = self::limit((string) $description, 155);
+        $head->title = $exact ? trim($title) : self::limit($title, 60);
+        $head->description = $exact ? trim((string) $description) : self::limit((string) $description, 155);
         $head->canonical = $ctx->url($path);
         $head->noindex = $noindex;
         $head->schema = $head->baseSchema();

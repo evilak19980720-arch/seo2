@@ -53,30 +53,56 @@ class SeoOptimizationTest extends TestCase
         $this->assertFalse(SeoRules::accountLabel('Baixar grátis'));
     }
 
-    public function test_weak_admin_title_is_regenerated_and_rendered_with_brand_and_keyword(): void
+    public function test_admin_title_and_description_are_kept_exactly(): void
     {
         $this->fakeAi();
         $site = $this->makeSite(['title' => 'Galaxy Run', 'description' => 'Galaxy Run']);
 
         app(SiteGenerator::class)->ensureMeta($site);
 
-        $this->assertSame('Galaxy Run: jogo de corrida espacial grátis', $site->fresh()->title);
-        $this->assertGreaterThanOrEqual(70, mb_strlen($site->fresh()->description), 'the AI description was too short, the profile fills it');
+        $this->assertSame('Galaxy Run', $site->fresh()->title, 'what the admin typed is never rewritten');
+        $this->assertSame('Galaxy Run', $site->fresh()->description);
     }
 
-    public function test_render_falls_back_when_stored_meta_is_only_the_brand(): void
+    public function test_empty_admin_title_is_filled_without_joins(): void
     {
-        $site = $this->makeSite(['title' => 'Galaxy Run', 'description' => 'Galaxy Run', 'status' => 'live']);
-        $site->pages()->create(['type' => 'home', 'slug' => '', 'title' => 'Galaxy Run', 'meta_title' => 'Galaxy Run', 'meta_description' => 'Galaxy Run', 'content' => []]);
+        $this->fakeAi();
+        $site = $this->makeSite(['title' => null, 'description' => null]);
+
+        app(SiteGenerator::class)->ensureMeta($site);
+
+        $this->assertSame('Galaxy Run: jogo de corrida espacial grátis', $site->fresh()->title);
+        $this->assertNotEmpty($site->fresh()->description);
+    }
+
+    public function test_home_uses_the_admin_meta_and_columns_use_their_own_name(): void
+    {
+        $long = 'Galaxy Run — o jogo de corrida espacial mais divertido para jogar no celular, grátis e sem cadastro';
+        $site = $this->makeSite(['title' => $long, 'description' => 'Galaxy Run', 'status' => 'live']);
+        $site->pages()->create(['type' => 'home', 'slug' => '', 'title' => 'Galaxy Run', 'meta_title' => 'Outra coisa', 'meta_description' => 'Outra descrição', 'content' => []]);
+        $site->pages()->create(['type' => 'about', 'slug' => 'sobre', 'title' => 'Sobre', 'content' => []]);
 
         app(StaticSiteBuilder::class)->buildAll($site->fresh());
-        $html = file_get_contents(StaticSiteBuilder::dirFor($site).'/index.html');
+        $dir = StaticSiteBuilder::dirFor($site);
+        $html = file_get_contents($dir.'/index.html');
 
         preg_match('#<title>(.*?)</title>#', $html, $title);
         preg_match('#<meta name="description" content="([^"]*)"#', $html, $description);
-        $this->assertNotSame('Galaxy Run', $title[1]);
-        $this->assertStringContainsString('Galaxy Run', $title[1]);
-        $this->assertGreaterThanOrEqual(70, mb_strlen(html_entity_decode($description[1])));
+        $this->assertSame($long, html_entity_decode($title[1]), 'no brand, tagline or truncation');
+        $this->assertSame('Galaxy Run', html_entity_decode($description[1]));
+
+        preg_match('#<title>(.*?)</title>#', file_get_contents($dir.'/sobre/index.html'), $about);
+        $this->assertSame('Sobre', html_entity_decode($about[1]));
+    }
+
+    public function test_joined_brand_is_taken_off_column_names(): void
+    {
+        $this->assertSame('Jogos', SeoRules::bareTitle('Jogos – Galaxy Run', ['Galaxy Run']));
+        $this->assertSame('Jogos', SeoRules::bareTitle('Galaxy Run | Jogos', ['Galaxy Run']));
+        $this->assertSame('Jogos', SeoRules::bareTitle('Jogos: Galaxy Run', ['galaxy run']));
+        $this->assertSame('Sobre o Galaxy Run', SeoRules::bareTitle('Sobre o Galaxy Run', ['Galaxy Run']));
+        $this->assertSame('Galaxy Run', SeoRules::bareTitle('Galaxy Run', ['Galaxy Run']));
+        $this->assertSame('Dicas – Truques', SeoRules::bareTitle('Dicas – Truques', ['Galaxy Run']));
     }
 
     public function test_empty_lists_are_noindexed_and_left_out_of_menus_and_sitemap(): void

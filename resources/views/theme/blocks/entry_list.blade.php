@@ -13,7 +13,7 @@
 @include('theme.partials.entry-card', ['entry' => $entry])
 @endforeach
 </div>
-@if (! $onOwner && $owner)<p class="entry-list__more"><a class="btn btn--ghost" href="{{ $ctx->pageHref($owner) }}">{{ $ctx->t('view_all') }} · {{ $ctx->link($owner)['label'] }}</a></p>@endif
+@if (! $onOwner && $owner)<p class="entry-list__more"><a class="btn btn--ghost" href="{{ $ctx->pageHref($owner) }}">{{ $ctx->t('view_all') }}</a></p>@endif
 </div>
 </section>
 @endif

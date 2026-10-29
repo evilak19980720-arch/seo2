@@ -316,45 +316,37 @@ class SiteGenerator
     }
 
     /**
-     * Homepage title and description. A title that is only the brand name or
-     * a too-short description is regenerated, even when typed in the admin:
-     * the result must name the product plus what it is (main keyword).
+     * Homepage title and description. What the admin typed is used exactly as
+     * written; only an empty field is filled (by AI, as returned, nothing
+     * joined to it).
      */
     public function ensureMeta(Site $site): void
     {
-        $brand = $site->product_name;
-        if (! SeoRules::weakTitle($site->title, $brand) && ! SeoRules::weakDescription($site->description, $brand)) {
+        if (filled($site->title) && filled($site->description)) {
             return;
         }
-        $title = $site->title;
-        $description = $site->description;
+        $title = trim((string) $site->title);
+        $description = trim((string) $site->description);
         try {
             $res = $this->ai->prompt(PromptType::SiteMeta, ['brand' => $this->brandContext($site)], $site)->json();
-            $aiTitle = (string) ($res['title'] ?? '');
-            if (! SeoRules::mentions($aiTitle, $brand)) {
-                $aiTitle = $brand.' – '.$aiTitle;
+            if ($title === '') {
+                $title = Str::limit(trim(strip_tags((string) ($res['title'] ?? ''))), 250, '');
             }
-            if (SeoRules::weakTitle($title, $brand) && ! SeoRules::weakTitle($aiTitle, $brand)) {
-                $title = SeoHead::limit($aiTitle, 60);
-            }
-            $aiDescription = SeoRules::stripClaims((string) ($res['description'] ?? ''), $this->brandContext($site));
-            if (SeoRules::weakDescription($description, $brand) && ! SeoRules::weakDescription($aiDescription, $brand)) {
-                $description = SeoHead::limit($aiDescription, 155);
+            if ($description === '') {
+                $description = trim(strip_tags(SeoRules::stripClaims((string) ($res['description'] ?? ''), $this->brandContext($site))));
             }
         } catch (Throwable) {
             // Fallbacks below.
         }
 
         $profile = $site->brandProfile;
-        if (SeoRules::weakTitle($title, $brand)) {
-            $what = $profile?->tagline ?: (__('theme.page_titles.product', [], $site->language()) ?: $site->name);
-            $title = SeoHead::limit($brand.' – '.$what, 60);
+        if ($title === '') {
+            $title = $site->product_name;
         }
-        if (SeoRules::weakDescription($description, $brand)) {
-            $description = SeoHead::limit(collect([$profile?->tagline, $profile?->description, implode('. ', (array) ($profile?->selling_points ?? []))])
-                ->filter()->implode(' '), 155) ?: $description;
+        if ($description === '') {
+            $description = SeoHead::limit((string) ($profile?->description ?: $profile?->tagline), 300);
         }
-        $site->forceFill(['title' => $title, 'description' => $description])->save();
+        $site->forceFill(['title' => $title, 'description' => $description ?: null])->save();
     }
 
     /**
@@ -632,7 +624,7 @@ class SiteGenerator
             $usedSlugs[] = $slug;
 
             $title = is_string($data['title'] ?? null) && LanguageDetector::matches($data['title'], $lang)
-                ? $data['title'] : $this->defaultTitle($type, $def, $lang);
+                ? SeoRules::bareTitle(strip_tags($data['title']), [$site->product_name, $site->name]) : $this->defaultTitle($type, $def, $lang);
             // Two pages about the same thing (e.g. "About the game" and "About us") get distinct titles.
             foreach ($titles as $other) {
                 if (SeoRules::titleOverlap($title, $other, $site->product_name) >= 0.6) {
@@ -646,10 +638,8 @@ class SiteGenerator
                 $content = $this->homeHeading($site, $content);
             }
 
-            $metaTitle = $type === 'home' ? ($site->title ?: $title) : (string) ($data['meta_title'] ?? '');
-            if ($type !== 'home' && (SeoRules::weakTitle($metaTitle, $site->product_name) || ! LanguageDetector::matches($metaTitle, $lang))) {
-                $metaTitle = "{$title} – {$site->product_name}";
-            }
+            // The page's <title> is its column name as is (home: the admin's site title).
+            $metaTitle = $type === 'home' ? ($site->title ?: $title) : $title;
             $metaDescription = $type === 'home' ? (string) $site->description : SeoRules::stripClaims((string) ($data['meta_description'] ?? ''), $facts);
             if (SeoRules::weakDescription($metaDescription, $site->product_name)) {
                 $metaDescription = $this->excerpt($content, $this->slots($site, $type)) ?: (string) $site->description;
@@ -658,7 +648,7 @@ class SiteGenerator
             $site->pages()->updateOrCreate(['type' => $type], [
                 'slug' => $slug,
                 'title' => Str::limit(strip_tags($title), 120, ''),
-                'meta_title' => SeoHead::limit($metaTitle, 60),
+                'meta_title' => trim(strip_tags($metaTitle)),
                 'meta_description' => SeoHead::limit($metaDescription, 155),
                 'content' => $content,
                 'noindex' => isset($problems[$type]),

@@ -114,7 +114,7 @@ SEO rules for every page:
 - No figures, prices, bonuses, percentages, payout/withdrawal times, rankings or superlatives ("best", "#1", "leading", "guaranteed") unless the brand profile or the reference content states them.
 - Never describe a feature the site does not have (see SITE FEATURES): without accounts no login, sign-up, register or account wording; without payments nothing about deposits, withdrawals or payment methods; licences and certifications only as stated in the brand profile.
 - Each page covers its own topic: never repeat another page's title or copy; titles of different pages must not overlap.
-- meta_title: page topic + {{product_name}}, max 60 chars; meta_description: 120-155 chars summarising this page.
+- meta_description: 120-155 chars summarising this page.
 
 For every page type return a URL slug in {{language}} (lowercase, hyphens, keyword-based, max 2 segments, keep the default if fine), a visible title in {{language}} (the labels are only hints, never copy another language), an SEO meta_title (max 60 chars) and meta_description (max 155 chars), and content for each of its blocks. Write like a polished official site: every block needs real copy, never leave text fields empty, and only state facts from the profile.
 - hero: eyebrow (2-4 words), heading, subheading (one or two sentences), cta_label, points (3 benefit phrases of max 4 words each)

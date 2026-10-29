@@ -111,7 +111,7 @@ class SiteRenderer
         $ctx = $this->ctx;
         $ctx->beginPage($page->slug);
         $isHome = $page->type === 'home';
-        $head = SeoHead::for($ctx, $page->slug, $this->pageTitle($page), $this->pageDescription($page), $this->isNoindex($page));
+        $head = SeoHead::for($ctx, $page->slug, $this->pageTitle($page), $this->pageDescription($page), $this->isNoindex($page), exact: true);
         $head->image = $this->ogImage();
         $head->withWebPage($page->updated_at);
         if ($faq = $this->faqItems($page)) {
@@ -154,23 +154,21 @@ class SiteRenderer
     /** SEO title: a bare brand name or empty title becomes "<page> – <brand>" (home: brand – tagline). */
     public function pageTitle(Page $page): string
     {
-        $brand = $this->site->product_name;
-        $title = $page->meta_title ?: ($page->type === 'home' ? $this->site->title : null) ?: $page->title;
-        if (! SeoRules::weakTitle($title, $brand)) {
-            return $title;
-        }
-        if ($page->type === 'home') {
-            $tail = $this->ctx->brand->tagline ?: $this->ctx->t('page_titles.product');
-
-            return SeoRules::mentions($tail, $brand) ? $tail : $brand.' – '.$tail;
+        // Home: exactly the admin's site title. Other pages: their own SEO
+        // title, else the column name itself; nothing is ever appended.
+        if ($page->type === 'home' && filled($this->site->title)) {
+            return trim($this->site->title);
         }
 
-        return SeoRules::mentions($page->title, $brand) ? $page->title.' – '.$this->ctx->t('page_titles.'.$page->type) : $page->title.' – '.$brand;
+        return trim($page->meta_title ?: $page->title);
     }
 
     /** Meta description: the page's own, else its first real paragraph, else the site's or brand's. */
     public function pageDescription(Page $page): string
     {
+        if ($page->type === 'home' && filled($this->site->description)) {
+            return trim($this->site->description);
+        }
         $brand = $this->site->product_name;
         $candidates = [$page->meta_description];
         $fields = ['hero' => 'subheading', 'banner' => 'subheading', 'prose' => 'html', 'features' => 'intro', 'card_grid' => 'intro', 'entry_list' => 'intro', 'steps' => 'intro', 'cta' => 'text', 'contact' => 'html', 'legal' => 'html'];
@@ -183,11 +181,11 @@ class SiteRenderer
         foreach ($candidates as $text) {
             $text = trim(preg_replace('/\s+/u', ' ', strip_tags((string) $text)));
             if (! SeoRules::weakDescription($text, $brand)) {
-                return $text;
+                return SeoHead::limit($text, 155);
             }
         }
 
-        return (string) $page->meta_description;
+        return SeoHead::limit((string) $page->meta_description, 155);
     }
 
     /** FAQ entries shown on a page (its own or the brand's), for FAQPage data. */
@@ -206,7 +204,7 @@ class SiteRenderer
     {
         $ctx = $this->ctx;
         $path = $n === 1 ? 'blog' : "blog/page/{$n}";
-        $title = $ctx->t('blog_title').' – '.$this->site->name.($n > 1 ? ' – '.$ctx->t('page', ['n' => $n]) : '');
+        $title = $ctx->t('blog_title').($n > 1 ? ' – '.$ctx->t('page', ['n' => $n]) : '');
         $ctx->beginPage($path);
         $head = SeoHead::for($ctx, $path, $title, $ctx->t('blog_description', ['brand' => $this->site->product_name]), ! $this->blogIsIndexable());
         $head->withBreadcrumbs(array_filter([

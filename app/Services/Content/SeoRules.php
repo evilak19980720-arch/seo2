@@ -114,7 +114,7 @@ class SeoRules
         $sentences = preg_split('/(?<=[.!?。！？])\s+/u', $text) ?: [$text];
         $kept = array_filter($sentences, fn ($s) => self::unsupportedClaims($s, $facts) === []);
 
-        return trim(implode(' ', $kept));
+        return implode(' – ', array_map('trim', $kept));
     }
 
     /** Same for HTML: paragraphs and list items with unsupported claims are removed or trimmed. */
@@ -144,6 +144,23 @@ class SeoRules
         }
 
         return $out;
+    }
+
+    /**
+     * A column name without a joined-on brand or site name ("Jogos – Brand",
+     * "Brand | Jogos", "Jogos: Brand"): only the column's own words remain.
+     */
+    public static function bareTitle(string $title, array $names): string
+    {
+        $title = trim(preg_replace('/\s+/u', ' ', $title));
+        $parts = preg_split('/\s+[-–—|:·•»]\s+|\s*[|•»]\s*|:\s+/u', $title);
+        if (count($parts) < 2) {
+            return $title;
+        }
+        $names = array_filter(array_map(fn ($n) => self::normalize((string) $n), $names));
+        $kept = array_values(array_filter($parts, fn ($p) => trim($p) !== '' && ! in_array(self::normalize($p), $names, true)));
+
+        return $kept !== [] && count($kept) < count($parts) ? implode(' – ', array_map('trim', $kept)) : $title;
     }
 
     /** Navigation wants 1–4 words; long SEO titles are cut at their separator. */

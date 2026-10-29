@@ -96,7 +96,7 @@ class SiteQaTest extends TestCase
         $this->assertSame('cards', $home->firstWhere('block', 'faq')['variant']);
         $this->assertNull($home->firstWhere('block', 'gallery'), 'variants change, sections are never added');
         $this->assertNull($site->custom_css);
-        $this->assertSame('Galaxy Run: jogo de corrida espacial grátis', $site->pages()->first()->meta_title);
+        $this->assertNotSame('Galaxy Run: jogo de corrida espacial grátis', $site->pages()->first()->meta_title, 'titles are never rewritten by the review');
         $this->assertSame('qa', $site->designVersions()->latest('version')->value('source'));
         $this->assertStringContainsString('已保留', collect($task->fresh()->log)->pluck('step')->implode("\n"));
     }

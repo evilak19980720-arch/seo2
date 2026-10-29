@@ -165,10 +165,7 @@ class SiteForm
                 }
                 try {
                     $res = app(AiManager::class)->prompt(PromptType::SiteMeta, ['brand' => $record->brandProfile?->toPromptContext() ?? ''], $record)->json();
-                    $title = (string) ($res['title'] ?? '');
-                    if (! str_contains(mb_strtolower($title), mb_strtolower($record->product_name))) {
-                        $title = $record->product_name.' – '.$title;
-                    }
+                    $title = trim(strip_tags((string) ($res['title'] ?? '')));
                     $set('title', SeoHead::limit($title, 60));
                     $set('description', SeoHead::limit((string) ($res['description'] ?? ''), 155));
                 } catch (Throwable $e) {

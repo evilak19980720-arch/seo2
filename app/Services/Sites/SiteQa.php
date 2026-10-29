@@ -433,9 +433,9 @@ class SiteQa
                 continue;
             }
             $update = [];
-            $title = trim(SeoRules::stripClaims((string) ($fields['meta_title'] ?? ''), $facts));
-            if ($title !== '' && mb_strlen($title) >= 20 && mb_strlen($title) <= 65 && ! SeoRules::weakTitle($title, $brand) && ! SeoRules::seasonal($title)) {
-                $update['meta_title'] = $title;
+            // Titles are the admin's site title (home) or the column name: never rewritten.
+            if ($page->type === 'home') {
+                continue;
             }
             $description = trim(SeoRules::stripClaims((string) ($fields['meta_description'] ?? ''), $facts));
             if ($description !== '' && mb_strlen($description) >= 70 && ! SeoRules::weakDescription($description, $brand) && ! SeoRules::seasonal($description)) {
