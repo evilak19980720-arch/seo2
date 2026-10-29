@@ -75,7 +75,24 @@ foreach ($variants as $block => $list) {
     $blocks[$block] = array_merge($blocks[$block], array_keys($list));
 }
 
+// Visual systems: one per site, so every block on every page speaks the same visual language.
+// A system fixes the skin and the variant families its blocks may use; a block whose family has
+// no variant in the system uses its original layouts. Sites differ by system, not block by block.
+$systems = [
+    'clean' => ['skin' => 'classic', 'families' => []],
+    'editorial' => ['skin' => 'editorial', 'families' => ['magazine', 'ribbon', 'bordered', 'numbered', 'framed', 'polaroid', 'ticks', 'rail', 'path']],
+    'neon' => ['skin' => 'neon', 'families' => ['neon', 'glow', 'ticker', 'glass', 'spotlight']],
+    'casino' => ['skin' => 'bold', 'families' => ['jackpot', 'casino', 'royal', 'vip', 'gold', 'scoreboard', 'plaques', 'medals', 'marquee', 'ticket', 'stage', 'vault']],
+    'lobby' => ['skin' => 'lobby', 'families' => ['lobby', 'poster', 'glossy', 'rail', 'chips', 'tiles', 'showcase', 'mosaic', 'ranked', 'reels', 'phone']],
+    'panels' => ['skin' => 'panels', 'families' => ['panels', 'badges', 'arrows', 'rings', 'framed', 'bordered', 'pill', 'arena', 'slab', 'ladder', 'pills']],
+];
+
 return [
+    'systems' => $systems,
+
+    // A page shows at most this many blocks on the dark "stage" colour.
+    'max_stage_blocks' => 1,
+
     // Block => available layout variants (resources/views/theme/blocks/{block}.blade.php)
     'blocks' => $blocks,
     'variants' => $variants,

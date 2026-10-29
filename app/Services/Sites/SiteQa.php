@@ -14,6 +14,8 @@ use App\Services\Render\SchemaValidator;
 use App\Services\Render\SeoHead;
 use App\Services\Render\StaticSiteBuilder;
 use App\Services\Theme\DesignConfigValidator;
+use App\Services\Theme\SiteStyle;
+use App\Services\Theme\Variants;
 use App\Support\Chromium;
 use App\Support\Media;
 use App\Support\PreviewServer;
@@ -395,15 +397,24 @@ class SiteQa
             foreach ((array) $blocks as $entry) {
                 $block = $entry['block'] ?? null;
                 $variant = $entry['variant'] ?? null;
-                if (! is_string($block) || ! in_array($variant, $options['block_variants'][$block] ?? [], true)) {
+                // Only a variant of the site's visual system, never a second stage block, and the
+                // block changes on every page so it keeps one look across the site.
+                if (! is_string($block) || ! in_array($variant, $options['block_variants'][$block] ?? [], true)
+                    || ! in_array($variant, SiteStyle::allowedFor($config, $block), true) || ! empty(Variants::definition($block, $variant)['stage'])) {
                     continue;
                 }
-                foreach ($config['pages'][$type] ?? [] as $i => $current) {
-                    if ($variants < self::MAX_VARIANTS && ($current['block'] ?? null) === $block && ($current['variant'] ?? null) !== $variant) {
-                        $variants++;
-                        $config['pages'][$type][$i]['variant'] = $variant;
-                        $changes[] = "{$type}.{$block} → {$variant}";
+                $changed = false;
+                foreach ((array) ($config['pages'] ?? []) as $pageType => $entries) {
+                    foreach ((array) $entries as $i => $current) {
+                        if ($variants < self::MAX_VARIANTS && ($current['block'] ?? null) === $block && ($current['variant'] ?? null) !== $variant) {
+                            $config['pages'][$pageType][$i]['variant'] = $variant;
+                            $changed = true;
+                        }
                     }
+                }
+                if ($changed) {
+                    $variants++;
+                    $changes[] = "{$block} → {$variant}";
                 }
             }
         }

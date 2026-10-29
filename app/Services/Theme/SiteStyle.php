@@ -89,32 +89,72 @@ class SiteStyle
         [$heading, $body] = explode('+', $this->pick('fonts', array_map(fn ($p) => implode('+', $p), $fonts ?: [['system', 'system']])));
 
         $config['fonts'] = ['heading' => $heading, 'body' => $body];
+        // One visual system per site: it fixes the skin and the variant families of every block.
+        $system = $this->pick('system', array_keys($theme['systems'] ?? ['clean' => []]));
+        $this->system = (array) ($theme['systems'][$system] ?? []);
         // "minimal" has no header buttons: only for sites that show none.
         $buttons = (int) ($config['navigation']['buttons'] ?? 1) > 0;
-        $config['nav'] = $this->pick('nav', array_filter($theme['blocks']['nav'], fn ($v) => ! $buttons || Variants::base('nav', $v) !== 'minimal'));
-        $config['footer'] = $this->pick('footer', $theme['blocks']['footer']);
+        $config['nav'] = $this->pick('nav', $this->inSystem('nav', array_filter($theme['blocks']['nav'], fn ($v) => ! $buttons || Variants::base('nav', $v) !== 'minimal')));
+        $config['footer'] = $this->pick('footer', $this->inSystem('footer', $theme['blocks']['footer']));
         $config['radius'] = $this->pick('radius', array_keys($theme['radius']));
         $config['shadow'] = $this->pick('shadow', array_keys($theme['shadow']));
         foreach ($theme['styles'] as $key => $allowed) {
-            $config['style'][$key] = $this->pick("style.{$key}", $allowed);
+            $config['style'][$key] = $key === 'skin' && in_array($this->system['skin'] ?? null, $allowed, true)
+                ? ($this->look['style.skin'] = $this->system['skin'])
+                : $this->pick("style.{$key}", $allowed);
         }
         $config['navigation'] = (array) ($config['navigation'] ?? []);
         foreach (DesignConfigValidator::MOBILE as $key => $allowed) {
             $config['navigation'][$key] = $this->pick("navigation.{$key}", $allowed);
         }
 
-        // The page's sections stay as chosen; each one gets the site's own variant.
+        // The page's sections stay as chosen. A block type looks the same on every page of the
+        // site (a game list on the home page and on the games page match), in the site's system;
+        // a page keeps at most one block on the dark stage colour, the rest use their base layout.
+        $maxStage = (int) ($theme['max_stage_blocks'] ?? 1);
         foreach ((array) ($config['pages'] ?? []) as $type => $blocks) {
+            $stage = 0;
             foreach ((array) $blocks as $i => $entry) {
                 $block = is_array($entry) ? ($entry['block'] ?? null) : $entry;
                 if (is_string($block) && ($allowed = $theme['blocks'][$block] ?? null)) {
-                    $config['pages'][$type][$i] = ['block' => $block, 'variant' => $this->pickVariant("{$type}.{$block}.{$i}", $allowed)] + (is_array($entry) ? $entry : []);
+                    $variant = $this->pickVariant("block.{$block}", $this->inSystem($block, $allowed));
+                    if (! empty(Variants::definition($block, $variant)['stage']) && ++$stage > $maxStage) {
+                        $variant = Variants::base($block, $variant);
+                    }
+                    $config['pages'][$type][$i] = ['block' => $block, 'variant' => $variant] + (is_array($entry) ? $entry : []);
                 }
             }
         }
         $config['look'] = $this->look;
 
         return $config;
+    }
+
+    /** @var array{skin?: string, families?: array<int, string>} the site's visual system */
+    protected array $system = [];
+
+    /**
+     * The variants of a block that belong to the site's system: its family
+     * variants when it has some, else the block's original layouts.
+     */
+    public function inSystem(string $block, array $allowed): array
+    {
+        $allowed = array_values($allowed);
+        $families = $this->system['families'] ?? [];
+        $restyled = array_keys(config("theme.variants.{$block}", []));
+        $own = array_values(array_filter($allowed, fn ($v) => in_array($v, $restyled, true) && in_array($v, $families, true)));
+        $original = array_values(array_filter($allowed, fn ($v) => ! in_array($v, $restyled, true)));
+
+        return $own ?: ($original ?: $allowed);
+    }
+
+    /** Variants a block may take in a stored design, within its visual system. */
+    public static function allowedFor(array $config, string $block): array
+    {
+        $style = new self('');
+        $style->system = (array) config('theme.systems.'.($config['look']['system'] ?? ''), []);
+
+        return $style->inSystem($block, config("theme.blocks.{$block}", []));
     }
 
     /** Block variants: seeded only (too many to track across sites, and never kept as identity). */
