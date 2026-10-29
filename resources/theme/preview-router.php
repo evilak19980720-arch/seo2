@@ -25,6 +25,12 @@ if ($real === false || (! str_starts_with($real, realpath($siteDir)) && ! str_st
 
 $types = ['html' => 'text/html; charset=utf-8', 'css' => 'text/css', 'js' => 'application/javascript', 'webp' => 'image/webp', 'avif' => 'image/avif', 'png' => 'image/png', 'ico' => 'image/x-icon', 'woff2' => 'font/woff2', 'xml' => 'application/xml', 'txt' => 'text/plain', 'webmanifest' => 'application/manifest+json'];
 header('Content-Type: '.($types[pathinfo($real, PATHINFO_EXTENSION)] ?? 'application/octet-stream'));
+// AI quality check: the page reports contrast, overflow and image problems into its own DOM.
+if (isset($_GET['__qa']) && str_ends_with($real, '.html')) {
+    echo str_replace('</body>', '<script>'.file_get_contents(__DIR__.'/qa-audit.js').'</script></body>', (string) file_get_contents($real));
+
+    return true;
+}
 readfile($real);
 
 return true;

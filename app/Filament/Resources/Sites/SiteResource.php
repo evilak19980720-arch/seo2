@@ -171,6 +171,7 @@ class SiteResource extends Resource
                 Radio::make('type')->label('生成范围')->default('full')->options([
                     'full' => '整站：模版（设计）+ 页面文案 + 渲染与验收',
                     'design' => '只重新生成模版（配色、字体、版式），保留现有页面文案',
+                    'qa' => '只做 AI 质检（美观 + SEO），按结果微调设计和标题描述',
                 ]),
             ])
             ->disabled(fn (Site $r) => app(SiteManager::class)->isBusy($r))

@@ -3,6 +3,7 @@
 namespace App\Services\Integrations;
 
 use App\Support\Binary;
+use App\Support\PreviewServer;
 use Symfony\Component\Process\Process;
 
 /**
@@ -22,24 +23,14 @@ class Lighthouse
      */
     public function auditSite(string $siteDir, array $paths): array
     {
-        $port = random_int(20000, 40000);
-        $server = new Process([PHP_BINARY, '-S', "127.0.0.1:{$port}", base_path('resources/theme/preview-router.php')], null, [
-            'SITE_DIR' => $siteDir,
-            'THEME_DIR' => public_path('theme'),
-        ]);
-        $server->start();
-        usleep(400_000);
-
-        $results = [];
-        try {
+        return PreviewServer::with($siteDir, function (string $base) use ($paths) {
+            $results = [];
             foreach ($paths as $label => $path) {
-                $results[$label] = $this->audit("http://127.0.0.1:{$port}/".ltrim($path, '/'));
+                $results[$label] = $this->audit($base.'/'.ltrim($path, '/'));
             }
-        } finally {
-            $server->stop(1);
-        }
 
-        return $results;
+            return $results;
+        });
     }
 
     /** @return array{performance: int, seo: int}|null */

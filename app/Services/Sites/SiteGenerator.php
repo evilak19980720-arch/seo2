@@ -56,6 +56,7 @@ class SiteGenerator
         protected ReferenceAnalyzer $reference,
         protected ReferenceImageImporter $images,
         protected SiteDataGenerator $data,
+        protected SiteQa $qa,
     ) {}
 
     /** Reference analysis of the current run, reused for page content. */
@@ -71,11 +72,26 @@ class SiteGenerator
     {
         $site = $task->site()->with(['domain', 'brandProfile'])->first();
         $task->update(['status' => 'running', 'started_at' => now()]);
-        $site->update(['status' => SiteStatus::Generating]);
+        $before = $site->status;
+        if ($task->type !== 'qa') {
+            $site->update(['status' => SiteStatus::Generating]);
+        }
 
         $designOnly = $task->type === 'design';
 
         try {
+            if ($task->type === 'qa') {
+                // Quality check of the site as it is: nothing is generated again.
+                $task->progress('渲染静态页面');
+                $this->render($site, $task);
+                $this->qa->run($site, $task, fn (Site $s) => $this->render($s, $task), force: true);
+                $site->update(['status' => $before]);
+                $task->progress('AI 质检完成');
+                $task->update(['status' => 'succeeded', 'finished_at' => now()]);
+
+                return;
+            }
+
             // Interface strings first: titles, menus and fallbacks use them.
             if ($note = ThemeStrings::ensure($site, $this->ai)) {
                 $task->progress($note);
@@ -141,6 +157,11 @@ class SiteGenerator
             $task->progress('渲染静态页面');
             $this->render($site, $task);
 
+            if ($this->qa->enabled()) {
+                $task->progress('AI 质检（美观 + SEO）');
+                $this->qa->run($site, $task, fn (Site $s) => $this->render($s, $task));
+            }
+
             $task->progress('Lighthouse 验收');
             $this->acceptance($site, $task);
 
@@ -154,7 +175,8 @@ class SiteGenerator
             $this->queueArt($site->fresh(['domain', 'brandProfile']), $task);
         } catch (Throwable $e) {
             report($e);
-            $site->update(['status' => SiteStatus::Failed]);
+            // A failed quality check leaves the site as it was.
+            $site->update(['status' => $task->type === 'qa' ? $before : SiteStatus::Failed]);
             $task->progress('失败：'.$e->getMessage());
             $task->update(['status' => 'failed', 'finished_at' => now()]);
             Alert::raise('generation_failed', "站点 {$site->name} 生成失败：".Str::limit($e->getMessage(), 200), $site->id, 'danger');

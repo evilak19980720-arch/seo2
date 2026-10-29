@@ -25,7 +25,7 @@ class GenerationTasksRelationManager extends RelationManager
             ->poll('5s')
             ->columns([
                 TextColumn::make('id')->label('#'),
-                TextColumn::make('type')->label('类型')->formatStateUsing(fn ($state) => ['full' => '整站生成', 'rebuild' => '重新渲染', 'design' => '设计'][$state] ?? $state),
+                TextColumn::make('type')->label('类型')->formatStateUsing(fn ($state) => ['full' => '整站生成', 'rebuild' => '重新渲染', 'design' => '设计', 'qa' => 'AI 质检'][$state] ?? $state),
                 TextColumn::make('status')->label('状态')->badge()->color(fn ($state) => match ($state) {
                     'succeeded' => 'success', 'failed' => 'danger', 'running' => 'info', default => 'gray',
                 }),
@@ -52,6 +52,7 @@ class GenerationTasksRelationManager extends RelationManager
                 Radio::make('type')->label('生成范围')->default('full')->options([
                     'full' => '整站：模版（设计）+ 页面文案 + 渲染与验收',
                     'design' => '只重新生成模版（配色、字体、版式），保留现有页面文案',
+                    'qa' => '只做 AI 质检（美观 + SEO），按结果微调设计和标题描述',
                 ]),
             ])
             ->disabled(fn () => app(SiteManager::class)->isBusy($this->getOwnerRecord()))

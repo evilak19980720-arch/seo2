@@ -259,6 +259,37 @@ Return JSON:
 {"tagline": "one sentence, at most 120 characters, naming {{product_name}} and what it is", "description": "3-5 paragraphs, 250-600 words, plain text", "selling_points": ["3-6 short items"], "specs": [{"key": "", "value": ""}], "target_audience": "", "use_cases": "", "faq": [{"question": "", "answer": ""}]}
 Use empty strings / arrays for anything the reference does not support.
 TXT,
+            PromptType::SiteReview->value => <<<'TXT'
+You are a senior web designer and technical SEO reviewer. Review the generated official website of {{product_name}} ({{site_type}}, written in {{language}} for {{country}}).
+{{screenshots}}
+
+BRAND PROFILE:
+{{brand}}
+
+PROGRAM CHECKS (measured on the built pages; "browser" lists low-contrast text, horizontal overflow, broken images per page and device):
+{{checks}}
+
+CURRENT DESIGN (option values):
+{{design}}
+
+ALLOWED OPTIONS (you may only pick from these):
+{{options}}
+
+PAGES (h1, meta title, meta description):
+{{pages}}
+
+AI CUSTOM CSS currently applied:
+{{custom_css}}
+
+Score the site from 0 to 100:
+- "design": does it look like a polished, premium official brand site (clear hierarchy, generous spacing, consistent colours, strong hero, nothing cluttered, overlapping, unreadable or broken), first on the phone screenshot, and how close is it to the reference look when reference screenshots are given?
+- "seo": titles and descriptions (clear main keyword in {{language}}, 35-60 / 120-155 characters, unique per page, no season or unsupported claims), one H1, readable text, the program checks above.
+Then list the concrete issues you see, and a change list that fixes them using ONLY the allowed options: change colours only to fix clashes or to match the reference; pick block variants that make the layout calmer and closer to the reference; never invent facts. Rewrite meta_title / meta_description only for pages whose current text is weak, duplicated or the wrong length; write them natively in {{language}}. Set "drop_custom_css" to true only when the custom CSS visibly breaks the layout or colours.
+Leave anything that is already good out of the change list.
+
+Return JSON:
+{"scores": {"design": 0, "seo": 0}, "issues": ["short issue"], "design": {"colors": {"primary": "#rrggbb"}, "fonts": {"heading": "", "body": ""}, "radius": "", "density": "", "shadow": "", "style": {"cards": ""}, "nav": "", "footer": "", "navigation": {"mobile_header": "", "mobile_menu": "", "mobile_bar_style": ""}, "pages": {"home": [{"block": "hero", "variant": ""}]}}, "pages": {"home": {"meta_title": "", "meta_description": ""}}, "drop_custom_css": false}
+TXT,
         ];
     }
 }

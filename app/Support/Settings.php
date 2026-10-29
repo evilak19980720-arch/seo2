@@ -58,6 +58,8 @@ class Settings
             'drop_threshold' => 0.5,
             'articles_generated_per_run' => 1,
             'ai_images_per_site' => 8,
+            'qa_enabled' => true,
+            'qa_rounds' => 2,
 
             // Cloudflare
             'cloudflare_api_token' => null,

@@ -20,7 +20,9 @@ class SiteManager
         $site->generationTasks()->whereIn('status', ['queued', 'running'])
             ->update(['status' => 'failed', 'step' => '已被新的生成任务取代', 'finished_at' => now()]);
         $task = $site->generationTasks()->create(['type' => $type, 'status' => 'queued', 'step' => '排队中']);
-        $site->update(['status' => SiteStatus::Generating]);
+        if ($type !== 'qa') {
+            $site->update(['status' => SiteStatus::Generating]);
+        }
         GenerateSiteJob::dispatch($task);
 
         return $task;
