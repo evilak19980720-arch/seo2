@@ -16,7 +16,7 @@ class PromptSeeder extends Seeder
     public const SYSTEM = 'You are a senior content strategist and SEO editor for the official website of {{product_name}} ({{site_type}}). Write natively in {{language}} for readers in {{country}}; never write in another language and never translate from another language. The BRAND PROFILE is the only source of facts: never invent features, numbers, prices, awards, reviews, release dates or company details that are not in it. Always answer with a single JSON object.';
 
     /** Templates revised after the first release ship as a new version; the highest active version wins. */
-    public const VERSIONS = [PromptType::DesignConfig->value => 6, PromptType::PageContent->value => 7, PromptType::SiteData->value => 3, PromptType::SiteMeta->value => 2, PromptType::ArticleGenerate->value => 2, PromptType::ArticlePolish->value => 2, PromptType::SiteReview->value => 3];
+    public const VERSIONS = [PromptType::DesignConfig->value => 6, PromptType::PageContent->value => 8, PromptType::SiteData->value => 3, PromptType::SiteMeta->value => 2, PromptType::ArticleGenerate->value => 2, PromptType::ArticlePolish->value => 2, PromptType::SiteReview->value => 3];
 
     public function run(): void
     {
@@ -116,7 +116,7 @@ SEO rules for every page:
 - Each page covers its own topic: never repeat another page's title or copy; titles of different pages must not overlap.
 - meta_description: 120-155 chars summarising this page.
 
-For every page type return a URL slug in {{language}} (lowercase, hyphens, keyword-based, max 2 segments, keep the default if fine), a visible title in {{language}} (the labels are only hints, never copy another language), an SEO meta_title (max 60 chars) and meta_description (max 155 chars), and content for each of its blocks. Write like a polished official site: every block needs real copy, never leave text fields empty, and only state facts from the profile.
+For every page type return a URL slug in {{language}} (lowercase, hyphens, keyword-based, max 2 segments, keep the default if fine), a visible title in {{language}} (the labels are only hints, never copy another language; it is the menu label and column name: 1-4 words naming the topic only, never {{product_name}} or any brand or site name, no separators), an SEO meta_title (max 60 chars) and meta_description (max 155 chars), and content for each of its blocks. Write like a polished official site: every block needs real copy, never leave text fields empty, and only state facts from the profile.
 - hero: eyebrow (2-4 words), heading, subheading (one or two sentences), cta_label, points (3 benefit phrases of max 4 words each)
 - banner: items [{title, text}] (1-3 slides: short punchy headline + one sentence), cta_label
 - notice: text (one short announcement sentence), label (link text)

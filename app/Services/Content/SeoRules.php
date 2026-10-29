@@ -146,21 +146,42 @@ class SeoRules
         return $out;
     }
 
+    /** Words left dangling when a brand is taken out of a name ("Games at", "Sobre o", "Hilfe von"). */
+    private const CONNECTORS = ['at', 'on', 'in', 'by', 'of', 'for', 'from', 'with', 'the', 'a', 'an', 'to', 'and', '&', '+', 'de', 'do', 'da', 'dos', 'das', 'no', 'na', 'nos', 'nas', 'em', 'o', 'os', 'as', 'e', 'en', 'el', 'la', 'los', 'las', 'del', 'al', 'y', 'con', 'para', 'por', 'von', 'vom', 'bei', 'im', 'am', 'der', 'die', 'das', 'und', 'mit', 'du', 'des', 'le', 'les', 'chez', 'et', 'di', 'della', 'il', 'ed', 'di', 'dan', 'di', 'của', 'tại', 'và'];
+
     /**
-     * A column name without a joined-on brand or site name ("Jogos – Brand",
-     * "Brand | Jogos", "Jogos: Brand"): only the column's own words remain.
+     * A column name with no brand or site name in it: "Jogos – Brand",
+     * "Brand | Jogos", "Games at Brand", "Brand Game Lobby", "Brand's News",
+     * "关于Brand" all keep only the column's own words. Empty when nothing
+     * but the brand was there (the caller then uses the default name).
      */
     public static function bareTitle(string $title, array $names): string
     {
         $title = trim(preg_replace('/\s+/u', ' ', $title));
-        $parts = preg_split('/\s+[-–—|:·•»]\s+|\s*[|•»]\s*|:\s+/u', $title);
-        if (count($parts) < 2) {
+        $names = array_values(array_unique(array_filter(array_map(fn ($n) => trim((string) $n), $names), fn ($n) => mb_strlen($n) >= 2)));
+        usort($names, fn ($a, $b) => mb_strlen($b) <=> mb_strlen($a));
+        $out = $title;
+        foreach ($names as $name) {
+            // Latin-side boundaries only, so "关于Brand" and "Brand游戏" are found too.
+            $out = preg_replace('/(?<![\p{Latin}\p{N}])'.preg_quote($name, '/').'(?:[\'’]s)?(?![\p{Latin}\p{N}])/iu', ' ', $out) ?? $out;
+        }
+        if ($out === $title) {
             return $title;
         }
-        $names = array_filter(array_map(fn ($n) => self::normalize((string) $n), $names));
-        $kept = array_values(array_filter($parts, fn ($p) => trim($p) !== '' && ! in_array(self::normalize($p), $names, true)));
+        $words = preg_split('/\s+/u', trim(preg_replace('/\s*[-–—|:·•»,]+\s*(?=\s|$)|(?<=^|\s)[-–—|:·•»,]+\s*/u', ' ', $out)), -1, PREG_SPLIT_NO_EMPTY);
+        $dangling = fn ($w) => in_array(mb_strtolower(trim($w, '-–—|:·•»,.?!¿¡')), self::CONNECTORS, true) || trim($w, '-–—|:·•»,.?!¿¡') === '';
+        while ($words && $dangling($words[0])) {
+            array_shift($words);
+        }
+        while ($words && $dangling(end($words))) {
+            array_pop($words);
+        }
+        $bare = trim(implode(' ', $words));
+        if ($bare !== '' && preg_match('/^\p{Ll}/u', $bare) && preg_match('/^\p{Lu}/u', $title)) {
+            $bare = mb_strtoupper(mb_substr($bare, 0, 1)).mb_substr($bare, 1);
+        }
 
-        return $kept !== [] && count($kept) < count($parts) ? implode(' – ', array_map('trim', $kept)) : $title;
+        return mb_strlen($bare) >= 2 ? $bare : '';
     }
 
     /** Navigation wants 1–4 words; long SEO titles are cut at their separator. */

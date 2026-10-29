@@ -10,6 +10,7 @@ use App\Services\Ai\AiManager;
 use App\Services\Content\LanguageDetector;
 use App\Services\Content\SeoRules;
 use App\Services\Render\HtmlSanitizer;
+use App\Services\Render\SeoHead;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -169,7 +170,7 @@ class SiteDataGenerator
             }
 
             // Titles are names and may stay as they are; copy in another language is dropped.
-            $summary = Str::limit(SeoRules::stripClaims(trim(strip_tags((string) ($item['summary'] ?? ''))), $facts), 300, '');
+            $summary = SeoHead::limit(SeoRules::stripClaims(trim(strip_tags((string) ($item['summary'] ?? ''))), $facts), 300);
             $entry = $site->entries()->updateOrCreate(['collection' => $collection, 'slug' => $slug], [
                 'title' => $title,
                 'summary' => $summary !== '' && LanguageDetector::matches($summary, $site->language()) ? $summary : null,

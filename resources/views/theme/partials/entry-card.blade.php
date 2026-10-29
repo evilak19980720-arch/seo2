@@ -20,6 +20,6 @@
 <div class="tile__body">
 <h3>@if ($href)<a class="entry-card__link" href="{{ $href }}">{{ $entry->title }}</a>@else{{ $entry->title }}@endif</h3>
 @if ($meta || $date)<p class="entry-card__meta">{{ implode(' · ', $meta) }}@if ($meta && $date) · @endif @if ($date)<time datetime="{{ $date->toDateString() }}">{{ $date->format('d/m/Y') }}</time>@endif</p>@endif
-@if ($entry->summary)<p>{{ \Illuminate\Support\Str::limit($entry->summary, 140) }}</p>@endif
+@if ($entry->summary)<p>{{ \App\Services\Render\SeoHead::limit($entry->summary, 140) }}</p>@endif
 </div>
 </article>

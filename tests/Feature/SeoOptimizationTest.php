@@ -8,6 +8,7 @@ use App\Models\GenerationTask;
 use App\Services\Content\SeoRules;
 use App\Services\Render\MarkupScrambler;
 use App\Services\Render\SchemaValidator;
+use App\Services\Render\SeoHead;
 use App\Services\Render\SiteRenderer;
 use App\Services\Render\StaticSiteBuilder;
 use App\Services\Sites\SiteGenerator;
@@ -95,13 +96,25 @@ class SeoOptimizationTest extends TestCase
         $this->assertSame('Sobre', html_entity_decode($about[1]));
     }
 
+    public function test_excerpts_end_on_a_word_or_a_sentence(): void
+    {
+        $this->assertSame('Bonus paid on the 7th.', SeoHead::limit('Bonus paid on the 7th. The next one is on the 27th of each month.', 34));
+        $this->assertSame('Member Day Mystery Bonus distribution…', SeoHead::limit('Member Day Mystery Bonus distribution and Reward Center claim', 40));
+    }
+
     public function test_joined_brand_is_taken_off_column_names(): void
     {
         $this->assertSame('Jogos', SeoRules::bareTitle('Jogos – Galaxy Run', ['Galaxy Run']));
         $this->assertSame('Jogos', SeoRules::bareTitle('Galaxy Run | Jogos', ['Galaxy Run']));
         $this->assertSame('Jogos', SeoRules::bareTitle('Jogos: Galaxy Run', ['galaxy run']));
-        $this->assertSame('Sobre o Galaxy Run', SeoRules::bareTitle('Sobre o Galaxy Run', ['Galaxy Run']));
-        $this->assertSame('Galaxy Run', SeoRules::bareTitle('Galaxy Run', ['Galaxy Run']));
+        $this->assertSame('Sobre', SeoRules::bareTitle('Sobre o Galaxy Run', ['Galaxy Run']));
+        $this->assertSame('', SeoRules::bareTitle('Galaxy Run', ['Galaxy Run']), 'only the brand: the caller takes the default name');
+        $this->assertSame('Games', SeoRules::bareTitle('Games at Galaxy Run', ['Galaxy Run']));
+        $this->assertSame('Game Lobby', SeoRules::bareTitle('Galaxy Run Game Lobby', ['Galaxy Run']));
+        $this->assertSame('News', SeoRules::bareTitle("Galaxy Run's News", ['Galaxy Run']));
+        $this->assertSame('Juegos', SeoRules::bareTitle('Juegos de Galaxy Run', ['Galaxy Run']));
+        $this->assertSame('游戏大厅', SeoRules::bareTitle('Galaxy Run游戏大厅', ['Galaxy Run']));
+        $this->assertSame('Galaxy Runner tips', SeoRules::bareTitle('Galaxy Runner tips', ['Galaxy Run']), 'a longer word is not the brand');
         $this->assertSame('Dicas – Truques', SeoRules::bareTitle('Dicas – Truques', ['Galaxy Run']));
     }
 

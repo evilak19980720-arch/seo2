@@ -294,7 +294,7 @@ class SiteGenerator
         $text = fn ($v) => is_string($v) && trim($v) !== '' && LanguageDetector::matches($v, $lang) ? trim(strip_tags($v)) : null;
         $fill = [];
         if (blank($profile->tagline) && ($v = $text($data['tagline'] ?? null))) {
-            $fill['tagline'] = Str::limit($v, 200, '');
+            $fill['tagline'] = SeoHead::limit($v, 200);
         }
         if (mb_strlen((string) $profile->description) < 200 && ($v = $text($data['description'] ?? null)) && mb_strlen($v) > mb_strlen((string) $profile->description)) {
             $fill['description'] = $v;
@@ -648,7 +648,9 @@ class SiteGenerator
             $usedSlugs[] = $slug;
 
             $title = is_string($data['title'] ?? null) && LanguageDetector::matches($data['title'], $lang)
-                ? SeoRules::bareTitle(strip_tags($data['title']), [$site->product_name, $site->name]) : $this->defaultTitle($type, $def, $lang);
+                ? SeoRules::bareTitle(strip_tags($data['title']), [$site->product_name, $site->name]) : '';
+            // A column name never carries the brand; a name that was only the brand takes the default.
+            $title = $title !== '' ? $title : $this->defaultTitle($type, $def, $lang);
             // Two pages about the same thing (e.g. "About the game" and "About us") get distinct titles.
             foreach ($titles as $other) {
                 if (SeoRules::titleOverlap($title, $other, $site->product_name) >= 0.6) {

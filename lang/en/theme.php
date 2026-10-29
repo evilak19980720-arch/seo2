@@ -22,6 +22,7 @@ return [
     'contact_address' => 'Address',
     'company' => 'Company',
     'pages' => 'Pages',
+    'more_pages' => 'More',
     'legal' => 'Legal',
     'rights' => 'All rights reserved.',
     'cookie_text' => 'We use cookies to measure traffic and improve the site.',

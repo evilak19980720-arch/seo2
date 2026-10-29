@@ -128,5 +128,12 @@ class RichTemplateTest extends TestCase
         $this->assertStringContainsString('<li><a href="/">Início</a></li>', $home);
         // The footer still lists every page.
         $this->assertMatchesRegularExpression('#<footer.*perguntas-frequentes.*</footer>#s', $home);
+        // Footer links come in groups that fold on phones: the submenu item heads its own group, legal comes last.
+        preg_match('#<footer.*</footer>#s', $home, $footer);
+        preg_match_all('#<details class="footer__group" data-fold open><summary class="footer__title">([^<]+)</summary>#', $footer[0], $titles);
+        $this->assertGreaterThanOrEqual(2, count($titles[1]));
+        $this->assertSame('Legal', end($titles[1]));
+        $this->assertMatchesRegularExpression('#<summary class="footer__title">[^<]+</summary><ul>\s*<li><a href="/[^"]*/">[^<]+</a></li><li><a href="/perguntas-frequentes/">#', $footer[0]);
+        $this->assertSame(1, substr_count($footer[0], 'href="/perguntas-frequentes/"'), 'each page once');
     }
 }

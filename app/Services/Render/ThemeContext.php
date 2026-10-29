@@ -11,6 +11,7 @@ use App\Services\Sites\ReferenceLibrary;
 use App\Services\Sites\SiteStructure;
 use App\Services\Theme\DefaultDesign;
 use App\Services\Theme\DesignConfigValidator;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Lang;
 
@@ -164,6 +165,37 @@ class ThemeContext
         return ($menu->isEmpty() ? $available : $menu)
             ->map(fn ($type) => $this->link($type) + ['children' => collect($submenu[$type] ?? [])->map(fn ($child) => $this->link($child))->all()])
             ->all();
+    }
+
+    /**
+     * Footer link groups, following the menu: a menu item with a submenu is
+     * its own group, the other menu items form "Pages", every page outside
+     * the menu "More". Phones show them folded (one tap opens a group).
+     *
+     * @return array<int, array{title: string, links: array<int, array{label: string, href: string}>}>
+     */
+    public function footerGroups(): array
+    {
+        $links = collect($this->navLinks(all: true))->keyBy('href');
+        $groups = [];
+        $plain = [];
+        foreach ($this->navLinks() as $item) {
+            if ($item['children'] !== []) {
+                $groups[] = ['title' => $item['label'], 'links' => [Arr::except($item, 'children'), ...$item['children']]];
+            } else {
+                $plain[] = Arr::except($item, 'children');
+            }
+        }
+        $used = collect($groups)->flatMap(fn ($g) => array_column($g['links'], 'href'))->merge(array_column($plain, 'href'))->all();
+        $rest = $links->except($used)->map(fn ($l) => Arr::except($l, 'children'))->values()->all();
+        if ($plain !== []) {
+            array_unshift($groups, ['title' => $this->t('pages'), 'links' => $plain]);
+        }
+        if ($rest !== []) {
+            $groups[] = ['title' => $this->t('more_pages'), 'links' => $rest];
+        }
+
+        return $groups;
     }
 
     /** @return array{label: string, href: string} */

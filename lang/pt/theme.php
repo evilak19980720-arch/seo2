@@ -22,6 +22,7 @@ return [
     'contact_address' => 'Endereço',
     'company' => 'Empresa',
     'pages' => 'Páginas',
+    'more_pages' => 'Mais',
     'legal' => 'Legal',
     'rights' => 'Todos os direitos reservados.',
     'cookie_text' => 'Usamos cookies para medir o tráfego e melhorar o site.',

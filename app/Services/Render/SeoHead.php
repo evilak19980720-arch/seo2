@@ -55,6 +55,10 @@ class SeoHead
             return $text;
         }
         $cut = mb_substr($text, 0, $max - 1);
+        // A whole sentence when one ends late enough, else whole words (never "Bo…").
+        if (preg_match('/^.*[.!?。！？](?=\s|$)/su', mb_substr($text, 0, $max), $m) && mb_strlen($m[0]) > $max * 0.6) {
+            return trim($m[0]);
+        }
         $space = mb_strrpos($cut, ' ');
 
         return rtrim($space > $max * 0.6 ? mb_substr($cut, 0, $space) : $cut, ' ,.;:-–—').'…';
