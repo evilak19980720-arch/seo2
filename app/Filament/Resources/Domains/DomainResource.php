@@ -250,7 +250,7 @@ class DomainResource extends Resource
                 app(SiteProvisioner::class)->cloudflare($domain);
                 $done++;
             } catch (Throwable $e) {
-                $domain->update(['last_error' => $e->getMessage()]);
+                $domain->recordError($e->getMessage());
                 $errors[] = "{$domain->name}：{$e->getMessage()}";
             }
         }

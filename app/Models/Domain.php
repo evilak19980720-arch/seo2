@@ -38,6 +38,13 @@ class Domain extends Model
         return rtrim(explode('/', $name)[0], '.');
     }
 
+    /** Save only the error, dropping unsaved changes so a bad value can't fail the save again. */
+    public function recordError(string $message, array $extra = []): void
+    {
+        $this->discardChanges();
+        $this->forceFill(['last_error' => mb_substr($message, 0, 2000)] + $extra)->saveQuietly();
+    }
+
     public function site(): HasOne
     {
         return $this->hasOne(Site::class);

@@ -25,6 +25,23 @@ class SiteProvisioner
         $this->gsc ??= new SearchConsole;
     }
 
+    /** Cloudflare setup for one domain, recording the error on it instead of throwing. */
+    public function connect(Domain $domain): ?string
+    {
+        if (! $this->cf->configured()) {
+            return null;
+        }
+        try {
+            $this->cloudflare($domain);
+
+            return null;
+        } catch (Throwable $e) {
+            $domain->recordError($e->getMessage());
+
+            return $e->getMessage();
+        }
+    }
+
     /** @return array<int, string> log lines */
     public function provision(Site $site): array
     {
@@ -35,7 +52,7 @@ class SiteProvisioner
             try {
                 $log = array_merge($log, $this->cloudflare($domain));
             } catch (Throwable $e) {
-                $domain->update(['last_error' => $e->getMessage()]);
+                $domain->recordError($e->getMessage());
                 $log[] = 'Cloudflare 失败: '.$e->getMessage();
             }
         } else {
@@ -46,7 +63,7 @@ class SiteProvisioner
             try {
                 $log = array_merge($log, $this->verifySearchConsole($domain));
             } catch (Throwable $e) {
-                $domain->update(['gsc_status' => 'failed', 'last_error' => $e->getMessage()]);
+                $domain->recordError($e->getMessage(), ['gsc_status' => 'failed']);
                 $log[] = 'Search Console 验证失败: '.$e->getMessage();
             }
         } else {

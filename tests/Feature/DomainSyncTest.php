@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Domain;
 use App\Services\Domains\DomainSync;
 use App\Services\Integrations\Cloudflare;
+use App\Support\Settings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -89,5 +90,35 @@ class DomainSyncTest extends TestCase
         $this->assertSame('jogo.com', $domain->fqdn('@'));
         $this->assertSame('www.jogo.com', $domain->fqdn('www'));
         $this->assertSame('api.jogo.com', $domain->fqdn('api.jogo.com'));
+    }
+
+    public function test_choosing_a_domain_for_a_site_points_apex_and_www_here(): void
+    {
+        Settings::setMany(['cloudflare_api_token' => 't', 'server_ip' => '203.0.113.7']);
+        config(['platform.certs_path' => $this->tmp.'/certs']);
+        Http::fake([
+            'api.cloudflare.com/client/v4/zones/*/dns_records*' => fn (Request $r) => Http::response(['success' => true, 'result' => $r->method() === 'GET' ? [] : ['id' => 'r1']]),
+            'api.cloudflare.com/client/v4/certificates' => Http::response(['success' => true, 'result' => ['certificate' => 'CERT', 'expires_on' => '2041-10-25 16:44:00 +0000 UTC']]),
+            'api.cloudflare.com/*' => Http::response(['success' => true, 'result' => []]),
+        ]);
+
+        $site = $this->makeSite(['domain' => 'novo.com']);
+
+        $records = collect(Http::recorded())->map(fn ($p) => $p[0])->filter(fn (Request $r) => $r->method() === 'POST' && str_contains($r->url(), 'dns_records'));
+        $this->assertSame([['A', 'novo.com', '203.0.113.7'], ['CNAME', 'www.novo.com', 'novo.com']], $records->map(fn ($r) => [$r['type'], $r['name'], $r['content']])->values()->all());
+        $domain = $site->domain->fresh();
+        $this->assertSame(2041, $domain->certificate_expires_at->year);
+        $this->assertNull($domain->last_error);
+    }
+
+    public function test_a_failed_save_records_only_the_error(): void
+    {
+        $domain = Domain::create(['name' => 'x.com']);
+        $domain->ip = 'not saved';
+        $domain->recordError('boom');
+
+        $fresh = $domain->fresh();
+        $this->assertSame('boom', $fresh->last_error);
+        $this->assertNull($fresh->ip);
     }
 }

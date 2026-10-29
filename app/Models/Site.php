@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\SiteStatus;
+use App\Jobs\ConnectDomainJob;
 use App\Services\Sites\SiteStructure;
 use App\Services\Theme\ExtraPages;
 use Illuminate\Database\Eloquent\Model;
@@ -39,6 +40,16 @@ class Site extends Model
             'launched_at' => 'datetime',
             'built_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // Choosing a domain for a site points its @ and www records at this server right away.
+        static::saved(function (Site $site) {
+            if ($site->domain_id && ($site->wasRecentlyCreated || $site->wasChanged('domain_id')) && $site->domain) {
+                ConnectDomainJob::dispatch($site->domain)->afterCommit();
+            }
+        });
     }
 
     public function domain(): BelongsTo
