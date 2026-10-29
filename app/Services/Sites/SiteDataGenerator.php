@@ -390,7 +390,7 @@ class SiteDataGenerator
                 'title' => $entry->title,
                 'summary' => $entry->summary,
                 'data' => $entry->data ?: null,
-                'sections' => collect($definitions[$entry->collection]['sections'] ?? [])->mapWithKeys(fn ($s) => [$s['key'] => $s['topic']])->all(),
+                'sections' => collect($definitions[$entry->collection]['sections'] ?? [])->mapWithKeys(fn ($s) => [$s['key'] => $s['topic'].(empty($s['source']) ? '' : ' [sources only]')])->all(),
                 'feedback' => $words !== null ? 'The first answer was too thin ('.($words[$entry->slug] ?? 0).' words). Write every section you can support, 80-220 words each, using the reference text, the item data and the brand profile for real details; at least '.SeoRules::THIN_WORDS.' words in all.' : null,
             ]);
             $reference .= self::mentions($pages, $entry->title);

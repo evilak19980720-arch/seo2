@@ -229,12 +229,53 @@ class ThemeContext
         return ['label' => SeoRules::navLabel($this->pages[$type]->title, $fallback), 'href' => $this->href($this->pages[$type]->slug)];
     }
 
-    /** Pages linked from a page's "see also" list: menu order, never the page itself. */
+    /**
+     * Pages linked from a page's "see also" list: the site type's related
+     * pages for it first (config "related"), then menu order; never the page
+     * itself or a hidden page.
+     */
     public function relatedPages(string $type, int $limit = 3): array
     {
-        return collect($this->navLinks(all: true))
-            ->reject(fn ($l) => trim($l['href'], '/') === $this->currentPath)
-            ->take($limit)->values()->all();
+        $all = collect($this->navLinks(all: true))->reject(fn ($l) => trim($l['href'], '/') === $this->currentPath)->keyBy('href');
+        $first = collect($this->site->typeConfig()['related'][$type] ?? [])
+            ->filter(fn ($t) => $this->pages->has($t) && ! in_array($t, $this->hidden, true))
+            ->map(fn ($t) => $this->href($this->pages[$t]->slug))
+            ->filter(fn ($href) => $all->has($href));
+
+        return $first->map(fn ($href) => $all[$href])->merge($all->except($first->all()))->take($limit)->values()->all();
+    }
+
+    /**
+     * Where a detail page leads next: for a game its provider and the
+     * category sections that list it, then the related pages of its kind.
+     *
+     * @return array<int, array{label: string, href: string}>
+     */
+    public function entryLinks(Entry $entry, int $limit = 4): array
+    {
+        $links = [];
+        if ($entry->collection === 'game') {
+            $provider = $this->allEntries()->where('collection', 'provider')
+                ->first(fn (Entry $p) => filled($entry->get('provider')) && SeoRules::normalize($p->title) === SeoRules::normalize((string) $entry->get('provider')));
+            if ($provider && ($href = $this->entryHref($provider))) {
+                $links[] = ['label' => $provider->title, 'href' => $href];
+            }
+            foreach (['slot_types' => 'types', 'themes' => 'theme_keys'] as $pageType => $field) {
+                if (! $this->pages->has($pageType) || in_array($pageType, $this->hidden, true)) {
+                    continue;
+                }
+                $content = $this->pages[$pageType]->content ?? [];
+                foreach ((array) $entry->get($field, []) as $key) {
+                    $section = collect($this->blocks($pageType))->firstWhere('key', $key);
+                    if ($section && filled($content[$key]['heading'] ?? null)) {
+                        $links[] = ['label' => $content[$key]['heading'], 'href' => $this->href($this->pages[$pageType]->slug).'#'.$key];
+                    }
+                }
+            }
+        }
+        $links = array_merge($links, $this->relatedPages('entry:'.$entry->collection, $limit));
+
+        return collect($links)->unique('href')->take($limit)->values()->all();
     }
 
     /**

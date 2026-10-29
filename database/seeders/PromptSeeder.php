@@ -16,7 +16,7 @@ class PromptSeeder extends Seeder
     public const SYSTEM = 'You are a senior content strategist and SEO editor for the official website of {{product_name}} ({{site_type}}). Write natively in {{language}} for readers in {{country}}; never write in another language and never translate from another language. The BRAND PROFILE is the only source of facts: never invent features, numbers, prices, awards, reviews, release dates or company details that are not in it. Write only copy a visitor reads: never mention the brand profile, the sources or what they do or do not include, never write "based on the information provided", placeholders or notes to the editor; when a fact is missing, simply leave it out. Always answer with a single JSON object.';
 
     /** Templates revised after the first release ship as a new version; the highest active version wins. */
-    public const VERSIONS = [PromptType::DesignConfig->value => 6, PromptType::PageContent->value => 9, PromptType::SiteData->value => 4, PromptType::SiteMeta->value => 3, PromptType::ArticleGenerate->value => 3, PromptType::ArticlePolish->value => 3, PromptType::EntryContent->value => 2, PromptType::SiteReview->value => 3];
+    public const VERSIONS = [PromptType::DesignConfig->value => 6, PromptType::PageContent->value => 9, PromptType::SiteData->value => 4, PromptType::SiteMeta->value => 3, PromptType::ArticleGenerate->value => 3, PromptType::ArticlePolish->value => 3, PromptType::EntryContent->value => 3, PromptType::SiteReview->value => 3];
 
     public function run(): void
     {
@@ -231,7 +231,7 @@ REFERENCE CONTENT about these items ("none" if there is none):
 Write the detail pages of these items of the official site of {{product_name}} in {{language}}. Each item lists its known data and the sections to write (key => topic):
 {{items}}
 
-Rules: every section is {"heading": "<h2 text about the topic, in {{language}}>", "html": "<p>…</p> (80-220 words, semantic HTML: <p>, <ul>, <h3>)"}; useful and specific to that item; facts only from the item data, the reference content or the brand profile (amounts, dates and terms exactly as stated); never invent RTP, payouts, winners or results; skip a section (leave it out) when there is nothing true to say; when an item has "feedback", fix exactly that; your own wording, never more than 6 words copied in a row; site features: {{site_features}}.
+Rules: every section is {"heading": "<h2 text about the topic, in {{language}}>", "html": "<p>…</p> (80-220 words, semantic HTML: <p>, <ul>, <h3>)"}; useful and specific to that item; facts from the item data, the reference content, the brand profile, or what is publicly known about the item (a game's published rules, symbols and features); amounts, dates and terms exactly as stated; never invent RTP, payouts, amounts, dates, winners or results; write every section listed; a topic marked [sources only] is written only from the item data, the reference or the brand profile, and left out when they say nothing about it; never mention the sources; when an item has "feedback", fix exactly that; your own wording, never more than 6 words copied in a row; site features: {{site_features}}.
 Return JSON: {"items": {"<slug>": {"<section key>": {"heading": "", "html": ""}}}}
 TXT,
             PromptType::UiTranslate->value => <<<'TXT'

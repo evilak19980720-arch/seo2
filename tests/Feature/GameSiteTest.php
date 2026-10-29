@@ -234,6 +234,7 @@ class GameSiteTest extends TestCase
         $this->assertStringContainsString('Mahjong Ways', $detail, 'same provider games are related');
         $this->assertStringContainsString('"@type":"VideoGame"', $detail);
         $this->assertStringNotContainsString('Volatilidade', $detail, 'unknown parameters are not invented');
+        $this->assertMatchesRegularExpression('#class="see-also__list"><li><a href="/#', $detail, 'a detail page leads on to related pages');
 
         $home = file_get_contents("{$dir}/index.html");
         $this->assertSame(1, substr_count($home, '<h1'));

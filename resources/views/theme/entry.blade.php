@@ -53,4 +53,8 @@
 @endif
 <p class="entry-list__more"><a class="btn btn--ghost" href="{{ $ctx->href($owner->slug) }}">{{ $ctx->t('view_all') }}</a></p>
 </div>
+@php($next = $ctx->entryLinks($entry))
+@if (count($next))
+<nav class="section see-also" aria-label="{{ $ctx->t('see_also') }}"><div class="container"><p class="see-also__title">{{ $ctx->t('see_also') }}</p><ul class="see-also__list">@foreach ($next as $link)<li><a href="{{ $link['href'] }}">{{ $link['label'] }}</a></li>@endforeach</ul></div></nav>
+@endif
 </article>
