@@ -104,5 +104,16 @@ class ThemeAndContentTest extends TestCase
         $this->assertStringContainsString('.nav__menu{background:#fff;color:#111827', $css, 'the phone menu keeps its show/hide mechanics');
         $this->assertStringNotContainsString('display:block', $css);
         $this->assertStringContainsString('.box{background:color-mix(in srgb,var(--c-primary) 20%,transparent)}', $css, 'see-through backgrounds are left alone');
+
+        // A footer painted dark with the muted colour as text: every token is a real colour, light enough to read.
+        $footer = CustomCssValidator::themeSafe(':root{--c-text:#000;--c-surface:#fff} .footer{background:#15171a;color:var(--c-muted);--c-muted:#0c0506}', $colors + ['muted' => '#a9aeb8']);
+        $this->assertStringNotContainsString('--c-text:#000', $footer, 'AI CSS cannot redefine the palette');
+        $this->assertStringNotContainsString('var(--c-muted)', $footer);
+        $this->assertStringNotContainsString('#0c0506', $footer);
+        preg_match('/\.footer\{[^}]*\bcolor:(#[0-9a-f]{6});[^}]*--c-text:(#[0-9a-f]{6});[^}]*--c-muted:(#[0-9a-f]{6})/', $footer, $m);
+        $this->assertCount(4, $m, $footer);
+        foreach (array_slice($m, 1) as $hex) {
+            $this->assertGreaterThanOrEqual(3, Color::contrast($hex, '#15171a'), $hex);
+        }
     }
 }

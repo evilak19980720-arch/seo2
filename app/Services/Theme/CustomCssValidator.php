@@ -85,6 +85,10 @@ class CustomCssValidator
             if ($prop === '' || $value === '') {
                 continue;
             }
+            // The palette belongs to the validated design: AI CSS may not redefine the colour tokens.
+            if (str_starts_with($prop, '--c-') || $prop === '--line') {
+                continue;
+            }
             if ($prop === 'float' || ($prop === 'position' && (preg_match('/fixed|sticky/i', $value) || (! $decorative && preg_match('/absolute/i', $value))))) {
                 continue;
             }
@@ -99,18 +103,16 @@ class CustomCssValidator
 
         $bg = self::resolve($decls['background-color'] ?? $decls['background'] ?? '', $colors);
         if ($bg !== null) {
+            // Always a plain hex here: the tokens below are derived from it, and a var() would refer to itself.
             $fg = self::resolve($decls['color'] ?? '', $colors);
             if ($fg !== null) {
-                $fixed = Color::ensureContrast($fg, $bg, 4.5);
-                if ($fixed !== $fg) {
-                    $decls['color'] = $fixed;
-                }
+                $text = Color::ensureContrast($fg, $bg, 4.5);
             } else {
                 // Spelled out even when the page text would do: the rule may sit inside a coloured header or footer.
                 $text = $colors['text'] ?? '#111111';
-                $decls['color'] = Color::contrast($text, $bg) >= 4.5 ? $text : Color::readableOn($bg);
+                $text = Color::contrast($text, $bg) >= 4.5 ? $text : Color::readableOn($bg);
             }
-            $text = $decls['color'];
+            $decls['color'] = $text;
             $decls += [
                 '--c-text' => $text, '--c-link' => $text, '--c-muted' => Color::mix($text, $bg, 0.22),
                 '--c-bg' => $bg, '--c-surface' => Color::mix($bg, $text, 0.08), '--line' => Color::mix($bg, $text, 0.16),
