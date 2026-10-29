@@ -206,6 +206,8 @@ class ReferenceAnalyzer
     public function cards(DOMXPath $xpath, string $base): array
     {
         $cards = [];
+        $nodes = [];
+        $uses = [];
         foreach ($xpath->query('//body//img | //body//*[@data-bg or @data-background or @data-src][not(self::img)]') as $node) {
             $src = null;
             foreach (['data-src', 'data-original', 'data-lazy-src', 'data-lazy', 'data-bg', 'data-background', 'src'] as $attr) {
@@ -217,34 +219,56 @@ class ReferenceAnalyzer
             if ($src === null || preg_match('/\.(svg|ico)(\?|$)|sprite|pixel|tracking|avatar|flag/i', $src)) {
                 continue;
             }
+            $nodes[] = [$node, $src];
+            $uses[$src] = ($uses[$src] ?? 0) + 1;
+        }
+
+        foreach ($nodes as [$node, $src]) {
             $name = trim($node->getAttribute('alt')) ?: trim($node->getAttribute('title'));
+            // A picture used again and again (an icon in a winners ticker, a badge) is nobody's cover:
+            // only its own alt can name it, never the text around it.
+            $shared = $uses[$src] >= 3;
             $link = null;
             $blurb = '';
+            $fallback = '';
             for ($el = $node->parentNode, $depth = 0; $el instanceof \DOMElement && $depth < 5; $el = $el->parentNode, $depth++) {
                 if ($link === null && $el->nodeName === 'a' && ($href = trim($el->getAttribute('href'))) !== '' && ! str_starts_with($href, 'javascript:')) {
                     $link = $this->absolute($href, $base);
                 }
-                $text = $this->blockText($xpath, $el);
-                // A block with several pictures is a list, not this picture's card.
+                // A block with several pictures is a list, not this picture's card: its text names other items.
                 $own = $xpath->evaluate('count(.//img)', $el) <= 1;
+                if (! $own) {
+                    break;
+                }
+                $text = $this->blockText($xpath, $el);
                 // "Ver mais" / "Saiba mais" links next to the picture, not around it.
-                if ($link === null && $own && mb_strlen($text) <= 600 && ($a = $xpath->query('.//a[@href]', $el)->item(0)) instanceof \DOMElement
+                if ($link === null && mb_strlen($text) <= 600 && ($a = $xpath->query('.//a[@href]', $el)->item(0)) instanceof \DOMElement
                     && ($href = trim($a->getAttribute('href'))) !== '' && ! preg_match('/^(#|javascript:)/i', $href)) {
                     $link = $this->absolute($href, $base);
                 }
-                if (($name === '' || $this->isFileName($name)) && mb_strlen($text) >= 2 && mb_strlen($text) <= 60) {
-                    $name = $text;
-                } elseif (($name === '' || $this->isFileName($name)) && $own && mb_strlen($text) > 60 && ($title = $this->blockTitle($xpath, $el)) !== null) {
-                    // Promotion / news cards: picture + heading + text in one block.
-                    $name = $title;
+                if (! $shared && ($name === '' || $this->isFileName($name))) {
+                    // A name-like element (heading, *name*, *title*) wins over the card's other text
+                    // (provider badge, "PLAY NOW" buttons), even one level further out.
+                    if (($title = $this->cardName($xpath, $el)) !== null) {
+                        $name = $title;
+                    } elseif ($fallback === '' && ($plain = $this->cardText($xpath, $el)) !== '' && mb_strlen($plain) >= 2 && mb_strlen($plain) <= 60) {
+                        $fallback = $plain;
+                    } elseif ($fallback === '' && mb_strlen($text) > 60 && ($title = $this->blockTitle($xpath, $el)) !== null) {
+                        // Promotion / news cards: picture + heading + text in one block.
+                        $name = $title;
+                    }
                 }
-                if ($blurb === '' && $own && mb_strlen($text) > mb_strlen($name) + 20 && mb_strlen($text) <= 600) {
-                    $rest = $name !== '' && str_starts_with($text, $name) ? ltrim(mb_substr($text, mb_strlen($name)), " \t:-–|") : $text;
+                if ($blurb === '' && mb_strlen($text) > mb_strlen($name ?: $fallback) + 20 && mb_strlen($text) <= 600) {
+                    $lead = $name ?: $fallback;
+                    $rest = $lead !== '' && str_starts_with($text, $lead) ? ltrim(mb_substr($text, mb_strlen($lead)), " \t:-–|") : $text;
                     $blurb = Str::limit($rest, 220);
                 }
                 if ($name !== '' && ! $this->isFileName($name) && $link !== null && $depth >= 2) {
                     break;
                 }
+            }
+            if (! $shared && ($name === '' || $this->isFileName($name))) {
+                $name = $fallback;
             }
             if ($name === '' || $this->isFileName($name) || mb_strlen($name) > 60 || preg_match(self::ACCOUNT_PATTERN, $name)) {
                 continue;
@@ -257,6 +281,43 @@ class ReferenceAnalyzer
         }
 
         return array_values($cards);
+    }
+
+    /** Controls and badges inside a card: buttons, provider / hot / new labels, icons. */
+    protected const CARD_CHROME = '/(^|[\s_-])(btn|button|play|demo|trial|icon|badge|tag|label|vendor|provider|hot|new|rtp|jackpot|count|num|price|star|rating)([\s_-]|$)/i';
+
+    /** The card's name element: a heading or an element whose class says name / title, holding no picture. */
+    protected function cardName(DOMXPath $xpath, \DOMElement $block): ?string
+    {
+        $query = './/*[self::h1 or self::h2 or self::h3 or self::h4 or self::h5 or self::h6'
+            .' or contains(translate(@class, "TITLENAM", "titlenam"), "name") or contains(translate(@class, "TITLENAM", "titlenam"), "title")][not(.//img)]';
+        foreach ($xpath->query($query, $block) as $el) {
+            $text = trim(preg_replace('/\s+/u', ' ', $el->textContent));
+            if (mb_strlen($text) >= 2 && mb_strlen($text) <= 60 && ! $this->isFileName($text) && ! preg_match(self::CARD_CHROME, (string) $el->getAttribute('class'))) {
+                return $text;
+            }
+        }
+
+        return null;
+    }
+
+    /** A card's text without its buttons, badges and labels. */
+    protected function cardText(DOMXPath $xpath, \DOMElement $block): string
+    {
+        $parts = [];
+        foreach ($xpath->query('.//text()', $block) as $node) {
+            if (($t = trim($node->textContent)) === '') {
+                continue;
+            }
+            for ($el = $node->parentNode; $el instanceof \DOMElement && $el !== $block; $el = $el->parentNode) {
+                if (in_array($el->nodeName, ['button', 'script', 'style'], true) || preg_match(self::CARD_CHROME, (string) $el->getAttribute('class'))) {
+                    continue 2;
+                }
+            }
+            $parts[] = $t;
+        }
+
+        return trim(preg_replace('/\s+/u', ' ', implode(' ', $parts)));
     }
 
     /** A block's visible text with its pieces kept apart ("Title" + "Body", not "TitleBody"). */
@@ -390,11 +451,25 @@ class ReferenceAnalyzer
         return Chromium::bin() !== null;
     }
 
+    /**
+     * Rendered page. Some sites blank themselves (navigate to about:blank)
+     * a moment after loading to stop copying: when the long wait ends on an
+     * empty page, a short one catches it after the lists are built.
+     */
     protected function render(string $url): ?string
     {
-        $out = (string) Chromium::run(['--window-size=1366,900', '--virtual-time-budget=10000', '--dump-dom', $url], 25);
+        $best = '';
+        foreach ([10000, 3500, 1800] as $budget) {
+            $out = (string) Chromium::run(['--window-size=1366,900', "--virtual-time-budget={$budget}", '--dump-dom', $url], 25);
+            if (strlen(strip_tags($out)) > strlen(strip_tags($best))) {
+                $best = $out;
+            }
+            if (strlen(trim(strip_tags($best))) >= 500) {
+                break;
+            }
+        }
 
-        return strlen($out) > 200 ? $this->slim($out) : null;
+        return strlen($best) > 200 ? $this->slim($best) : null;
     }
 
     /**

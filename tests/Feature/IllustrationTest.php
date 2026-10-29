@@ -194,4 +194,24 @@ class IllustrationTest extends TestCase
         $this->assertSame('brand/ref-1/ox.png', $image('Fortune Ox', 0), 'no number: matched by name');
         $this->assertNull($image('Fortune Ox', 2), 'a picture already given to an item is not given again');
     }
+
+    public function test_game_cards_take_the_name_beside_the_picture_not_badges_buttons_or_ticker_icons(): void
+    {
+        $card = fn (string $img, string $name, string $vendor = 'Jili') => '<div class="game-item-wrap"><div class="game-item hot"><img alt="" class="game-img" src="https://img.test/'.$img.'.avif"> <span class="hot-icon"></span> <span class="vendor-icon">'.$vendor.'</span> <div class="game-btn"><button class="btn-beginplay"> PLAY NOW </button><button class="btn-freeplay"> FREE TRIAL </button></div></div> <p class="game-name">'.$name.'</p></div>';
+        $ticker = collect(['Sugar Bang Bang 2', 'BACCARAT 13', 'Lucky Neko'])->map(fn ($n) => '<li><img src="/res/img/item-icon.png"><span class="win-game-name">'.$n.'</span><span>R$ 120</span></li>')->implode('');
+        $html = '<html><body><ul class="ticker">'.$ticker.'</ul><div class="games">'
+            .'<div class="game-item-wrap"><div class="game-item"><img class="game-img" alt=""></div><p class="game-name"></p></div>'
+            .$card('JL0033', 'Super Ace').$card('JL0045', 'Fortune Gems').$card('PP0218', 'Gates of Olympus', 'PP')
+            .'</div><div class="promo"><img src="/p/cash.jpg"><div><h3>Cashback semanal</h3><p>'.str_repeat('Receba parte das perdas de volta toda segunda. ', 3).'</p></div></div></body></html>';
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        $cards = collect(app(ReferenceAnalyzer::class)->cards(new \DOMXPath($dom), 'https://ref.test/'))->pluck('image', 'name');
+
+        $this->assertSame('https://img.test/JL0033.avif', $cards['Super Ace']);
+        $this->assertSame('https://img.test/JL0045.avif', $cards['Fortune Gems']);
+        $this->assertSame('https://img.test/PP0218.avif', $cards['Gates of Olympus']);
+        $this->assertSame('https://ref.test/p/cash.jpg', $cards['Cashback semanal']);
+        $this->assertCount(4, $cards, 'no "Jili PLAY NOW" names, no ticker icon given a game name, no empty card');
+    }
 }
