@@ -132,4 +132,15 @@ class IllustrationTest extends TestCase
         $this->assertNull($gen->matchTile('Programa VIP', $tiles));
         $this->assertNull($gen->matchTile('Sem foto', $tiles));
     }
+
+    public function test_a_picture_the_model_picked_must_belong_to_the_item(): void
+    {
+        $tiles = collect([['name' => 'Sweet Bonanza', 'image' => 'https://ref.test/a1.png'], ['name' => '', 'image' => 'https://ref.test/a2.png']]);
+        $gen = app(SiteDataGenerator::class);
+
+        $this->assertFalse($gen->urlShows('https://ref.test/a1.png', 'Gates of Olympus', $tiles), 'another game\'s tile');
+        $this->assertTrue($gen->urlShows('https://ref.test/a1.png', 'Sweet Bonanza 1000', $tiles));
+        $this->assertTrue($gen->urlShows('https://cdn.ref.test/games/gates_of_olympus-cover.webp', 'Gates of Olympus', $tiles), 'file name spells the name');
+        $this->assertFalse($gen->urlShows('https://cdn.ref.test/games/12345.webp', 'Gates of Olympus', $tiles));
+    }
 }

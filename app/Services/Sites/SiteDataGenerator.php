@@ -88,6 +88,7 @@ class SiteDataGenerator
      */
     public function generate(Site $site, string $facts, array $pages, string $features): int
     {
+        $this->usedImages = [];
         $this->notes = [];
         $type = $site->typeConfig();
         $collections = array_values(array_filter(SiteStructure::collections($type), fn ($c) => SiteStructure::owner($type, $c) !== null));
@@ -154,7 +155,8 @@ class SiteDataGenerator
                 'title' => $title,
                 'summary' => $summary !== '' && LanguageDetector::matches($summary, $site->language()) ? $summary : null,
                 'data' => $this->cleanData($collection, $item, $factsLower),
-                'image' => $this->image($site, $title, (string) ($item['image'] ?? ''), $tiles, $known) ?? $existing?->image,
+                // With reference pictures on, a picture that no longer proves to match is dropped rather than kept.
+                'image' => $site->reference_import_images ? $this->image($site, $title, (string) ($item['image'] ?? ''), $tiles, $known) : $existing?->image,
                 'sort' => $i,
                 'source' => 'ai',
             ]);
@@ -271,17 +273,43 @@ class SiteDataGenerator
         return $data;
     }
 
-    /** The item's image: the URL the model matched, else a tile with the same name; only URLs read from the reference. */
+    /** Picture URLs already given to an item of this run: one picture never stands for two items. */
+    protected array $usedImages = [];
+
+    /**
+     * The item's picture, only when it provably shows this item: the
+     * reference tile with the same name first; the URL the model picked only
+     * when its tile carries a matching name, or its file name spells the
+     * item's name. Otherwise none (a picture of another game is worse than
+     * none).
+     */
     protected function image(Site $site, string $title, string $url, Collection $tiles, Collection $known): ?string
     {
         if (! $site->reference_import_images) {
             return null;
         }
-        if ($url === '' || ! $known->has($url)) {
-            $url = (string) ($this->matchTile($title, $tiles)['image'] ?? '');
+        $byName = $this->matchTile($title, $tiles->reject(fn ($t) => isset($this->usedImages[$t['image'] ?? ''])));
+        if ($byName) {
+            $url = (string) $byName['image'];
+        } elseif ($url === '' || ! $known->has($url) || isset($this->usedImages[$url]) || ! $this->urlShows($url, $title, $tiles)) {
+            return null;
         }
+        $this->usedImages[$url] = true;
 
-        return $url !== '' ? rescue(fn () => $this->images->store($site, $url), null, false) : null;
+        return rescue(fn () => $this->images->store($site, $url), null, false);
+    }
+
+    /** Whether a picture URL belongs to the item: its tile is named like the item, or its file name spells the name. */
+    public function urlShows(string $url, string $title, Collection $tiles): bool
+    {
+        $owners = $tiles->where('image', $url);
+        if ($owners->isNotEmpty()) {
+            return $this->matchTile($title, $owners) !== null;
+        }
+        $file = Str::slug(pathinfo((string) parse_url($url, PHP_URL_PATH), PATHINFO_FILENAME));
+        $name = Str::slug($title);
+
+        return mb_strlen($name) >= 4 && str_contains(str_replace('-', '', $file), str_replace('-', '', $name));
     }
 
     /** Detail copy, six items per call, with the reference text that mentions each item. */

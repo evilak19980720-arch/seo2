@@ -1,6 +1,7 @@
 @php
     $href = $ctx->entryHref($entry);
-    $thumb = ($entry->image ? $ctx->image($entry->image, 640) : null) ?? $ctx->fallbackImage('entry:'.$entry->collection.':'.$entry->slug, 640)['image'] ?? null;
+    // Items stand for real games, promotions…: only their own picture, never another one.
+    $thumb = $entry->image ? $ctx->image($entry->image, 640) : null;
     $status = $entry->status();
     $tag = collect(['hot', 'new', 'classic'])->first(fn ($t) => in_array($t, $entry->tags(), true));
     $badge = in_array($entry->collection, ['promotion', 'event'], true) ? ($status ? $ctx->t('status_'.$status) : null) : ($tag ? $ctx->t($tag) : null);
@@ -13,7 +14,7 @@
     ], fn ($v) => is_string($v) && $v !== ''));
 @endphp
 <article class="tile entry-card entry-card--{{ $entry->collection }}">
-<div class="tile__media">@if ($thumb)@include('theme.partials.picture', ['img' => $thumb, 'alt' => $entry->title])@else<span class="tile__ph" aria-hidden="true">{{ mb_strtoupper(mb_substr($entry->title, 0, 1)) }}</span>@endif @if ($badge)<span class="tile__tag">{{ $badge }}</span>@endif</div>
+<div class="tile__media">@if ($thumb)@include('theme.partials.picture', ['img' => $thumb, 'alt' => $entry->title])@else<span class="tile__ph tile__ph--named" aria-hidden="true"><span>{{ $entry->title }}</span></span>@endif @if ($badge)<span class="tile__tag">{{ $badge }}</span>@endif</div>
 <div class="tile__body">
 <h3>@if ($href)<a class="entry-card__link" href="{{ $href }}">{{ $entry->title }}</a>@else{{ $entry->title }}@endif</h3>
 @if ($meta || $date)<p class="entry-card__meta">{{ implode(' · ', $meta) }}@if ($meta && $date) · @endif @if ($date)<time datetime="{{ $date->toDateString() }}">{{ $date->format('d/m/Y') }}</time>@endif</p>@endif
