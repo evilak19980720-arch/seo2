@@ -34,11 +34,21 @@ class ReferenceImageImporter
         $hashes = [];
         $added = 0;
 
+        // Pictures already collected with the reference cards: a card's picture stays with its item, the rest are reused without a second download.
+        $library = $site->referenceItems()->whereIn('image_hash', array_map(fn ($i) => md5($i['url']), $images))->get()->keyBy('image_hash');
+
         foreach ($images as $image) {
             if ($imported + $added >= self::MAX) {
                 break;
             }
-            if (in_array($image['url'], $known, true)) {
+            $collected = $library[md5($image['url'])] ?? null;
+            if (in_array($image['url'], $known, true) || $collected?->kind === 'card') {
+                continue;
+            }
+            if ($collected?->image_path && $collected->width >= 320 && $collected->height >= 180) {
+                $media[] = ['type' => 'image', 'path' => $collected->image_path, 'alt' => $site->product_name, 'caption' => null, 'source' => 'reference', 'source_url' => $image['url']];
+                $added++;
+
                 continue;
             }
             $binary = $this->download($image['url']);

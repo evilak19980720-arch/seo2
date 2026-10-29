@@ -66,6 +66,11 @@ class Site extends Model
         return $this->hasMany(Entry::class);
     }
 
+    public function referenceItems(): HasMany
+    {
+        return $this->hasMany(ReferenceItem::class);
+    }
+
     public function articles(): HasMany
     {
         return $this->hasMany(Article::class);

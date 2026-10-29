@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Filament\Resources\Sites\Pages\EditSite;
 use App\Filament\Resources\Sites\RelationManagers\EntriesRelationManager;
+use App\Filament\Resources\Sites\RelationManagers\ReferenceItemsRelationManager;
 use App\Models\GenerationTask;
 use App\Models\Site;
 use App\Models\User;
@@ -243,6 +244,14 @@ class GameSiteTest extends TestCase
         $this->assertStringNotContainsString('5000x', $tiger->sections['details']['html']);
         $this->assertNotNull($site->entries()->where('slug', 'gates-of-olympus')->value('image'));
 
+        // Collected cards keep name, picture and link together; items take the stored picture of their own card.
+        $cards = $site->referenceItems()->where('kind', 'card')->get()->keyBy('name');
+        $this->assertSame('https://ref.test/img/ft.png', $cards['Fortune Tiger']->image_url);
+        $this->assertSame('https://ref.test/jogos/fortune-tiger', $cards['Fortune Tiger']->link);
+        $this->assertNotNull($cards['Fortune Tiger']->image_path);
+        $this->assertSame($cards['Fortune Tiger']->image_path, $tiger->image);
+        $this->assertTrue($site->referenceItems()->whereNull('image_path')->doesntExist(), 'every collected picture is uploaded');
+
         $promo = $site->entries()->where('collection', 'promotion')->first();
         $this->assertSame('R$ 20', $promo->get('reward'), 'reference amounts are kept');
         $this->assertNull($promo->get('requirement'), 'invented amounts are not');
@@ -320,5 +329,10 @@ class GameSiteTest extends TestCase
         Livewire::actingAs($admin)
             ->test(EntriesRelationManager::class, ['ownerRecord' => $site, 'pageClass' => EditSite::class])
             ->assertOk()->assertSee('Fortune Tiger');
+
+        $site->referenceItems()->create(['kind' => 'card', 'name' => 'Cashback semanal', 'text' => '10% de volta', 'image_url' => 'https://ref.test/c.jpg', 'image_hash' => md5('https://ref.test/c.jpg'), 'image_path' => 'brand/c.jpg', 'width' => 600, 'height' => 300]);
+        Livewire::actingAs($admin)
+            ->test(ReferenceItemsRelationManager::class, ['ownerRecord' => $site, 'pageClass' => EditSite::class])
+            ->assertOk()->assertSee('Cashback semanal')->assertSee('600×300');
     }
 }

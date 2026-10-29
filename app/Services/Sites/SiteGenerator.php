@@ -57,6 +57,7 @@ class SiteGenerator
         protected ReferenceImageImporter $images,
         protected SiteDataGenerator $data,
         protected SiteQa $qa,
+        protected ReferenceLibrary $library,
     ) {}
 
     /** Reference analysis of the current run, reused for page content. */
@@ -126,6 +127,11 @@ class SiteGenerator
                     $task->progress('读取参考网站内页');
                     $this->referencePages = $this->reference->crawl($this->referenceData);
                     $task->progress('参考网站内页：读到 '.count($this->referencePages).' 页，图块 '.collect($this->referenceSources())->sum(fn ($p) => count($p['cards'] ?? [])).' 个');
+                }
+                if ($this->referenceData && $site->reference_import_images) {
+                    $task->progress('保存参考网站素材（名称、文字和图片成对保存，图片上传'.(Media::configured() ? '对象存储' : '本地存储').'）');
+                    $stats = rescue(fn () => $this->library->capture($site, $this->referenceSources()), null);
+                    $task->progress($stats ? "参考网站素材：卡片 {$stats['cards']} 个，图片共 {$stats['images']} 张，本次上传 {$stats['uploaded']} 张".($stats['failed'] ? "，{$stats['failed']} 张下载失败或不是图片" : '') : '参考网站素材保存失败');
                 }
                 $task->progress('生成站点数据（游戏、优惠、活动、公告…）');
                 $count = $this->data->generate($site, $this->facts($site), $this->referenceSources(), $this->siteFeatures($site));

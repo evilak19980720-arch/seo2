@@ -134,6 +134,7 @@ class ReferenceAnalyzer
                 'title' => trim((string) $xpath->evaluate('string(//title)')) ?: null,
                 'content' => Str::limit($content, 6000, ''),
                 'cards' => $cards,
+                'images' => $this->images($xpath, '', $link['url']),
                 'detail' => ! empty($link['detail']),
             ];
             if (empty($link['detail'])) {

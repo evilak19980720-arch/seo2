@@ -113,7 +113,9 @@ class SiteDataGenerator
             return 0;
         }
 
-        $tiles = collect($pages)->flatMap(fn ($p) => $p['cards'] ?? [])->values();
+        // Cards collected with their stored pictures (ReferenceLibrary) first; the crawl's own cards otherwise.
+        $library = ReferenceLibrary::cards($site);
+        $tiles = $library->isNotEmpty() ? $library : collect($pages)->flatMap(fn ($p) => $p['cards'] ?? [])->values();
         $known = $tiles->pluck('image')->merge(collect($pages)->flatMap(fn ($p) => array_column($p['images'] ?? [], 'url')))->filter()->flip();
         $saved = collect();
         foreach ($collections as $collection) {
@@ -295,8 +297,10 @@ class SiteDataGenerator
             return null;
         }
         $this->usedImages[$url] = true;
+        // Already uploaded with its card: no second download.
+        $stored = $tiles->firstWhere('image', $url)['path'] ?? null;
 
-        return rescue(fn () => $this->images->store($site, $url), null, false);
+        return $stored ?: rescue(fn () => $this->images->store($site, $url), null, false);
     }
 
     /** Whether a picture URL belongs to the item: its tile is named like the item, or its file name spells the name. */

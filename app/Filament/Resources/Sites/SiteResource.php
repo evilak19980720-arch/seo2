@@ -12,6 +12,7 @@ use App\Filament\Resources\Sites\RelationManagers\EntriesRelationManager;
 use App\Filament\Resources\Sites\RelationManagers\GenerationTasksRelationManager;
 use App\Filament\Resources\Sites\RelationManagers\KeywordsRelationManager;
 use App\Filament\Resources\Sites\RelationManagers\PagesRelationManager;
+use App\Filament\Resources\Sites\RelationManagers\ReferenceItemsRelationManager;
 use App\Filament\Resources\Sites\Schemas\SiteForm;
 use App\Models\AiProvider;
 use App\Models\Site;
@@ -196,6 +197,7 @@ class SiteResource extends Resource
             KeywordsRelationManager::class,
             PagesRelationManager::class,
             EntriesRelationManager::class,
+            ReferenceItemsRelationManager::class,
             GenerationTasksRelationManager::class,
             DesignVersionsRelationManager::class,
         ];

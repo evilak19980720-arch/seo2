@@ -8,6 +8,7 @@ use App\Models\AiProvider;
 use App\Services\Content\ArticlePipeline;
 use App\Services\Content\PublishScheduler;
 use App\Services\Render\StaticSiteBuilder;
+use App\Services\Sites\ReferenceLibrary;
 use App\Services\Sites\SiteDataGenerator;
 use App\Services\Sites\SiteGenerator;
 use App\Services\Theme\ReferenceAnalyzer;
@@ -142,5 +143,23 @@ class IllustrationTest extends TestCase
         $this->assertTrue($gen->urlShows('https://ref.test/a1.png', 'Sweet Bonanza 1000', $tiles));
         $this->assertTrue($gen->urlShows('https://cdn.ref.test/games/gates_of_olympus-cover.webp', 'Gates of Olympus', $tiles), 'file name spells the name');
         $this->assertFalse($gen->urlShows('https://cdn.ref.test/games/12345.webp', 'Gates of Olympus', $tiles));
+    }
+
+    public function test_the_library_keeps_each_card_with_its_picture_text_and_terms(): void
+    {
+        $found = app(ReferenceLibrary::class)->collect([
+            ['url' => 'https://ref.test/', 'cards' => [
+                ['name' => 'Cashback semanal', 'image' => 'https://ref.test/p/cash.jpg', 'url' => 'https://ref.test/promo/cashback', 'text' => '10% de volta toda segunda'],
+                ['name' => 'Fortune Tiger', 'image' => 'https://ref.test/g/tiger.webp', 'url' => null],
+            ], 'images' => [['url' => 'https://ref.test/banner.jpg', 'alt' => 'Banner'], ['url' => 'https://ref.test/g/tiger.webp', 'alt' => '']]],
+            ['url' => 'https://ref.test/promo/cashback/', 'detail' => true, 'content' => 'Cashback de 10% sobre perdas, mínimo R$ 20, válido até 31/12.', 'cards' => [], 'images' => []],
+        ]);
+
+        $cash = $found[md5('https://ref.test/p/cash.jpg')];
+        $this->assertSame(['card', 'Cashback semanal', '10% de volta toda segunda', 'https://ref.test/promo/cashback'], [$cash['kind'], $cash['name'], $cash['text'], $cash['link']]);
+        $this->assertStringContainsString('mínimo R$ 20', $cash['detail'], 'the detail page terms stay with the card');
+        $this->assertSame('card', $found[md5('https://ref.test/g/tiger.webp')]['kind'], 'a picture seen as a card stays a card');
+        $this->assertSame('image', $found[md5('https://ref.test/banner.jpg')]['kind']);
+        $this->assertCount(3, $found);
     }
 }
