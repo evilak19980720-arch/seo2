@@ -12,10 +12,10 @@ use App\Services\Render\SiteRenderer;
 use App\Services\Render\StaticSiteBuilder;
 use App\Services\Sites\SiteGenerator;
 use App\Services\Stats\SearchConsoleSync;
+use App\Services\Theme\DesignConfigValidator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
-use App\Services\Theme\DesignConfigValidator;
 use Tests\TestCase;
 
 class SeoOptimizationTest extends TestCase

@@ -146,4 +146,21 @@ class ReferenceLibrary
         return $site->referenceItems()->where('kind', 'card')->whereNotNull('image_path')->orderBy('id')->get()
             ->map(fn (ReferenceItem $i) => ['name' => (string) $i->name, 'image' => $i->image_url, 'url' => $i->link, 'text' => trim(($i->text ?? '').' '.Str::limit((string) $i->detail, 300, '')), 'path' => $i->image_path]);
     }
+
+    /**
+     * Every uploaded reference picture large enough to show (cards and bare
+     * pictures alike), named by its card or alt where it has one.
+     *
+     * @return Collection<int, array{path: string, alt: ?string, width: int, height: int}>
+     */
+    public static function pictures(Site $site, int $minWidth = 200): Collection
+    {
+        if (! $site->exists) {
+            return collect();
+        }
+
+        return $site->referenceItems()->whereNotNull('image_path')->where(fn ($q) => $q->whereNull('width')->orWhere('width', '>=', $minWidth))->orderBy('id')->get()
+            ->map(fn (ReferenceItem $i) => ['path' => $i->image_path, 'alt' => filled($i->name) ? (string) $i->name : null, 'width' => (int) $i->width, 'height' => (int) $i->height])
+            ->unique('path')->values();
+    }
 }

@@ -390,6 +390,7 @@ class SiteRenderer
             ->map(fn ($t) => trim(preg_replace('/\s+/u', ' ', (string) $t)))->first(fn ($t) => mb_strlen($t) >= 70) ?? (string) $entry->summary;
         $head = SeoHead::for($ctx, $path, SeoHead::limit($title, 60), SeoHead::limit($description, 155), false);
         $image = $entry->image ? $ctx->image($entry->image, 1400) : null;
+        $image ??= $entry->image ? null : ($ctx->entryFallback($entry, 1400)['image'] ?? null);
         $head->image = $image ? MediaPublisher::absolute($this->site, $image['src']) : $this->ogImage();
         $head->preloadImage = $image['src'] ?? null;
         $head->withWebPage($entry->updated_at)->withBreadcrumbs([

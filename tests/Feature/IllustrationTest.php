@@ -82,9 +82,11 @@ class IllustrationTest extends TestCase
         Media::put('brand/shot.png', self::png());
         $site = $this->liveSite(['media' => [['type' => 'image', 'path' => 'brand/shot.png', 'alt' => 'Tela']]]);
 
-        $body = app(ArticlePipeline::class)->generateNext($site)->body;
+        $article = app(ArticlePipeline::class)->generateNext($site);
+        $body = $article->body;
 
-        $this->assertSame(1, substr_count($body, 'src="media:brand/shot.png"'), 'each spare picture is used once');
+        $this->assertSame('brand/shot.png', $article->featured_image);
+        $this->assertSame(0, substr_count($body, 'src="media:brand/shot.png"'), 'the featured picture is not shown again in the text');
         $this->assertStringNotContainsString('data-illustration', $body);
         Http::assertNotSent(fn ($r) => str_contains($r->url(), '/images/'));
     }

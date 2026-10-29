@@ -15,8 +15,10 @@ use App\Models\Site;
 use App\Services\Ai\AiManager;
 use App\Services\Render\HtmlSanitizer;
 use App\Services\Render\SeoHead;
+use App\Services\Sites\ReferenceLibrary;
 use App\Support\Media;
 use App\Support\Settings;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 /**
@@ -25,6 +27,12 @@ use Illuminate\Support\Str;
  */
 class ArticlePipeline
 {
+    /** Narrowest reference picture put in an article. */
+    protected const ARTICLE_PICTURE_WIDTH = 400;
+
+    /** Pictures put in an article that came without any. */
+    protected const MAX_INSERTED_PICTURES = 3;
+
     public function __construct(protected AiManager $ai, protected Guardrails $guardrails) {}
 
     /** Why a site may not get automatic articles right now, or null when it may. */
@@ -109,10 +117,12 @@ class ArticlePipeline
             // Polishing is best-effort; guardrails still run on the draft.
         }
 
+        $featured = $existing?->featured_image ?? $this->pickImage($site);
         if (str_contains($html, 'data-illustration')) {
             $task?->step(ArticleTaskStatus::Illustrating);
-            $html = $this->illustrate($site, $keyword, $html);
+            $html = $this->illustrate($site, $keyword, $html, $featured);
         }
+        $html = $this->withPictures($site, $keyword, $html, $featured);
 
         $title = Str::limit(trim(strip_tags((string) ($data['title'] ?? $keyword->keyword))), 110, '');
         $article = $existing ?? new Article(['site_id' => $site->id, 'keyword_id' => $keyword->id]);
@@ -123,7 +133,7 @@ class ArticlePipeline
             'type' => $type,
             'meta_title' => SeoHead::limit((string) ($data['meta_title'] ?? $title), 60),
             'meta_description' => SeoHead::limit((string) ($data['meta_description'] ?? ''), 155),
-            'featured_image' => $existing?->featured_image ?? $this->pickImage($site),
+            'featured_image' => $featured,
             'featured_image_alt' => Str::limit((string) ($data['featured_image_alt'] ?? $title), 120, ''),
             'author' => __('theme.editorial', ['brand' => $site->name], $site->language()),
             'body' => HtmlSanitizer::clean($html),
@@ -166,16 +176,16 @@ class ArticlePipeline
         return $slug;
     }
 
-    /** Rotate brand images as featured images (never invent imagery). */
     /**
      * Replace the model's <figure data-illustration="…"> placeholders with
      * AI-generated pictures stored on the media disk (OSS). Without an image
-     * model, or when generation fails, a brand / reference image not yet used
-     * in the article takes the place, else the placeholder is dropped.
+     * model, or when generation fails, a brand picture or a random picture
+     * downloaded from the reference site takes the place (never one twice in
+     * an article), else the placeholder is dropped.
      */
-    public function illustrate(Site $site, Keyword $keyword, string $html): string
+    public function illustrate(Site $site, Keyword $keyword, string $html, ?string $featured = null): string
     {
-        $spare = collect($site->brandProfile?->media ?? [])->where('type', 'image')->pluck('path')->filter()->shuffle()->values();
+        $spare = $this->sparePictures($site, $featured);
         $made = 0;
 
         return preg_replace_callback('/<figure\b[^>]*data-illustration\s*=\s*(["\'])(.*?)\1[^>]*>.*?<\/figure>/is', function ($m) use ($site, $keyword, &$spare, &$made) {
@@ -201,9 +211,50 @@ class ArticlePipeline
         }, $html) ?? $html;
     }
 
+    /** Brand pictures, then the reference site's pictures large enough for an article, each in random order. */
+    protected function sparePictures(Site $site, ?string $featured = null): Collection
+    {
+        // Never the article's own featured picture, which already shows above the text.
+        return collect($site->brandProfile?->media ?? [])->where('type', 'image')->pluck('path')->filter()->shuffle()
+            ->merge(ReferenceLibrary::pictures($site, self::ARTICLE_PICTURE_WIDTH)->pluck('path')->shuffle())
+            ->unique()->reject(fn ($p) => $p === $featured)->values();
+    }
+
+    /**
+     * An article left without any picture (no placeholders, no image model)
+     * gets random reference / brand pictures after some of its sections, one
+     * every few sections, so long text is broken up like on a real site.
+     */
+    public function withPictures(Site $site, Keyword $keyword, string $html, ?string $featured = null): string
+    {
+        if (preg_match('/<img\b/i', $html)) {
+            return $html;
+        }
+        $spare = $this->sparePictures($site, $featured);
+        $sections = preg_match_all('/<h2\b/i', $html);
+        if ($spare->isEmpty() || $sections < 2) {
+            return $html;
+        }
+        $want = min(self::MAX_INSERTED_PICTURES, $spare->count(), intdiv($sections, 2));
+        // Before the 2nd, 4th… section heading: never above the first one, where the intro is.
+        $at = 0;
+        $placed = 0;
+
+        return preg_replace_callback('/<h2\b/i', function ($m) use (&$at, &$placed, $want, $spare, $keyword) {
+            $at++;
+            if ($at % 2 !== 0 || $placed >= $want) {
+                return $m[0];
+            }
+            $path = $spare[$placed++];
+
+            return '<figure><img src="media:'.e($path).'" alt="'.e(Str::limit($keyword->keyword, 120, '')).'"></figure>'.$m[0];
+        }, $html) ?? $html;
+    }
+
     protected function pickImage(Site $site): ?string
     {
         $images = collect($site->brandProfile?->media ?? [])->where('type', 'image')->pluck('path')->filter()->values();
+        $images = $images->isNotEmpty() ? $images : ReferenceLibrary::pictures($site, self::ARTICLE_PICTURE_WIDTH)->pluck('path')->values();
         if ($images->isEmpty()) {
             return null;
         }

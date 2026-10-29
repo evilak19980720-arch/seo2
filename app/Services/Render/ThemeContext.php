@@ -7,6 +7,7 @@ use App\Models\Entry;
 use App\Models\Page;
 use App\Models\Site;
 use App\Services\Content\SeoRules;
+use App\Services\Sites\ReferenceLibrary;
 use App\Services\Sites\SiteStructure;
 use App\Services\Theme\DefaultDesign;
 use App\Services\Theme\DesignConfigValidator;
@@ -48,6 +49,8 @@ class ThemeContext
     protected ?array $slots = null;
 
     protected ?Collection $poolCache = null;
+
+    protected ?Collection $referenceCache = null;
 
     public function __construct(public readonly Site $site, public readonly MediaPublisher $media)
     {
@@ -359,7 +362,11 @@ class ThemeContext
         if (filled($ai['path'] ?? null)) {
             return ['path' => $ai['path'], 'alt' => $ai['alt'] ?? $this->brand->product_name];
         }
-        // No AI picture: reuse the real pictures in turn rather than leave the slot empty.
+        // No AI picture: a reference picture the real ones left over (wide ones first), drawn in the site's own random order.
+        if ($index !== false && ($pic = $this->referenceSlotPicture($index - $real->count()))) {
+            return $pic;
+        }
+        // Then the real pictures in turn rather than leave the slot empty.
         if ($index !== false && $real->isNotEmpty()) {
             $pic = $real[$index % $real->count()];
 
@@ -367,6 +374,40 @@ class ThemeContext
         }
 
         return null;
+    }
+
+    /**
+     * Pictures downloaded from the reference site that are not among the
+     * real pictures, in a random order stable for the site.
+     *
+     * @return Collection<int, array{path: string, alt: string, width: int, height: int}>
+     */
+    public function referencePictures(): Collection
+    {
+        if ($this->referenceCache !== null) {
+            return $this->referenceCache;
+        }
+        $real = $this->realPictures()->pluck('path')->flip();
+        $seed = (string) ($this->site->id ?? $this->site->domain_id ?? '');
+
+        return $this->referenceCache = ReferenceLibrary::pictures($this->site)
+            ->reject(fn ($p) => isset($real[$p['path']]))
+            ->map(fn ($p) => ['alt' => $p['alt'] ?? $this->brand->product_name] + $p)
+            ->sortBy(fn ($p) => md5($seed.'|'.$p['path']))->values();
+    }
+
+    /** The n-th reference picture for a hero / banner / cover slot: wide pictures first, then the rest. */
+    protected function referenceSlotPicture(int $n): ?array
+    {
+        $pictures = $this->referencePictures();
+        if ($n < 0 || $pictures->isEmpty()) {
+            return null;
+        }
+        // Unknown sizes count as wide enough: the hero shows them uncropped either way.
+        $ordered = $pictures->partition(fn ($p) => ! $p['height'] || $p['width'] >= $p['height'] * 1.3)->flatten(1)->values();
+        $pic = $ordered[$n % $ordered->count()];
+
+        return ['path' => $pic['path'], 'alt' => $pic['alt']];
     }
 
     /**
@@ -379,6 +420,7 @@ class ThemeContext
     {
         return $this->poolCache ??= $this->realPictures()
             ->map(fn ($m) => ['path' => $m['path'], 'alt' => filled($m['alt'] ?? null) ? $m['alt'] : $this->brand->product_name])
+            ->merge($this->referencePictures()->map(fn ($p) => ['path' => $p['path'], 'alt' => $p['alt']]))
             ->merge($this->allEntries()->filter(fn (Entry $e) => filled($e->image))->map(fn (Entry $e) => ['path' => $e->image, 'alt' => $e->title]))
             ->unique('path')->values();
     }
@@ -402,6 +444,33 @@ class ThemeContext
         foreach ($ordered as $pick) {
             if ($this->useImage($pick['path']) && ($image = $this->image($pick['path'], $maxWidth))) {
                 return ['image' => $image, 'alt' => $pick['alt']];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * A picture for an item (game, promotion…) that has none of its own: a
+     * random reference picture not shown on this page, preferring ones no
+     * other item owns, so an item never wears another item's cover while a
+     * free picture is left.
+     *
+     * @return array{image: array, alt: string}|null
+     */
+    public function entryFallback(Entry $entry, int $maxWidth = 640): ?array
+    {
+        $owned = $this->allEntries()->pluck('image')->filter()->flip();
+        [$free, $taken] = $this->referencePictures()->partition(fn ($p) => ! isset($owned[$p['path']]));
+        $pool = $free->values()->merge($taken->values());
+        if ($pool->isEmpty()) {
+            return null;
+        }
+        $start = hexdec(substr(md5($entry->collection.':'.$entry->id.':'.$entry->title), 0, 8)) % max(1, $free->count() ?: $pool->count());
+        $ordered = $pool->slice($start)->merge($pool->slice(0, $start));
+        foreach ($ordered as $pick) {
+            if ($this->useImage($pick['path']) && ($image = $this->image($pick['path'], $maxWidth))) {
+                return ['image' => $image, 'alt' => $entry->title];
             }
         }
 

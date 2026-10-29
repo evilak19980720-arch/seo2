@@ -1,7 +1,9 @@
 @php
     $href = $ctx->entryHref($entry);
-    // Items stand for real games, promotions…: only their own picture, never another one.
-    $thumb = $entry->image ? $ctx->image($entry->image, 640) : null;
+    // An item's own picture first (counted as shown on the page); without one, a random reference picture.
+    $own = $entry->image ? $ctx->image($entry->image, 640) : null;
+    $own && $ctx->useImage($entry->image);
+    $thumb = $own ?? ($ctx->entryFallback($entry)['image'] ?? null);
     $status = $entry->status();
     $tag = collect(['hot', 'new', 'classic'])->first(fn ($t) => in_array($t, $entry->tags(), true));
     $badge = in_array($entry->collection, ['promotion', 'event'], true) ? ($status ? $ctx->t('status_'.$status) : null) : ($tag ? $ctx->t($tag) : null);
