@@ -162,4 +162,36 @@ class IllustrationTest extends TestCase
         $this->assertSame('image', $found[md5('https://ref.test/banner.jpg')]['kind']);
         $this->assertCount(3, $found);
     }
+
+    public function test_tiles_are_numbered_and_never_cut_off_by_long_page_text(): void
+    {
+        $pages = [['url' => 'https://ref.test/', 'title' => 'Ref', 'content' => str_repeat('Texto longo da página inicial. ', 3000), 'cards' => [
+            ['name' => 'Fortune Tiger', 'image' => 'https://ref.test/ft.png', 'text' => 'Slot do tigre'],
+            ['name' => 'fortune tiger', 'image' => 'https://ref.test/ft2.png'],
+            ['name' => 'Sem foto', 'image' => null],
+            ['name' => 'Gates of Olympus', 'image' => 'https://ref.test/go.png'],
+        ]]];
+        $digest = SiteDataGenerator::digest($pages, 8000);
+
+        $this->assertLessThanOrEqual(8100, mb_strlen($digest));
+        $this->assertStringContainsString('#1 | Fortune Tiger | Slot do tigre', $digest);
+        $this->assertStringContainsString('#2 | Gates of Olympus', $digest, 'one tile per name, tiles without a picture left out');
+        $this->assertStringNotContainsString('ref.test/ft.png', $digest, 'tiles are named by number, not URL');
+    }
+
+    public function test_an_item_takes_the_tile_the_model_numbered_when_the_names_agree(): void
+    {
+        $site = $this->makeSite(['reference_import_images' => true]);
+        $tiles = SiteDataGenerator::tiles(collect([
+            ['name' => 'Bônus RefCasino', 'image' => 'https://ref.test/b.png', 'path' => 'brand/ref-1/b.png'],
+            ['name' => 'Fortune Ox', 'image' => 'https://ref.test/ox.png', 'path' => 'brand/ref-1/ox.png'],
+        ]));
+        $gen = app(SiteDataGenerator::class);
+        $image = fn (string $title, $tile) => (fn () => $this->image($site, $title, '', $tiles, collect(), $tile))->call($gen);
+
+        $this->assertSame('brand/ref-1/b.png', $image('Bônus Galaxy Run', 1), 'the brand swapped in the name still matches its numbered tile');
+        $this->assertNull($image('Fortune Tiger', '#2'), 'a numbered tile of another game is refused');
+        $this->assertSame('brand/ref-1/ox.png', $image('Fortune Ox', 0), 'no number: matched by name');
+        $this->assertNull($image('Fortune Ox', 2), 'a picture already given to an item is not given again');
+    }
 }

@@ -16,7 +16,7 @@ class PromptSeeder extends Seeder
     public const SYSTEM = 'You are a senior content strategist and SEO editor for the official website of {{product_name}} ({{site_type}}). Write natively in {{language}} for readers in {{country}}; never write in another language and never translate from another language. The BRAND PROFILE is the only source of facts: never invent features, numbers, prices, awards, reviews, release dates or company details that are not in it. Always answer with a single JSON object.';
 
     /** Templates revised after the first release ship as a new version; the highest active version wins. */
-    public const VERSIONS = [PromptType::DesignConfig->value => 5, PromptType::PageContent->value => 7, PromptType::SiteData->value => 2, PromptType::SiteMeta->value => 2, PromptType::ArticleGenerate->value => 2, PromptType::ArticlePolish->value => 2, PromptType::SiteReview->value => 2];
+    public const VERSIONS = [PromptType::DesignConfig->value => 5, PromptType::PageContent->value => 7, PromptType::SiteData->value => 3, PromptType::SiteMeta->value => 2, PromptType::ArticleGenerate->value => 2, PromptType::ArticlePolish->value => 2, PromptType::SiteReview->value => 3];
 
     public function run(): void
     {
@@ -195,7 +195,7 @@ TXT,
 BRAND PROFILE:
 {{brand}}
 
-REFERENCE SITE ({{reference_url}}; "none" if there is no reference). Its pages, then the image tiles found on them (name | image | link):
+REFERENCE SITE ({{reference_url}}; "none" if there is no reference). Its pages, then the numbered picture tiles found on them (#id | name | text next to the picture):
 {{reference}}
 
 List the site data of the official site of {{product_name}}, written in {{language}}, for these collections: {{collections}}.
@@ -205,18 +205,18 @@ Rules:
 - Keep amounts, percentages, dates, requirements and terms exactly as the sources state them. Never invent an item, a figure, a date, a licence, a winner or a result; leave a field "" (or []) when the sources do not give it.
 - Replace the reference's own brand and company names with {{product_name}}.
 - summary: one or two sentences in your own words (never copy more than 6 words in a row).
-- image: the exact image URL of the tile whose name matches the item, else "".
+- TILES are the pictured items of the reference (game covers, provider logos, promotion and event banners). Build the game, provider, promotion, event and news lists from them first: one item per tile that shows such an item, with "tile" = its #id number and "title" = the tile name copied exactly (only the reference's own brand name replaced by {{product_name}}). Only then add items the text names that have no tile, with "tile": 0. Never give one tile to two items, never give a tile to an item it does not show.
 - slug: lowercase ASCII words with hyphens, unique per collection.
 - Dates as YYYY-MM-DD. A collection the sources say nothing about gets [].
 - Site features: {{site_features}}. Nothing about accounts or payments the site does not have.
 
 Fields per collection:
-- game: title, slug, summary, image, provider, series, themes [] (free words), mechanics [] (free words), types [] (any keys of GAME TYPES), theme_keys [] (any keys of GAME THEMES), devices [] (any of "mobile", "desktop", "tablet"), demo (true when the sources say a free demo exists), tags (any of "hot", "new", "classic", "featured", "upcoming"), rtp, volatility, max_win, paylines, reels, min_bet, max_bet, release_date
-- provider: title, slug, summary, image, country, founded
-- promotion: title, slug, summary, image, tags (any of "new_user", "regular", "festival", "featured", "anniversary", "app", "invite"), reward, requirement, starts_at, ends_at, status ("upcoming"|"ongoing"|"ended"|"")
-- event: title, slug, summary, image, tags (any of "featured", "launch", "anniversary", "festival", "community", "quiz", "creative", "collab", "live", "offline"), reward, requirement, starts_at, ends_at, status
+- game: title, slug, summary, tile, provider, series, themes [] (free words), mechanics [] (free words), types [] (any keys of GAME TYPES), theme_keys [] (any keys of GAME THEMES), devices [] (any of "mobile", "desktop", "tablet"), demo (true when the sources say a free demo exists), tags (any of "hot", "new", "classic", "featured", "upcoming"), rtp, volatility, max_win, paylines, reels, min_bet, max_bet, release_date
+- provider: title, slug, summary, tile, country, founded
+- promotion: title, slug, summary, tile, tags (any of "new_user", "regular", "festival", "featured", "anniversary", "app", "invite"), reward, requirement, starts_at, ends_at, status ("upcoming"|"ongoing"|"ended"|"")
+- event: title, slug, summary, tile, tags (any of "featured", "launch", "anniversary", "festival", "community", "quiz", "creative", "collab", "live", "offline"), reward, requirement, starts_at, ends_at, status
 - notice: title, slug, summary, date, tags (any of "maintenance", "game_maintenance", "rules", "restored", "new_game", "removed", "game_update", "payments", "policy", "channels")
-- news: title, slug, summary, image, date, tags (any of "brand", "new_games", "features", "updates", "partners", "editorial", "monthly", "community")
+- news: title, slug, summary, tile, date, tags (any of "brand", "new_games", "features", "updates", "partners", "editorial", "monthly", "community")
 GAME TYPES (key = meaning): {{game_types}}
 GAME THEMES (key = meaning): {{game_themes}}
 At most {{max_items}} items per collection.
@@ -269,10 +269,10 @@ BRAND PROFILE:
 PROGRAM CHECKS (measured on the built pages; "browser" lists low-contrast text, horizontal overflow, broken images per page and device):
 {{checks}}
 
-CURRENT DESIGN (option values):
+CURRENT DESIGN (option values; header, footer, phone menu, fonts, corners, card style and hero are this site's identity, taken from its reference, and are NOT yours to change):
 {{design}}
 
-ALLOWED OPTIONS (you may only pick from these):
+ALLOWED OPTIONS (you may only pick from these; nothing else can be changed):
 {{options}}
 
 PAGES (h1, meta title, meta description):
@@ -284,11 +284,11 @@ AI CUSTOM CSS currently applied:
 Score the site from 0 to 100:
 - "design": does it look like a polished, premium official brand site (clear hierarchy, generous spacing, consistent colours, strong hero, nothing cluttered, overlapping, unreadable or broken), first on the phone screenshot, and how close is it to the reference look when reference screenshots are given?
 - "seo": titles and descriptions (clear main keyword in {{language}}, 35-60 / 120-155 characters, unique per page, no season or unsupported claims), one H1, readable text, the program checks above.
-Then list the concrete issues you see (each one short sentence in Simplified Chinese, at most 8 issues, for the Chinese-speaking admin), and a change list that fixes them using ONLY the allowed options: change colours only to fix clashes or to match the reference; pick block variants that make the layout calmer and closer to the reference; never invent facts. Rewrite meta_title / meta_description only for pages whose current text is weak, duplicated or the wrong length; write them natively in {{language}}. Set "drop_custom_css" to true only when the custom CSS visibly breaks the layout or colours.
+Then list the concrete issues you see (each one short sentence in Simplified Chinese, at most 8 issues, for the Chinese-speaking admin), and a SMALL change list that fixes only those issues using ONLY the allowed options. Your job is to repair defects, not to restyle: every site must keep its own look, so never move the design towards a generic or "safe" default. Change at most 2 colours and only when text is unreadable (keep the brand hue, adjust lightness); change at most 2 block variants and only when that block is visibly broken, cluttered or far from the reference; never invent facts. Rewrite meta_title / meta_description only for pages whose current text is weak, duplicated or the wrong length; write them natively in {{language}}. Set "drop_custom_css" to true only when the custom CSS visibly breaks the layout or colours.
 Leave anything that is already good out of the change list.
 
 Return JSON:
-{"scores": {"design": 0, "seo": 0}, "issues": ["short issue"], "design": {"colors": {"primary": "#rrggbb"}, "fonts": {"heading": "", "body": ""}, "radius": "", "density": "", "shadow": "", "style": {"cards": ""}, "nav": "", "footer": "", "navigation": {"mobile_header": "", "mobile_menu": "", "mobile_bar_style": ""}, "pages": {"home": [{"block": "hero", "variant": ""}]}}, "pages": {"home": {"meta_title": "", "meta_description": ""}}, "drop_custom_css": false}
+{"scores": {"design": 0, "seo": 0}, "issues": ["short issue"], "design": {"colors": {"text": "#rrggbb"}, "density": "", "shadow": "", "pages": {"home": [{"block": "faq", "variant": ""}]}}, "pages": {"home": {"meta_title": "", "meta_description": ""}}, "drop_custom_css": false}
 TXT,
         ];
     }

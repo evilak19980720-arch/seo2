@@ -59,8 +59,8 @@ class SiteQaTest extends TestCase
 
     private const PATCH = [
         'design' => [
-            'nav' => 'bar', 'radius' => 'huge', 'colors' => ['primary' => '#7c3aed', 'text' => 'red'], 'fonts' => ['heading' => 'comic-sans', 'body' => 'manrope'],
-            'navigation' => ['mobile_menu' => 'sheet', 'mobile_header' => 'floating'], 'pages' => ['home' => [['block' => 'hero', 'variant' => 'image-bg'], ['block' => 'faq', 'variant' => 'nope'], ['block' => 'gallery', 'variant' => 'grid']]],
+            'nav' => 'bar', 'radius' => 'lg', 'density' => 'relaxed', 'style' => ['cards' => 'flat'], 'colors' => ['primary' => '#7c3aed', 'text' => 'red', 'muted' => '#374151', 'surface' => '#eeeeee'], 'fonts' => ['heading' => 'comic-sans', 'body' => 'manrope'],
+            'navigation' => ['mobile_menu' => 'sheet', 'mobile_header' => 'floating'], 'pages' => ['home' => [['block' => 'hero', 'variant' => 'image-bg'], ['block' => 'faq', 'variant' => 'nope'], ['block' => 'faq', 'variant' => 'cards'], ['block' => 'gallery', 'variant' => 'grid']]],
         ],
         'pages' => ['home' => ['meta_title' => 'Galaxy Run: jogo de corrida espacial grátis', 'meta_description' => 'Corra entre planetas e desvie de asteroides no Galaxy Run, o jogo de corrida espacial grátis para celular.'], 'missing' => ['meta_title' => 'x']],
         'drop_custom_css' => true,
@@ -79,22 +79,35 @@ class SiteQaTest extends TestCase
         $site->refresh();
         $design = $site->design_config;
         $this->assertSame(1, $builds);
-        $this->assertSame('bar', $design['nav']);
-        $this->assertSame('md', $design['radius'], 'unknown values are ignored');
-        $this->assertSame('#7c3aed', $design['colors']['primary']);
-        $this->assertSame('#111827', $design['colors']['text']);
-        $this->assertSame('manrope', $design['fonts']['body']);
-        $this->assertNotSame('comic-sans', $design['fonts']['heading']);
-        $this->assertSame('sheet', $design['navigation']['mobile_menu']);
-        $this->assertNotSame('floating', $design['navigation']['mobile_header']);
+        // The site's identity stays as generated: no reviewer pulls every site to the same look.
+        $this->assertSame('split', $design['nav']);
+        $this->assertSame('md', $design['radius']);
+        $this->assertNotSame('manrope', $design['fonts']['body'] ?? null);
+        $this->assertNotSame('flat', $design['style']['cards'] ?? null);
+        $this->assertNotSame('sheet', $design['navigation']['mobile_menu'] ?? null);
         $home = collect($design['pages']['home']);
-        $this->assertSame('image-bg', $home->firstWhere('block', 'hero')['variant']);
-        $this->assertNotSame('nope', $home->firstWhere('block', 'faq')['variant']);
+        $this->assertSame('split', $home->firstWhere('block', 'hero')['variant'], 'the hero is identity too');
+        // Repairs: spacing, unreadable colours (at most two), broken blocks.
+        $this->assertSame('relaxed', $design['density']);
+        $this->assertSame('#7c3aed', $design['colors']['primary']);
+        $this->assertSame('#111827', $design['colors']['text'], 'invalid values are ignored');
+        $this->assertSame('#374151', $design['colors']['muted']);
+        $this->assertSame('#f8fafc', $design['colors']['surface'], 'at most two colours per round');
+        $this->assertSame('cards', $home->firstWhere('block', 'faq')['variant']);
         $this->assertNull($home->firstWhere('block', 'gallery'), 'variants change, sections are never added');
         $this->assertNull($site->custom_css);
         $this->assertSame('Galaxy Run: jogo de corrida espacial grátis', $site->pages()->first()->meta_title);
         $this->assertSame('qa', $site->designVersions()->latest('version')->value('source'));
         $this->assertStringContainsString('已保留', collect($task->fresh()->log)->pluck('step')->implode("\n"));
+    }
+
+    public function test_colours_stay_when_no_text_is_unreadable(): void
+    {
+        $site = $this->site();
+        $changes = $this->qa([], [])->apply($site, ['design' => self::PATCH['design'], 'pages' => [], 'drop_custom_css' => false], $this->measure(2, 0));
+
+        $this->assertSame('#2563eb', $site->fresh()->design_config['colors']['primary']);
+        $this->assertNotContains('颜色 primary → #7c3aed', $changes);
     }
 
     public function test_a_change_that_does_not_help_is_undone(): void

@@ -56,17 +56,25 @@ class SiteDataGenerator
 
     /**
      * The reference as one text for the model: each page's text, then the
-     * image tiles (name | image | link) found on all pages.
+     * image tiles, numbered (#id | name | text next to the picture). The
+     * tiles have their own share of the room so a long page text never cuts
+     * them off; the model names a tile by its number, never by URL.
      *
      * @param  array<int, array>  $pages  home first, then the crawled inner pages
+     * @param  Collection|null  $tiles  numbered tiles (self::tiles); the pages' own cards otherwise
      */
-    public static function digest(array $pages, int $limit = 24_000): string
+    public static function digest(array $pages, int $limit = 24_000, ?Collection $tiles = null): string
     {
-        if ($pages === []) {
+        if ($pages === [] && ! $tiles?->isNotEmpty()) {
             return 'none';
         }
+        $tiles ??= self::tiles(collect($pages)->flatMap(fn ($p) => $p['cards'] ?? []));
+        $list = $tiles->isNotEmpty()
+            ? "### TILES (#id | name | text next to the picture)\n".Str::limit($tiles->map(fn ($c, $i) => '#'.($i + 1).' | '.$c['name'].(empty($c['text']) ? '' : ' | '.Str::limit(preg_replace('/\s+/u', ' ', $c['text']), 120)))->implode("\n"), (int) ($limit * 0.4), '')
+            : '';
         $out = '';
-        $share = (int) max(1500, ($limit * 0.75) / count($pages));
+        $room = $limit - mb_strlen($list) - 10;
+        $share = $pages === [] ? 0 : (int) max(1200, $room / count($pages));
         foreach ($pages as $page) {
             $text = trim((string) ($page['content'] ?? ''));
             if ($text === '') {
@@ -74,12 +82,20 @@ class SiteDataGenerator
             }
             $out .= '### '.trim(($page['label'] ?? '').' – '.($page['title'] ?? ''), ' –').' ('.$page['url'].")\n".Str::limit($text, $share)."\n\n";
         }
-        $tiles = collect($pages)->flatMap(fn ($p) => $p['cards'] ?? [])->unique(fn ($c) => mb_strtolower($c['name']))->take(150);
-        if ($tiles->isNotEmpty()) {
-            $out .= "### TILES (name | image | link | text next to the picture)\n".$tiles->map(fn ($c) => $c['name'].' | '.($c['image'] ?? '').' | '.($c['url'] ?? '').(empty($c['text']) ? '' : ' | '.Str::limit($c['text'], 160)))->implode("\n");
-        }
 
-        return Str::limit(trim($out), $limit) ?: 'none';
+        return trim(Str::limit(trim($out), max(0, $room))."\n\n".$list) ?: 'none';
+    }
+
+    /**
+     * Tiles with a picture, one per name, in a fixed order: the number the
+     * model gives back (#1, #2…) is the position here plus one.
+     *
+     * @return Collection<int, array>
+     */
+    public static function tiles(Collection $cards): Collection
+    {
+        return $cards->filter(fn ($c) => filled($c['name'] ?? null) && filled($c['image'] ?? null))
+            ->unique(fn ($c) => SeoRules::normalize((string) $c['name']))->take(150)->values();
     }
 
     /**
@@ -96,11 +112,15 @@ class SiteDataGenerator
             return 0;
         }
 
+        // Cards collected with their stored pictures (ReferenceLibrary) first; the crawl's own cards otherwise.
+        $library = ReferenceLibrary::cards($site);
+        $tiles = self::tiles($library->isNotEmpty() ? $library : collect($pages)->flatMap(fn ($p) => $p['cards'] ?? []));
+
         try {
             $res = $this->ai->prompt(PromptType::SiteData, [
                 'brand' => $site->brandProfile?->toPromptContext() ?? "Product: {$site->product_name}",
                 'reference_url' => $site->reference_url ?: 'none',
-                'reference' => self::digest($pages),
+                'reference' => self::digest($pages, 24_000, $tiles),
                 'collections' => implode(', ', $collections),
                 'max_items' => max(self::MAX_ITEMS),
                 'site_features' => $features,
@@ -113,9 +133,6 @@ class SiteDataGenerator
             return 0;
         }
 
-        // Cards collected with their stored pictures (ReferenceLibrary) first; the crawl's own cards otherwise.
-        $library = ReferenceLibrary::cards($site);
-        $tiles = $library->isNotEmpty() ? $library : collect($pages)->flatMap(fn ($p) => $p['cards'] ?? [])->values();
         $known = $tiles->pluck('image')->merge(collect($pages)->flatMap(fn ($p) => array_column($p['images'] ?? [], 'url')))->filter()->flip();
         $saved = collect();
         foreach ($collections as $collection) {
@@ -158,7 +175,7 @@ class SiteDataGenerator
                 'summary' => $summary !== '' && LanguageDetector::matches($summary, $site->language()) ? $summary : null,
                 'data' => $this->cleanData($collection, $item, $factsLower),
                 // With reference pictures on, a picture that no longer proves to match is dropped rather than kept.
-                'image' => $site->reference_import_images ? $this->image($site, $title, (string) ($item['image'] ?? ''), $tiles, $known) : $existing?->image,
+                'image' => $site->reference_import_images ? $this->image($site, $title, (string) ($item['image'] ?? ''), $tiles, $known, $item['tile'] ?? null) : $existing?->image,
                 'sort' => $i,
                 'source' => 'ai',
             ]);
@@ -279,18 +296,33 @@ class SiteDataGenerator
     protected array $usedImages = [];
 
     /**
-     * The item's picture, only when it provably shows this item: the
-     * reference tile with the same name first; the URL the model picked only
+     * The item's picture, only when it provably shows this item: the tile
+     * the model numbered when its name matches the item, then the reference
+     * tile with the same name; the URL the model picked only
      * when its tile carries a matching name, or its file name spells the
      * item's name. Otherwise none (a picture of another game is worse than
      * none).
      */
-    protected function image(Site $site, string $title, string $url, Collection $tiles, Collection $known): ?string
+    protected function image(Site $site, string $title, string $url, Collection $tiles, Collection $known, mixed $tile = null): ?string
     {
         if (! $site->reference_import_images) {
             return null;
         }
-        $byName = $this->matchTile($title, $tiles->reject(fn ($t) => isset($this->usedImages[$t['image'] ?? ''])));
+        $free = $tiles->reject(fn ($t) => isset($this->usedImages[$t['image'] ?? '']));
+        $id = is_numeric(ltrim((string) $tile, '#')) ? (int) ltrim((string) $tile, '#') : 0;
+        // "Bônus Galaxy" for the reference's "Bônus RefCasino": the brand swapped in is no part of the item's name.
+        $plain = trim(preg_replace('/\s+/u', ' ', str_ireplace((string) $site->product_name, '', $title)), " \t-–:|");
+        $names = array_unique(array_filter([$title, mb_strlen($plain) >= 4 ? $plain : null]));
+        $match = function (Collection $among) use ($names) {
+            foreach ($names as $name) {
+                if ($tile = $this->matchTile($name, $among)) {
+                    return $tile;
+                }
+            }
+
+            return null;
+        };
+        $byName = ($id > 0 && $free->has($id - 1) ? $match(collect([$free->get($id - 1)])) : null) ?? $match($free);
         if ($byName) {
             $url = (string) $byName['image'];
         } elseif ($url === '' || ! $known->has($url) || isset($this->usedImages[$url]) || ! $this->urlShows($url, $title, $tiles)) {

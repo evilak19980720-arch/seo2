@@ -33,8 +33,21 @@ use Throwable;
  */
 class SiteQa
 {
-    /** Design keys the reviewer may change; everything else stays as generated. */
-    public const SCALARS = ['radius', 'density', 'shadow', 'nav', 'footer'];
+    /**
+     * Design keys the reviewer may change. The site's identity (header and
+     * footer type, phone menu, fonts, corners, card style, hero) was chosen
+     * from the reference and stays as generated: a reviewer that may change
+     * it pulls every site towards the same "safe" look.
+     */
+    public const SCALARS = ['density', 'shadow'];
+
+    /** Blocks whose variant shapes the first impression; never changed by the reviewer. */
+    public const IDENTITY_BLOCKS = ['hero', 'banner'];
+
+    /** At most this many colours and block variants change in one round. */
+    public const MAX_COLORS = 2;
+
+    public const MAX_VARIANTS = 2;
 
     public function __construct(protected AiManager $ai, protected Screenshot $screenshot, protected StaticSiteBuilder $builder) {}
 
@@ -86,7 +99,7 @@ class SiteQa
                 }
 
                 $snapshot = $this->snapshot($site);
-                $changes = $this->apply($site, $review);
+                $changes = $this->apply($site, $review, $current);
                 if ($changes === []) {
                     $task->progress('AI 质检：没有可用的修改建议');
 
@@ -339,15 +352,9 @@ class SiteQa
     {
         return [
             'colors' => 'hex values for '.implode(', ', DesignConfigValidator::COLOR_KEYS),
-            'fonts' => array_keys(config('theme.fonts')),
-            'radius' => array_keys(config('theme.radius')),
             'density' => array_keys(config('theme.density')),
             'shadow' => array_keys(config('theme.shadow')),
-            'style' => config('theme.styles'),
-            'nav' => config('theme.blocks.nav'),
-            'footer' => config('theme.blocks.footer'),
-            'navigation' => DesignConfigValidator::MOBILE + ['sticky' => [true, false], 'buttons' => [0, 1, 2]],
-            'block_variants' => collect(config('theme.blocks'))->except(config('theme.layout_blocks'))->all(),
+            'block_variants' => collect(config('theme.blocks'))->except(array_merge(config('theme.layout_blocks'), self::IDENTITY_BLOCKS))->all(),
         ];
     }
 
@@ -356,7 +363,7 @@ class SiteQa
      *
      * @return array<int, string> what changed, for the task log
      */
-    public function apply(Site $site, array $review): array
+    public function apply(Site $site, array $review, ?array $measure = null): array
     {
         $changes = [];
         $config = $site->design_config ?? [];
@@ -370,31 +377,17 @@ class SiteQa
                 $config[$key] = $value;
             }
         }
-        foreach ((array) ($patch['colors'] ?? []) as $key => $value) {
-            if (in_array($key, DesignConfigValidator::COLOR_KEYS, true) && is_string($value) && preg_match('/^#[0-9a-f]{6}$/i', $value) && strcasecmp($config['colors'][$key] ?? '', $value) !== 0) {
+        // Colours only to fix text the program found unreadable, a few at a time.
+        $clash = $measure === null || collect($measure['browser'] ?? [])->contains(fn ($f) => ! empty($f['contrast']));
+        $colors = 0;
+        foreach ($clash ? (array) ($patch['colors'] ?? []) : [] as $key => $value) {
+            if ($colors < self::MAX_COLORS && in_array($key, DesignConfigValidator::COLOR_KEYS, true) && is_string($value) && preg_match('/^#[0-9a-f]{6}$/i', $value) && strcasecmp($config['colors'][$key] ?? '', $value) !== 0) {
                 $changes[] = "颜色 {$key} → {$value}";
                 $config['colors'][$key] = strtolower($value);
+                $colors++;
             }
         }
-        foreach (['heading', 'body'] as $role) {
-            $value = $patch['fonts'][$role] ?? null;
-            if (is_string($value) && in_array($value, $options['fonts'], true) && ($config['fonts'][$role] ?? null) !== $value) {
-                $changes[] = "字体 {$role} → {$value}";
-                $config['fonts'][$role] = $value;
-            }
-        }
-        foreach ((array) ($patch['style'] ?? []) as $key => $value) {
-            if (isset($options['style'][$key]) && in_array($value, $options['style'][$key], true) && ($config['style'][$key] ?? null) !== $value) {
-                $changes[] = "风格 {$key} → {$value}";
-                $config['style'][$key] = $value;
-            }
-        }
-        foreach ((array) ($patch['navigation'] ?? []) as $key => $value) {
-            if (isset($options['navigation'][$key]) && in_array($value, $options['navigation'][$key], true) && ($config['navigation'][$key] ?? null) !== $value) {
-                $changes[] = "导航 {$key} → ".json_encode($value);
-                $config['navigation'][$key] = $value;
-            }
-        }
+        $variants = 0;
         // Block variants only: the reviewer never adds, removes or reorders sections.
         foreach ((array) ($patch['pages'] ?? []) as $type => $blocks) {
             foreach ((array) $blocks as $entry) {
@@ -404,7 +397,8 @@ class SiteQa
                     continue;
                 }
                 foreach ($config['pages'][$type] ?? [] as $i => $current) {
-                    if (($current['block'] ?? null) === $block && ($current['variant'] ?? null) !== $variant) {
+                    if ($variants < self::MAX_VARIANTS && ($current['block'] ?? null) === $block && ($current['variant'] ?? null) !== $variant) {
+                        $variants++;
                         $config['pages'][$type][$i]['variant'] = $variant;
                         $changes[] = "{$type}.{$block} → {$variant}";
                     }
