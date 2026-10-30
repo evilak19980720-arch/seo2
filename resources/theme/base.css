@@ -822,7 +822,8 @@ body:has(.mobile-bar--pill){padding-bottom:calc(84px + env(safe-area-inset-botto
 /* Cards follow their pictures' own ratio (square icons stay whole) */
 .section .tiles--shaped .tile__media{aspect-ratio:var(--tile-ratio)}
 /* Small item pictures: more, narrower columns so a card is never wider than 1.5x its picture */
-:is(.entry-list--cards,.entry-list--compact) .entry-list__items.tiles--small,.lobby__grid.tiles--small{grid-template-columns:repeat(auto-fill,minmax(min(100%,calc(var(--tile-cap) / 2)),1fr))}
+/* …but never narrower than a readable card (tiny logos would otherwise make 30px columns) */
+:is(.entry-list--cards,.entry-list--compact) .entry-list__items.tiles--small,.lobby__grid.tiles--small{grid-template-columns:repeat(auto-fill,minmax(min(100%,max(150px,calc(var(--tile-cap) / 2))),1fr))}
 .pic--capped{display:block;margin-inline:auto;height:auto}
 /* One or two items: one wide card or an even pair, never a lone half-width card beside empty space */
 .section .items--1{grid-template-columns:minmax(0,1fr)!important;display:grid}

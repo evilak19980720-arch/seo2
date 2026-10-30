@@ -793,7 +793,8 @@ class ThemeContext
         $widths = $sizes->pluck('width')->sort()->values();
         $width = $widths[intdiv($widths->count(), 2)];
 
-        return ['ratio' => $ratio, 'cap' => $width < 420 ? (int) round($width * 1.5) : null];
+        // A card never gets narrower than a readable one, however small the picture (provider logos can be 40px).
+        return ['ratio' => $ratio, 'cap' => $width < 420 ? max(300, (int) round($width * 1.5)) : null];
     }
 
     /** Like entries(), but only items no other section of this page listed yet. */

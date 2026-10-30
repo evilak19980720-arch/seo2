@@ -15,6 +15,7 @@ use App\Services\Render\ThemeContext;
 use App\Services\Sites\SiteGenerator;
 use App\Services\Sites\SiteStructure;
 use App\Services\Theme\DesignConfigValidator;
+use App\Support\Media;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Lang;
@@ -453,5 +454,29 @@ class GameSiteTest extends TestCase
 
         GoneUrl::create(['host' => $site->domain->name, 'path' => 'rtp-e-volatilidade', 'to' => '/guia-de-slots/']);
         $this->get('https://'.$site->domain->name.'/rtp-e-volatilidade/')->assertRedirect('https://'.$site->domain->name.'/guia-de-slots/')->assertStatus(301);
+    }
+
+    public function test_tiny_item_pictures_never_squeeze_cards_into_slivers(): void
+    {
+        $site = $this->gameSite();
+        $site->update(['structure' => SiteStructure::choose($site, $this->positioning())]);
+        $site = $site->fresh(['domain', 'brandProfile']);
+        $this->fillPages($site);
+        $this->addEntries($site);
+        $im = imagecreatetruecolor(40, 40);
+        ob_start();
+        imagepng($im);
+        Media::put('logos/p.png', ob_get_clean());
+        foreach (['JILI', 'FA CHAI', 'KA Gaming', 'JDB', 'CQ9', 'Spribe'] as $name) {
+            $site->entries()->create(['collection' => 'provider', 'slug' => Str::slug($name), 'title' => $name, 'image' => 'logos/p.png', 'summary' => "{$name} é um estúdio de slots para celular."]);
+        }
+        $site->entries()->where('slug', 'pg-soft')->update(['image' => 'logos/p.png']);
+
+        (new StaticSiteBuilder)->buildAll($site->fresh(['domain', 'brandProfile']));
+        $html = file_get_contents(StaticSiteBuilder::dirFor($site).'/'.$site->pages()->where('type', 'providers')->value('slug').'/index.html');
+        preg_match_all('/--tile-cap:(\d+)px/', $html, $m);
+        $this->assertNotEmpty($m[1], 'small logos get a capped card width');
+        $this->assertGreaterThanOrEqual(300, min($m[1]), 'never a column narrower than a readable card');
+        $this->assertMatchesRegularExpression('/tiles--small\{grid-template-columns:repeat\(auto-fill,minmax\(min\(100%,max\(150px,/', file_get_contents(resource_path('theme/base.css')));
     }
 }

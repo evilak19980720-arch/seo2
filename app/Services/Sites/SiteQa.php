@@ -282,7 +282,7 @@ class SiteQa
     {
         $n = count($measure['seo']);
         foreach ($measure['browser'] as $found) {
-            $n += count($found['contrast'] ?? []) + (($found['overflow'] ?? 0) > 1 ? 1 : 0) + ($found['brokenImages'] ?? 0) + ($found['missingAlt'] ?? 0);
+            $n += count($found['contrast'] ?? []) + (($found['overflow'] ?? 0) > 1 ? 1 : 0) + ($found['brokenImages'] ?? 0) + ($found['missingAlt'] ?? 0) + ($found['squeezed'] ?? 0);
         }
 
         return $n;
@@ -292,8 +292,9 @@ class SiteQa
     {
         $contrast = array_sum(array_map(fn ($f) => count($f['contrast'] ?? []), $measure['browser']));
         $overflow = count(array_filter($measure['browser'], fn ($f) => ($f['overflow'] ?? 0) > 1));
+        $squeezed = array_sum(array_map(fn ($f) => $f['squeezed'] ?? 0, $measure['browser']));
 
-        return '程序检查 '.$this->problems($measure).' 处（SEO '.count($measure['seo'])."，文字看不清 {$contrast}，横向溢出 {$overflow}）";
+        return '程序检查 '.$this->problems($measure).' 处（SEO '.count($measure['seo'])."，文字看不清 {$contrast}，横向溢出 {$overflow}，挤压变形 {$squeezed}）";
     }
 
     protected function total(array $review): int

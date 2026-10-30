@@ -23,7 +23,7 @@ window.addEventListener('load', function () {
       for (var i = layers.length - 1; i >= 0; i--) bg = blend(layers[i], bg);
       return { bg: bg, complex: complex };
     };
-    var out = { contrast: [], overflow: Math.max(0, document.documentElement.scrollWidth - innerWidth), brokenImages: 0, missingAlt: 0, h1: document.querySelectorAll('h1').length, smallText: 0, tapTargets: 0 };
+    var out = { contrast: [], overflow: Math.max(0, document.documentElement.scrollWidth - innerWidth), brokenImages: 0, missingAlt: 0, h1: document.querySelectorAll('h1').length, smallText: 0, tapTargets: 0, squeezed: 0 };
     var all = document.querySelectorAll('body *');
     for (var i = 0; i < all.length; i++) {
       var el = all[i];
@@ -37,6 +37,8 @@ window.addEventListener('load', function () {
       var op = 1; for (var e = el; e; e = e.parentElement) op *= +getComputedStyle(e).opacity;
       if (op < .3) continue;
       if (parseFloat(cs.fontSize) < 12) out.smallText++;
+      // Text squeezed into a sliver (a few letters a line): a layout gave its box no room.
+      if (el.textContent.trim().length >= 8 && r.width < parseFloat(cs.fontSize) * 4 && r.height > parseFloat(cs.fontSize) * 4) out.squeezed++;
       var b = bgOf(el); if (b.complex) continue;
       var under = document.elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2);
       if (under.some(function (u) { return u.tagName === 'IMG' || u.tagName === 'PICTURE' || u.tagName === 'VIDEO'; })) continue;
