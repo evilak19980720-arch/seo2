@@ -16,3 +16,14 @@
 .fr-palace .footer{border-top:4px double var(--c-primary);text-align:center}
 .fr-palace .footer p{margin-left:auto;margin-right:auto}
 .fr-palace .footer__brand{text-transform:uppercase;letter-spacing:.12em}
+
+/* phones: everything centred, collections as a two-column gallery of square framed pieces */
+@media (max-width:759px){
+.fr-palace .section :is(.entry-list__items,.lobby__grid,.card-grid__items){grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:14px}
+.fr-palace .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{flex-direction:column!important;text-align:center}
+.fr-palace .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{aspect-ratio:1!important;flex:none!important;min-height:0!important}
+.fr-palace .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body{align-items:center;padding:.7rem .5rem .9rem!important}
+.fr-palace .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body p:not(.entry-card__meta){display:none}
+.fr-palace .section{padding-top:calc(3.5rem*var(--space));padding-bottom:calc(3.5rem*var(--space))}
+.fr-palace .hero h1{text-transform:uppercase;letter-spacing:.04em}
+}

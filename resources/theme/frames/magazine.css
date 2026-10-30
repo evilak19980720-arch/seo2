@@ -17,3 +17,14 @@
 .fr-magazine main>.section:not(.hero,.cta--banner,.download--banner,.stats-block--strip,[data-stage])>.container:has(>.section__head)>:not(.section__head){grid-column:2;min-width:0}
 }
 .fr-magazine .footer__brand{text-transform:uppercase;letter-spacing:.05em;font-size:1.6rem}
+
+/* phones: a reading list, each item a row with a small picture on the left, rows ruled apart */
+@media (max-width:759px){
+.fr-magazine .section :is(.entry-list__items,.lobby__grid,.card-grid__items){display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:0}
+.fr-magazine .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{flex-direction:row!important;align-items:center;gap:.9rem;background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;box-shadow:none;padding:.85rem 0}
+.fr-magazine .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{flex:0 0 96px!important;aspect-ratio:1!important;min-height:0!important;border-radius:6px}
+.fr-magazine .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__ph--named span{font-size:.72rem}
+.fr-magazine .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__tag{display:none}
+.fr-magazine .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body{padding:0!important}
+.fr-magazine .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body p:not(.entry-card__meta){-webkit-line-clamp:2!important}
+}

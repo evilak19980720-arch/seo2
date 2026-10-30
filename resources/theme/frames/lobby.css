@@ -24,3 +24,17 @@
 .fr-lobby .nav__actions .btn{width:100%}
 .fr-lobby .hero{margin:20px;border-radius:28px}
 }
+
+/* phones: an app-store lobby, three small rounded icons a row with the name under each */
+@media (max-width:759px){
+.fr-lobby .section :is(.entry-list__items,.lobby__grid,.card-grid__items){grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:14px 10px}
+.fr-lobby .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{flex-direction:column!important;background:transparent;border:0;box-shadow:none;overflow:visible}
+.fr-lobby .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{aspect-ratio:1!important;flex:none!important;min-height:0!important;border-radius:22%;box-shadow:0 8px 18px -10px rgba(0,0,0,.5)}
+.fr-lobby .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__ph--named span{font-size:.75rem}
+.fr-lobby .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__tag{display:none}
+.fr-lobby .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body{padding:.45rem 0 0!important;text-align:center}
+.fr-lobby .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body h3{font-size:.8rem!important}
+.fr-lobby .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body p{display:none}
+.fr-lobby .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body::after{display:none}
+.fr-lobby .section{padding-top:calc(2rem*var(--space));padding-bottom:calc(2rem*var(--space))}
+}

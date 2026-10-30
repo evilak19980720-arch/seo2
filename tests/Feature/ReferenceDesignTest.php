@@ -191,8 +191,10 @@ class ReferenceDesignTest extends TestCase
         $second = $site->fresh()->design_config;
 
         $this->assertSame(1, $second['look']['round']);
-        $changed = collect($first['look'])->except('round')->filter(fn ($v, $k) => ($second['look'][$k] ?? null) !== $v);
-        $this->assertSame(collect($first['look'])->except('round')->keys()->all(), $changed->keys()->all(), 'every choice changes');
+        // Choices the new page skeleton fixes (phone header, bottom bar…) may repeat; every free one changes.
+        $free = collect($first['look'])->except(['round', ...array_keys(config('theme.frames.'.($second['look']['frame'] ?? ''), []))]);
+        $changed = $free->filter(fn ($v, $k) => ($second['look'][$k] ?? null) !== $v);
+        $this->assertSame($free->keys()->all(), $changed->keys()->all(), 'every choice changes');
         $variants = fn ($c) => collect($c['pages'])->flatMap(fn ($blocks) => array_column($blocks, 'variant'))->all();
         $this->assertNotSame($variants($first), $variants($second), 'block variants are drawn again');
 

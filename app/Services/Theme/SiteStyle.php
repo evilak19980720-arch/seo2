@@ -110,12 +110,12 @@ class SiteStyle
                 // A frame is the site's scheme: the skin stays neutral and is not a choice of its own.
                 $key === 'skin' && $this->frame !== [] => 'classic',
                 $key === 'skin' && in_array($this->system['skin'] ?? null, $allowed, true) => $this->look['style.skin'] = $this->system['skin'],
-                default => $this->pick("style.{$key}", $allowed),
+                default => $this->pick("style.{$key}", $this->inFrame("style.{$key}", $allowed)),
             };
         }
         $config['navigation'] = (array) ($config['navigation'] ?? []);
         foreach (DesignConfigValidator::MOBILE as $key => $allowed) {
-            $config['navigation'][$key] = $this->pick("navigation.{$key}", $allowed);
+            $config['navigation'][$key] = $this->pick("navigation.{$key}", $this->inFrame("navigation.{$key}", $allowed));
         }
 
         // The page's sections stay as chosen. A block type looks the same on every page of the

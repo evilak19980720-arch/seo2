@@ -90,20 +90,31 @@ $systems = [
 // Page skeletons ("frames"): one per site, on top of its system. A frame reshapes the whole page
 // (header placement, hero scale, container width, how sections are laid out and separated, the
 // footer) through resources/theme/frames/{name}.css, and limits the header, hero and footer to
-// layouts that suit it. Its sites take the neutral skin: the frame is their scheme. "classic" is
-// no frame (the system's own skin).
+// layouts that suit it, and fixes the phone skeleton (hero order, facts strip, footer, heading alignment,
+// header and bottom bar) so phones differ by frame as much as desktops. Its sites take the neutral
+// skin: the frame is their scheme. "classic" is no frame (the system's own skin).
 $frames = [
     'classic' => [],
-    'cinema' => ['nav' => ['bar', 'glass', 'neon'], 'hero' => ['image-bg', 'vault', 'arena'], 'footer' => ['dark', 'gold', 'slab']],
-    'palace' => ['nav' => ['centered', 'split', 'gold'], 'hero' => ['centered', 'stacked', 'spotlight'], 'footer' => ['centered', 'badges', 'gold']],
-    'arena' => ['nav' => ['bar', 'neon', 'split'], 'hero' => ['split', 'casino', 'arena'], 'footer' => ['slab', 'neon', 'columns']],
-    'lobby' => ['nav' => ['bar', 'neon', 'glass'], 'hero' => ['split', 'reels', 'jackpot'], 'footer' => ['columns', 'simple']],
-    'magazine' => ['nav' => ['portal', 'lobby'], 'hero' => ['split', 'image-bg'], 'footer' => ['columns', 'simple']],
-    'showcase' => ['nav' => ['bar', 'glass'], 'hero' => ['stacked', 'split', 'spotlight'], 'footer' => ['centered', 'columns']],
-    'spotlight' => ['nav' => ['centered', 'bar', 'neon'], 'hero' => ['stacked', 'marquee', 'jackpot', 'spotlight'], 'footer' => ['neon', 'centered', 'dark']],
-    'panorama' => ['nav' => ['bar', 'glass', 'split'], 'hero' => ['image-bg', 'vault', 'arena'], 'footer' => ['dark', 'slab']],
-    'chapters' => ['nav' => ['bar', 'split', 'minimal'], 'hero' => ['split', 'centered'], 'footer' => ['columns', 'simple']],
-    'bento' => ['nav' => ['bar', 'glass'], 'hero' => ['split', 'casino', 'reels'], 'footer' => ['columns', 'badges']],
+    'cinema' => ['nav' => ['bar', 'glass', 'neon'], 'hero' => ['image-bg', 'vault', 'arena'], 'footer' => ['dark', 'gold', 'slab'],
+        'style.mhero' => ['text-top'], 'style.facts' => ['scroll'], 'style.mfooter' => ['center'], 'style.mheads' => ['left'], 'navigation.mobile_header' => ['standard'], 'navigation.mobile_bar_style' => ['flat', 'labels']],
+    'palace' => ['nav' => ['centered', 'split', 'gold'], 'hero' => ['centered', 'stacked', 'spotlight'], 'footer' => ['centered', 'badges', 'gold'],
+        'style.mhero' => ['card'], 'style.facts' => ['list'], 'style.mfooter' => ['center'], 'style.mheads' => ['center'], 'navigation.mobile_header' => ['center'], 'navigation.mobile_bar_style' => ['pill', 'raised']],
+    'arena' => ['nav' => ['bar', 'neon', 'split'], 'hero' => ['split', 'casino', 'arena'], 'footer' => ['slab', 'neon', 'columns'],
+        'style.mhero' => ['compact', 'text-top'], 'style.facts' => ['grid'], 'style.mfooter' => ['split'], 'style.mheads' => ['left'], 'navigation.mobile_header' => ['cta', 'standard'], 'navigation.mobile_bar_style' => ['cta', 'raised']],
+    'lobby' => ['nav' => ['bar', 'neon', 'glass'], 'hero' => ['split', 'reels', 'jackpot'], 'footer' => ['columns', 'simple'],
+        'style.mhero' => ['card'], 'style.facts' => ['scroll'], 'style.mfooter' => ['split'], 'style.mheads' => ['left'], 'navigation.mobile_header' => ['tabs', 'standard'], 'navigation.mobile_bar_style' => ['icons', 'raised']],
+    'magazine' => ['nav' => ['portal', 'lobby'], 'hero' => ['split', 'image-bg'], 'footer' => ['columns', 'simple'],
+        'style.mhero' => ['image-top'], 'style.facts' => ['list'], 'style.mfooter' => ['stack'], 'style.mheads' => ['left'], 'navigation.mobile_header' => ['standard', 'cta'], 'navigation.mobile_bar_style' => ['labels', 'flat']],
+    'showcase' => ['nav' => ['bar', 'glass'], 'hero' => ['stacked', 'split', 'spotlight'], 'footer' => ['centered', 'columns'],
+        'style.mhero' => ['card'], 'style.facts' => ['scroll'], 'style.mfooter' => ['center'], 'style.mheads' => ['center'], 'navigation.mobile_header' => ['center', 'standard'], 'navigation.mobile_bar_style' => ['pill']],
+    'spotlight' => ['nav' => ['centered', 'bar', 'neon'], 'hero' => ['stacked', 'marquee', 'jackpot', 'spotlight'], 'footer' => ['neon', 'centered', 'dark'],
+        'style.mhero' => ['text-top'], 'style.facts' => ['scroll', 'hidden'], 'style.mfooter' => ['center'], 'style.mheads' => ['center'], 'navigation.mobile_header' => ['center'], 'navigation.mobile_bar_style' => ['pill', 'icons']],
+    'panorama' => ['nav' => ['bar', 'glass', 'split'], 'hero' => ['image-bg', 'vault', 'arena'], 'footer' => ['dark', 'slab'],
+        'style.mhero' => ['image-top'], 'style.facts' => ['hidden', 'list'], 'style.mfooter' => ['stack'], 'style.mheads' => ['center'], 'navigation.mobile_header' => ['standard'], 'navigation.mobile_bar_style' => ['raised', 'flat']],
+    'chapters' => ['nav' => ['bar', 'split', 'minimal'], 'hero' => ['split', 'centered'], 'footer' => ['columns', 'simple'],
+        'style.mhero' => ['compact'], 'style.facts' => ['list'], 'style.mfooter' => ['stack'], 'style.mheads' => ['left'], 'navigation.mobile_header' => ['standard', 'cta'], 'navigation.mobile_bar_style' => ['labels']],
+    'bento' => ['nav' => ['bar', 'glass'], 'hero' => ['split', 'casino', 'reels'], 'footer' => ['columns', 'badges'],
+        'style.mhero' => ['card'], 'style.facts' => ['grid'], 'style.mfooter' => ['split'], 'style.mheads' => ['left'], 'navigation.mobile_header' => ['standard', 'cta'], 'navigation.mobile_bar_style' => ['raised', 'icons']],
 ];
 
 return [

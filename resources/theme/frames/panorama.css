@@ -13,3 +13,12 @@
 .fr-panorama main+.footer{padding-top:calc(4rem*var(--space) + var(--sheet))}
 .fr-panorama main>.section:last-child{padding-bottom:calc(5rem*var(--space) + var(--sheet))}
 .fr-panorama .section__head h2{font-size:clamp(1.6rem,4.4vw,3rem)}
+
+/* phones: wide landscape cards in a swipeable rail, a big picture hero */
+@media (max-width:759px){
+.fr-panorama .hero--image-bg{min-height:72svh;align-items:flex-end}
+.fr-panorama .section :is(.entry-list__items,.lobby__grid,.card-grid__items){display:flex!important;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;margin:0 -20px;padding:0 20px .75rem;scroll-padding:0 20px;scrollbar-width:none}
+.fr-panorama .section :is(.entry-list__items,.lobby__grid,.card-grid__items)>*{flex:0 0 84%;scroll-snap-align:start;max-width:none}
+.fr-panorama .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{flex-direction:column!important}
+.fr-panorama .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{aspect-ratio:16/9!important;flex:none!important;min-height:0!important}
+}

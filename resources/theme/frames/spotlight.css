@@ -11,3 +11,15 @@
 .fr-spotlight :is(.tile,.post-card,.feature,.faq details,.faq__item,.card){background:color-mix(in srgb,var(--c-on-secondary) 6%,transparent)!important;border:1px solid color-mix(in srgb,var(--c-primary) 35%,transparent)!important;box-shadow:0 0 30px -12px color-mix(in srgb,var(--c-primary) 60%,transparent)!important}
 .fr-spotlight .btn:not(.btn--ghost){box-shadow:0 0 28px -4px color-mix(in srgb,var(--c-primary) 85%,transparent)}
 .fr-spotlight .footer{background:color-mix(in srgb,#000 30%,var(--c-secondary));border-top:1px solid color-mix(in srgb,var(--c-primary) 40%,transparent)}
+
+/* phones: a centred stage, collections as a rail of square glowing cards */
+@media (max-width:759px){
+.fr-spotlight .hero__text,.fr-spotlight .section__head{text-align:center!important;margin-left:auto!important;margin-right:auto!important}
+.fr-spotlight .hero :is(.hero__actions,.hero__points){justify-content:center!important}
+.fr-spotlight .section__head h2::after{margin-left:auto!important;margin-right:auto!important}
+.fr-spotlight .section :is(.entry-list__items,.lobby__grid,.card-grid__items){display:flex!important;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;margin:0 -20px;padding:0 20px .75rem;scroll-padding:0 20px;scrollbar-width:none}
+.fr-spotlight .section :is(.entry-list__items,.lobby__grid,.card-grid__items)>*{flex:0 0 58%;scroll-snap-align:center;max-width:none}
+.fr-spotlight .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{aspect-ratio:1}
+.fr-spotlight .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body{text-align:center}
+.fr-spotlight .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body p:not(.entry-card__meta){display:none}
+}

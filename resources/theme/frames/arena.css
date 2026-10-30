@@ -13,3 +13,13 @@
 .fr-arena .btn:not(.btn--ghost){border-radius:0;clip-path:polygon(12px 0,100% 0,calc(100% - 12px) 100%,0 100%);padding-left:2rem;padding-right:2rem;text-transform:uppercase;letter-spacing:.04em;box-shadow:none}
 .fr-arena :is(.tile,.post-card){border-radius:0;clip-path:polygon(0 0,calc(100% - 20px) 0,100% 20px,100% 100%,0 100%)}
 .fr-arena .footer{border-top:6px solid var(--c-primary)}
+
+/* phones: a punchy two-column grid of cut-corner cards with the name only */
+@media (max-width:759px){
+.fr-arena .section :is(.entry-list__items,.lobby__grid,.card-grid__items){grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px}
+.fr-arena .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{flex-direction:column!important}
+.fr-arena .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{aspect-ratio:4/5!important;flex:none!important;min-height:0!important}
+.fr-arena .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body p:not(.entry-card__meta){display:none}
+.fr-arena .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body h3{text-transform:uppercase;font-style:italic}
+.fr-arena main>.section:nth-of-type(3n+2){clip-path:polygon(0 1.2rem,100% 0,100% calc(100% - 1.2rem),0 100%)}
+}

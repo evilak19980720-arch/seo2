@@ -11,3 +11,16 @@
 .fr-showcase main>.hero:first-child{border-radius:0}
 .fr-showcase .footer{max-width:1320px;margin:0 auto 24px;border-radius:36px}
 }
+
+/* phones: sections float as rounded cards on the backdrop; lists lead with one large piece, then two a row */
+@media (max-width:759px){
+.fr-showcase main{background:transparent}
+.fr-showcase main>.section:not(.hero){margin:10px;border-radius:26px;background:var(--c-bg)!important;padding-top:calc(2.5rem*var(--space));padding-bottom:calc(2.5rem*var(--space))}
+.fr-showcase main>.section[data-stage]:not(.hero){background:var(--c-secondary)!important}
+.fr-showcase .section :is(.entry-list__items,.lobby__grid,.card-grid__items){grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px}
+.fr-showcase .section :is(.entry-list__items,.lobby__grid,.card-grid__items)>:first-child{grid-column:1/-1}
+.fr-showcase .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{flex-direction:column!important}
+.fr-showcase .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{flex:none!important;min-height:0!important}
+.fr-showcase .section :is(.entry-list__items,.lobby__grid,.card-grid__items)>:not(:first-child) .tile__body p:not(.entry-card__meta){display:none}
+.fr-showcase .section :is(.entry-list__items,.lobby__grid,.card-grid__items)>:first-child .tile__media{aspect-ratio:16/10}
+}

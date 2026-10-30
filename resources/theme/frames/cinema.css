@@ -20,3 +20,14 @@
 .fr-cinema .tile:hover .tile__media img{transform:scale(1.06)}
 .fr-cinema .footer__brand{font-size:clamp(1.6rem,4.5vw,2.8rem);text-transform:uppercase;letter-spacing:-.02em}
 .fr-cinema .btn--lg{min-height:60px;padding:0 2.4rem;text-transform:uppercase;letter-spacing:.06em}
+
+/* phones: a near full-screen poster hero with the title low on the picture, lists as a swipeable rail of tall posters */
+@media (max-width:759px){
+.fr-cinema .hero--image-bg{min-height:86svh;align-items:flex-end;padding-bottom:2.5rem}
+.fr-cinema .hero--image-bg .hero__media::after{background:linear-gradient(0deg,var(--c-secondary) 12%,color-mix(in srgb,var(--c-secondary) 45%,transparent) 55%,transparent)}
+.fr-cinema .hero h1{font-size:clamp(2.2rem,11vw,3.2rem)!important}
+.fr-cinema .section :is(.entry-list__items,.lobby__grid,.card-grid__items){display:flex!important;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;margin:0 -20px;padding:0 20px .75rem;scroll-padding:0 20px;scrollbar-width:none}
+.fr-cinema .section :is(.entry-list__items,.lobby__grid,.card-grid__items)>*{flex:0 0 68%;scroll-snap-align:start;max-width:none}
+.fr-cinema .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{aspect-ratio:3/4}
+.fr-cinema .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body p:not(.entry-card__meta){display:none}
+}

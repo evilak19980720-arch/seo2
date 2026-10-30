@@ -16,3 +16,13 @@
 .fr-bento main>:is(.faq,.cta,.steps,.checklist,.quote,.callout,.download,.prose-block,.timeline,.glossary,.specs,.stats-block,.notice){flex:1 1 40%}
 .fr-bento main>.section .container{padding-left:clamp(20px,3vw,48px);padding-right:clamp(20px,3vw,48px)}
 }
+
+/* phones: bento grid inside each tile, the first item twice the size */
+@media (max-width:759px){
+.fr-bento .section :is(.entry-list__items,.lobby__grid,.card-grid__items){grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px}
+.fr-bento .section :is(.entry-list__items,.lobby__grid,.card-grid__items)>:first-child{grid-column:1/-1}
+.fr-bento .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{flex-direction:column!important;border-radius:18px}
+.fr-bento .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{flex:none!important;min-height:0!important;aspect-ratio:1}
+.fr-bento .section :is(.entry-list__items,.lobby__grid,.card-grid__items)>:first-child .tile__media{aspect-ratio:2/1}
+.fr-bento .section :is(.entry-list__items,.lobby__grid,.card-grid__items)>:not(:first-child) .tile__body p:not(.entry-card__meta){display:none}
+}

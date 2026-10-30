@@ -45,11 +45,11 @@ class SiteStyleTest extends TestCase
         $first = SiteStyle::for(1)->apply(self::SAME_ANSWER);
         $second = SiteStyle::for(2, [$first])->apply(self::SAME_ANSWER);
 
-        foreach ($first['look'] as $key => $value) {
+        // Choices a page skeleton fixes may repeat across skeletons; every free one differs.
+        $fixed = array_keys(config('theme.frames.'.$second['look']['frame'], []));
+        foreach (array_diff_key($first['look'], array_flip($fixed)) as $key => $value) {
             $this->assertNotSame($value, $second['look'][$key], "{$key}: two sites never share a choice while others are free");
         }
-        $this->assertNotSame($first['navigation']['mobile_header'], $second['navigation']['mobile_header']);
-        $this->assertNotSame($first['style']['mhero'], $second['style']['mhero']);
 
         // Generated again (other sites changed since): the site keeps its look.
         $again = SiteStyle::for(2, [$first, $second, $second], $second['look'])->apply(self::SAME_ANSWER);
@@ -75,6 +75,11 @@ class SiteStyleTest extends TestCase
             $this->assertSame('classic', $config['style']['skin'], 'the frame is the scheme');
             $this->assertContains($config['nav'], $frame['nav']);
             $this->assertContains($config['footer'], $frame['footer']);
+            foreach ($frame as $key => $allowed) {
+                if (str_contains($key, '.')) {
+                    $this->assertContains(data_get($config, $key), $allowed, "{$key}: the phone skeleton follows the frame");
+                }
+            }
             $this->assertStringContainsString(".fr-{$config['look']['frame']}", Variants::frameCss($config));
         }
 
