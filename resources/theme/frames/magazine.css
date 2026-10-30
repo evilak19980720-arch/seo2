@@ -1,0 +1,19 @@
+/* frame magazine: a masthead header, a cover-style hero, and on wide screens every section as a two-column spread with its heading held in a sticky side column */
+.fr-magazine .nav__brand{font-size:clamp(1.3rem,3vw,1.8rem);text-transform:uppercase;letter-spacing:.05em}
+.fr-magazine .hero h1{font-size:clamp(2.2rem,6.5vw,4.8rem);letter-spacing:-.035em;line-height:1}
+.fr-magazine main{counter-reset:mag}
+.fr-magazine main>.section:not(.hero,.cta--banner,.download--banner,.stats-block--strip,[data-stage]){background:transparent!important;border-top:2px solid var(--c-text)}
+.fr-magazine main>.section:not(.hero,.cta--banner,.download--banner,.stats-block--strip,[data-stage])+.section:not(.hero,.cta--banner,.download--banner,.stats-block--strip,[data-stage]){border-top-width:1px}
+.fr-magazine .section__head,.st-mheads-center.fr-magazine .section__head{text-align:left;margin-left:0;max-width:none}
+.fr-magazine .section__head h2{font-size:clamp(1.7rem,4.4vw,3rem);letter-spacing:-.03em}
+.fr-magazine .section__head h2::before{counter-increment:mag;content:"N\00BA " counter(mag,decimal-leading-zero);display:block;font-size:.8rem;letter-spacing:.18em;color:var(--c-primary);margin-bottom:.6rem}
+.fr-magazine .section__head h2::after{margin-left:0;width:100%;max-width:120px;height:2px;border-radius:0;background:var(--c-text)}
+.fr-magazine .section__head p{margin-left:0}
+.fr-magazine :is(.tile,.post-card){border-radius:4px}
+@media (min-width:1024px){
+.fr-magazine main>.section:not(.hero,.cta--banner,.download--banner,.stats-block--strip,[data-stage])>.container:has(>.section__head){display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr);gap:0 3.5rem;align-items:start}
+.fr-magazine main>.section:not(.hero,.cta--banner,.download--banner,.stats-block--strip,[data-stage])>.container>.section__head{position:sticky;top:120px;margin:0}
+.fr-magazine main>.section:not(.hero,.cta--banner,.download--banner,.stats-block--strip,[data-stage])>.container>.section__head h2{font-size:clamp(1.5rem,2.3vw,2.2rem);overflow-wrap:normal;word-break:normal;hyphens:auto}
+.fr-magazine main>.section:not(.hero,.cta--banner,.download--banner,.stats-block--strip,[data-stage])>.container:has(>.section__head)>:not(.section__head){grid-column:2;min-width:0}
+}
+.fr-magazine .footer__brand{text-transform:uppercase;letter-spacing:.05em;font-size:1.6rem}

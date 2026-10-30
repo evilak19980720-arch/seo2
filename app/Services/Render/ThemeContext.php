@@ -12,6 +12,7 @@ use App\Services\Sites\ReferenceLibrary;
 use App\Services\Sites\SiteStructure;
 use App\Services\Theme\DefaultDesign;
 use App\Services\Theme\DesignConfigValidator;
+use App\Services\Theme\Variants;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Lang;
@@ -148,7 +149,10 @@ class ThemeContext
     /** Body classes for the design's global style switches. */
     public function bodyClass(): string
     {
-        return collect($this->design['style'] ?? [])->map(fn ($value, $key) => "st-{$key}-{$value}")->implode(' ');
+        $frame = Variants::frame($this->design);
+
+        return collect($this->design['style'] ?? [])->map(fn ($value, $key) => "st-{$key}-{$value}")
+            ->when($frame, fn ($c) => $c->push("fr-{$frame}"))->when($this->currentPath === '', fn ($c) => $c->push('pg-home'))->implode(' ');
     }
 
     public function blocks(string $pageType): array

@@ -87,8 +87,28 @@ $systems = [
     'panels' => ['skin' => 'panels', 'families' => ['panels', 'badges', 'arrows', 'rings', 'framed', 'bordered', 'pill', 'arena', 'slab', 'ladder', 'pills']],
 ];
 
+// Page skeletons ("frames"): one per site, on top of its system. A frame reshapes the whole page
+// (header placement, hero scale, container width, how sections are laid out and separated, the
+// footer) through resources/theme/frames/{name}.css, and limits the header, hero and footer to
+// layouts that suit it. Its sites take the neutral skin: the frame is their scheme. "classic" is
+// no frame (the system's own skin).
+$frames = [
+    'classic' => [],
+    'cinema' => ['nav' => ['bar', 'glass', 'neon'], 'hero' => ['image-bg', 'vault', 'arena'], 'footer' => ['dark', 'gold', 'slab']],
+    'palace' => ['nav' => ['centered', 'split', 'gold'], 'hero' => ['centered', 'stacked', 'spotlight'], 'footer' => ['centered', 'badges', 'gold']],
+    'arena' => ['nav' => ['bar', 'neon', 'split'], 'hero' => ['split', 'casino', 'arena'], 'footer' => ['slab', 'neon', 'columns']],
+    'lobby' => ['nav' => ['bar', 'neon', 'glass'], 'hero' => ['split', 'reels', 'jackpot'], 'footer' => ['columns', 'simple']],
+    'magazine' => ['nav' => ['portal', 'lobby'], 'hero' => ['split', 'image-bg'], 'footer' => ['columns', 'simple']],
+    'showcase' => ['nav' => ['bar', 'glass'], 'hero' => ['stacked', 'split', 'spotlight'], 'footer' => ['centered', 'columns']],
+    'spotlight' => ['nav' => ['centered', 'bar', 'neon'], 'hero' => ['stacked', 'marquee', 'jackpot', 'spotlight'], 'footer' => ['neon', 'centered', 'dark']],
+    'panorama' => ['nav' => ['bar', 'glass', 'split'], 'hero' => ['image-bg', 'vault', 'arena'], 'footer' => ['dark', 'slab']],
+    'chapters' => ['nav' => ['bar', 'split', 'minimal'], 'hero' => ['split', 'centered'], 'footer' => ['columns', 'simple']],
+    'bento' => ['nav' => ['bar', 'glass'], 'hero' => ['split', 'casino', 'reels'], 'footer' => ['columns', 'badges']],
+];
+
 return [
     'systems' => $systems,
+    'frames' => $frames,
 
     // A page shows at most this many blocks on the dark "stage" colour.
     'max_stage_blocks' => 1,

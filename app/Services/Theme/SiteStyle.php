@@ -92,16 +92,26 @@ class SiteStyle
         // One visual system per site: it fixes the skin and the variant families of every block.
         $system = $this->pick('system', array_keys($theme['systems'] ?? ['clean' => []]));
         $this->system = (array) ($theme['systems'][$system] ?? []);
+        // The page skeleton: it narrows the header, hero and footer to the layouts it is drawn for. A look kept from
+        // before frames existed stays frameless, so redesigning a page never reshapes the site.
+        if ($this->look !== [] && ! isset($this->look['frame']) && isset($this->look['nav'])) {
+            $this->look['frame'] = 'classic';
+        }
+        $this->frame = (array) ($theme['frames'][$this->pick('frame', array_keys($theme['frames'] ?? ['classic' => []]))] ?? []);
         // "minimal" has no header buttons: only for sites that show none.
         $buttons = (int) ($config['navigation']['buttons'] ?? 1) > 0;
-        $config['nav'] = $this->pick('nav', $this->inSystem('nav', array_filter($theme['blocks']['nav'], fn ($v) => ! $buttons || Variants::base('nav', $v) !== 'minimal')));
-        $config['footer'] = $this->pick('footer', $this->inSystem('footer', $theme['blocks']['footer']));
+        $navs = array_values(array_filter($theme['blocks']['nav'], fn ($v) => ! $buttons || Variants::base('nav', $v) !== 'minimal'));
+        $config['nav'] = $this->pick('nav', $this->inFrame('nav', $this->inSystem('nav', $navs), $navs));
+        $config['footer'] = $this->pick('footer', $this->inFrame('footer', $this->inSystem('footer', $theme['blocks']['footer']), $theme['blocks']['footer']));
         $config['radius'] = $this->pick('radius', array_keys($theme['radius']));
         $config['shadow'] = $this->pick('shadow', array_keys($theme['shadow']));
         foreach ($theme['styles'] as $key => $allowed) {
-            $config['style'][$key] = $key === 'skin' && in_array($this->system['skin'] ?? null, $allowed, true)
-                ? ($this->look['style.skin'] = $this->system['skin'])
-                : $this->pick("style.{$key}", $allowed);
+            $config['style'][$key] = match (true) {
+                // A frame is the site's scheme: the skin stays neutral and is not a choice of its own.
+                $key === 'skin' && $this->frame !== [] => 'classic',
+                $key === 'skin' && in_array($this->system['skin'] ?? null, $allowed, true) => $this->look['style.skin'] = $this->system['skin'],
+                default => $this->pick("style.{$key}", $allowed),
+            };
         }
         $config['navigation'] = (array) ($config['navigation'] ?? []);
         foreach (DesignConfigValidator::MOBILE as $key => $allowed) {
@@ -117,7 +127,7 @@ class SiteStyle
             foreach ((array) $blocks as $i => $entry) {
                 $block = is_array($entry) ? ($entry['block'] ?? null) : $entry;
                 if (is_string($block) && ($allowed = $theme['blocks'][$block] ?? null)) {
-                    $variant = $this->pickVariant("block.{$block}", $this->inSystem($block, $allowed));
+                    $variant = $this->pickVariant("block.{$block}", $this->inFrame($block, $this->inSystem($block, $allowed), $allowed));
                     if (! empty(Variants::definition($block, $variant)['stage']) && ++$stage > $maxStage) {
                         $variant = Variants::base($block, $variant);
                     }
@@ -125,13 +135,24 @@ class SiteStyle
                 }
             }
         }
-        $config['look'] = $this->look;
+        $config['look'] = $this->frame !== [] ? array_diff_key($this->look, ['style.skin' => 1]) : $this->look;
 
         return $config;
     }
 
     /** @var array{skin?: string, families?: array<int, string>} the site's visual system */
     protected array $system = [];
+
+    /** @var array<string, array<int, string>> the site's page skeleton: block => layouts it allows */
+    protected array $frame = [];
+
+    /** The layouts the frame allows among the system's ($own), else among all the block may take ($all), else $own. */
+    protected function inFrame(string $block, array $own, ?array $all = null): array
+    {
+        $frame = $this->frame[$block] ?? [];
+
+        return array_values(array_intersect($own, $frame)) ?: array_values(array_intersect($all ?? $own, $frame)) ?: array_values($own);
+    }
 
     /**
      * The variants of a block that belong to the site's system: its family
@@ -153,8 +174,10 @@ class SiteStyle
     {
         $style = new self('');
         $style->system = (array) config('theme.systems.'.($config['look']['system'] ?? ''), []);
+        $style->frame = (array) config('theme.frames.'.($config['look']['frame'] ?? ''), []);
+        $all = config("theme.blocks.{$block}", []);
 
-        return $style->inSystem($block, config("theme.blocks.{$block}", []));
+        return $style->inFrame($block, $style->inSystem($block, $all), $all);
     }
 
     /** Block variants: seeded only (too many to track across sites, and never kept as identity). */

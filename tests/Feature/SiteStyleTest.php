@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Services\Theme\SiteStyle;
+use App\Services\Theme\Variants;
 use Tests\TestCase;
 
 class SiteStyleTest extends TestCase
@@ -54,5 +55,32 @@ class SiteStyleTest extends TestCase
         $again = SiteStyle::for(2, [$first, $second, $second], $second['look'])->apply(self::SAME_ANSWER);
         $this->assertSame($second['look'], $again['look']);
         $this->assertSame($second['nav'], $again['nav']);
+    }
+
+    public function test_each_site_gets_a_page_skeleton_that_shapes_its_header_hero_and_footer(): void
+    {
+        $frames = config('theme.frames');
+        $sites = [];
+        foreach (range(1, count($frames)) as $id) {
+            $sites[] = SiteStyle::for($id, $sites)->apply(self::SAME_ANSWER);
+        }
+        $this->assertEqualsCanonicalizing(array_keys($frames), array_column(array_column($sites, 'look'), 'frame'), 'every skeleton is used before one repeats');
+
+        foreach ($sites as $config) {
+            $frame = $frames[$config['look']['frame']];
+            if ($frame === []) {
+                continue;
+            }
+            $this->assertFileExists(resource_path("theme/frames/{$config['look']['frame']}.css"));
+            $this->assertSame('classic', $config['style']['skin'], 'the frame is the scheme');
+            $this->assertContains($config['nav'], $frame['nav']);
+            $this->assertContains($config['footer'], $frame['footer']);
+            $this->assertStringContainsString(".fr-{$config['look']['frame']}", Variants::frameCss($config));
+        }
+
+        // A look kept from before skeletons existed stays frameless on a page redesign.
+        $old = SiteStyle::for(1)->apply(self::SAME_ANSWER)['look'];
+        unset($old['frame']);
+        $this->assertSame('classic', SiteStyle::for(1, [], $old)->apply(self::SAME_ANSWER)['look']['frame']);
     }
 }

@@ -59,7 +59,7 @@ class RichTemplateTest extends TestCase
         $this->assertFileExists("{$dir}/eventos/index.html");
         $this->assertFileExists("{$dir}/ranking/index.html");
         $home = file_get_contents("{$dir}/index.html");
-        $this->assertStringContainsString('class="'.collect($style['style'])->map(fn ($v, $k) => "st-{$k}-{$v}")->implode(' ').'"', $home);
+        $this->assertStringContainsString('class="'.collect($style['style'])->map(fn ($v, $k) => "st-{$k}-{$v}")->implode(' ').(($frame = Variants::frame($site->design_config)) ? " fr-{$frame}" : '').' pg-home', $home);
         $variantClass = fn ($block, $prefix, $variant) => $prefix.' '.$prefix.'--'.Variants::base($block, $variant);
         $this->assertStringContainsString($variantClass('nav', 'nav', $site->design_config['nav']), $home);
         $this->assertStringContainsString('notice--'.collect($site->design_config['pages']['home'])->firstWhere('block', 'notice')['variant'], $home);

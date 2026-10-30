@@ -1,0 +1,18 @@
+/* frame bento: every section is its own rounded tile on the page; on wide screens short sections pair up two to a row, long lists keep the full width */
+.fr-bento main{display:flex;flex-direction:column;gap:12px;padding:12px}
+.fr-bento main>*{min-width:0}
+.fr-bento main>.section{border-radius:24px;background:var(--c-surface)!important;padding:calc(3rem*var(--space)) 0}
+.fr-bento main>.section[data-stage]{background:var(--c-secondary)!important}
+.fr-bento main>.hero{padding:calc(3.5rem*var(--space)) 0}
+.fr-bento .stats{margin-top:0}
+.fr-bento .section__head,.st-mheads-center.fr-bento .section__head{text-align:left;margin-left:0;max-width:none}
+.fr-bento .section__head h2::after{margin-left:0}
+.fr-bento .section__head p{margin-left:0}
+.fr-bento :is(.tile,.post-card,.feature,.card){background:var(--c-bg)}
+@media (min-width:1024px){
+.fr-bento main{flex-flow:row wrap;gap:20px;padding:20px;max-width:1440px;margin:0 auto}
+.fr-bento main>*{flex:1 1 100%}
+.fr-bento main>.section{border-radius:32px}
+.fr-bento main>:is(.faq,.cta,.steps,.checklist,.quote,.callout,.download,.prose-block,.timeline,.glossary,.specs,.stats-block,.notice){flex:1 1 40%}
+.fr-bento main>.section .container{padding-left:clamp(20px,3vw,48px);padding-right:clamp(20px,3vw,48px)}
+}

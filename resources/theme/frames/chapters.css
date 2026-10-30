@@ -1,0 +1,12 @@
+/* frame chapters: a calm reading layout; every section is a numbered chapter, and on wide screens the numbers sit on one vertical rail down the page */
+.fr-chapters main{counter-reset:ch}
+.fr-chapters main>.section:not(.hero,.cta--banner,.download--banner,.stats-block--strip,[data-stage]){background:transparent!important}
+.fr-chapters .section__head,.st-mheads-center.fr-chapters .section__head{position:relative;text-align:left;margin-left:0;max-width:820px}
+.fr-chapters .section__head::before{counter-increment:ch;content:counter(ch,decimal-leading-zero);display:inline-grid;place-items:center;min-width:44px;height:44px;padding:0 .4rem;margin-bottom:.9rem;border-radius:999px;background:var(--c-primary);color:var(--c-on-primary);font:800 .9rem/1 var(--f-heading);letter-spacing:.06em}
+.fr-chapters .section__head h2::after{margin-left:0}
+.fr-chapters .section__head p{margin-left:0}
+@media (min-width:1024px){
+.fr-chapters main>.section:not(.hero,.cta--banner,.download--banner,.stats-block--strip,[data-stage])>.container{position:relative;padding-left:110px}
+.fr-chapters main>.section:not(.hero,.cta--banner,.download--banner,.stats-block--strip,[data-stage])>.container::before{content:"";position:absolute;left:41px;top:calc(-5rem*var(--space));bottom:calc(-5rem*var(--space));width:2px;background:linear-gradient(var(--line),var(--line))}
+.fr-chapters .section__head::before{position:absolute;left:-90px;top:0;margin:0;box-shadow:0 0 0 8px var(--c-bg)}
+}

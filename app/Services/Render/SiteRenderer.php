@@ -588,7 +588,7 @@ class SiteRenderer
         if ($this->baseCss !== null) {
             return $this->baseCss;
         }
-        $css = (string) file_get_contents(resource_path('theme/base.css')).Variants::css($this->ctx->design);
+        $css = (string) file_get_contents(resource_path('theme/base.css')).Variants::css($this->ctx->design).Variants::frameCss($this->ctx->design);
 
         return $this->baseCss = $this->scrambler()?->css($css) ?? $css;
     }

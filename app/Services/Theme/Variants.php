@@ -75,9 +75,23 @@ class Variants
         return $css;
     }
 
-    /** Every variant stylesheet (for the class-name vocabulary and checks). */
+    /** The design's page skeleton (config theme.frames), null for none. */
+    public static function frame(array $design): ?string
+    {
+        $frame = $design['look']['frame'] ?? null;
+
+        return is_string($frame) && config("theme.frames.{$frame}") && is_file(resource_path("theme/frames/{$frame}.css")) ? $frame : null;
+    }
+
+    /** CSS of the design's page skeleton. */
+    public static function frameCss(array $design): string
+    {
+        return ($frame = self::frame($design)) ? "\n".file_get_contents(resource_path("theme/frames/{$frame}.css")) : '';
+    }
+
+    /** Every variant and frame stylesheet (for the class-name vocabulary and checks). */
     public static function allCss(): string
     {
-        return implode("\n", array_map('file_get_contents', glob(resource_path('theme/variants/*.css')) ?: []));
+        return implode("\n", array_map('file_get_contents', array_merge(glob(resource_path('theme/variants/*.css')) ?: [], glob(resource_path('theme/frames/*.css')) ?: [])));
     }
 }
