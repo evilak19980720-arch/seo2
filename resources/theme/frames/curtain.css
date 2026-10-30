@@ -1,0 +1,21 @@
+/* frame curtain: a theatre stage, valance over the hero, curtain shading down both sides of every section, spotlit centred headings */
+@media (min-width:1024px){.fr-curtain .container{max-width:1080px}}
+.fr-curtain .hero{text-align:center}
+.fr-curtain .hero__lead{margin-left:auto;margin-right:auto}
+.fr-curtain .hero :is(.hero__actions,.hero__points){justify-content:center}
+.fr-curtain .hero::before{content:"";position:absolute;left:0;right:0;top:0;height:26px;z-index:2;pointer-events:none;background:radial-gradient(circle at 50% 0,var(--c-primary) 15px,transparent 16px) 0 0/40px 26px repeat-x,linear-gradient(var(--c-primary),var(--c-primary)) 0 0/100% 8px no-repeat}
+.fr-curtain .hero::after{content:"";position:absolute;left:10%;right:10%;bottom:-60px;height:120px;pointer-events:none;background:radial-gradient(closest-side,color-mix(in srgb,var(--c-primary) 30%,transparent),transparent)}
+.fr-curtain main>.section{box-shadow:inset clamp(18px,5vw,90px) 0 clamp(30px,6vw,110px) calc(-1*clamp(10px,3vw,50px)) color-mix(in srgb,var(--c-primary) 30%,var(--c-secondary)),inset calc(-1*clamp(18px,5vw,90px)) 0 clamp(30px,6vw,110px) calc(-1*clamp(10px,3vw,50px)) color-mix(in srgb,var(--c-primary) 30%,var(--c-secondary))}
+.fr-curtain .section__head,.st-mheads-left.fr-curtain .section__head{text-align:center;margin-left:auto;margin-right:auto;position:relative}
+.fr-curtain .section__head::before{content:"";position:absolute;left:50%;top:-3.5rem;width:min(520px,90vw);height:12rem;transform:translateX(-50%);pointer-events:none;background:radial-gradient(50% 60% at 50% 0,color-mix(in srgb,var(--c-primary) 22%,transparent),transparent);z-index:-1}
+.fr-curtain .section__head h2::after{margin-left:auto;margin-right:auto}
+.fr-curtain .section__head p{margin-left:auto;margin-right:auto}
+@media (max-width:759px){
+.fr-curtain .section :is(.entry-list__items,.lobby__grid,.card-grid__items){display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:12px}
+.fr-curtain .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{flex-direction:column!important}
+.fr-curtain .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{aspect-ratio:16/9!important;flex:none!important;min-height:0!important}
+.fr-curtain .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{position:relative}
+.fr-curtain .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body{position:absolute;left:0;right:0;bottom:0;padding:2.4rem .8rem .75rem!important;background:linear-gradient(transparent,rgba(0,0,0,.85));color:#fff}
+.fr-curtain .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body :is(h3,a,p){color:#fff!important}
+.fr-curtain .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body p:not(.entry-card__meta){display:none}
+}

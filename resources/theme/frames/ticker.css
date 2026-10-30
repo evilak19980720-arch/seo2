@@ -1,0 +1,17 @@
+/* frame ticker: section titles on dark LED scoreboards, a marquee-striped hero edge, compact swipeable game strips */
+.fr-ticker .hero{border-bottom:10px solid transparent;border-image:repeating-linear-gradient(90deg,var(--c-primary) 0 22px,var(--c-accent) 22px 44px) 10}
+.fr-ticker .section__head,.st-mheads-center.fr-ticker .section__head{text-align:left;margin-left:0;max-width:none}
+.fr-ticker .section__head h2{display:inline-block;padding:.55rem 1.2rem;border-radius:10px;border:2px solid color-mix(in srgb,var(--c-primary) 55%,#000);background:radial-gradient(circle,rgba(255,255,255,.09) 1px,transparent 1.6px) 0 0/6px 6px,#0b0b12!important;-webkit-background-clip:border-box!important;background-clip:border-box!important;color:color-mix(in srgb,var(--c-primary) 55%,#fff)!important;text-shadow:0 0 12px color-mix(in srgb,var(--c-primary) 70%,transparent)!important;text-transform:uppercase;letter-spacing:.06em;font-size:clamp(1.1rem,2.8vw,1.7rem)}
+.fr-ticker .section__head h2::after,.fr-ticker .section__head h2::before{display:none}
+.fr-ticker .section__head p{margin-left:0}
+@media (max-width:759px){
+.fr-ticker .section :is(.entry-list__items,.lobby__grid,.card-grid__items){display:flex!important;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;margin:0 -20px;padding:0 20px .75rem;scroll-padding:0 20px;scrollbar-width:none}
+.fr-ticker .section :is(.entry-list__items,.lobby__grid,.card-grid__items)>*{flex:0 0 78%;scroll-snap-align:start;max-width:none}
+.fr-ticker .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{flex-direction:row!important;align-items:center;gap:.7rem;padding:.55rem}
+.fr-ticker .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{flex:0 0 68px!important;aspect-ratio:1!important;min-height:0!important;border-radius:12px}
+.fr-ticker .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__ph--named span{font-size:.62rem}
+.fr-ticker .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__tag{display:none}
+.fr-ticker .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body{padding:0!important}
+.fr-ticker .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body p:not(.entry-card__meta){display:none}
+}
+@media (max-width:759px){.fr-ticker .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body{position:static!important;background:none!important;color:var(--c-text)}.fr-ticker .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body h3 :is(a,span){color:var(--c-text)!important}}

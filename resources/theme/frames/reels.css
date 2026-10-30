@@ -1,0 +1,17 @@
+/* frame reels: a slot-machine cabinet, sections ruled into reel columns, headings in a reel window, games in tall reel strips */
+.fr-reels main>.section:not(.hero,.cta--banner,.download--banner,.stats-block--strip,[data-stage])>.container{background:repeating-linear-gradient(90deg,transparent 0 calc(20% - 1px),color-mix(in srgb,var(--c-text) 7%,transparent) calc(20% - 1px) 20%)}
+.fr-reels .section__head,.st-mheads-left.fr-reels .section__head{text-align:center;margin-left:auto;margin-right:auto}
+.fr-reels .section__head h2{display:inline-block;padding:.4rem 1.6rem;border-top:4px solid var(--c-primary);border-bottom:4px solid var(--c-primary);background:linear-gradient(180deg,color-mix(in srgb,var(--c-text) 10%,transparent),transparent 30%,transparent 70%,color-mix(in srgb,var(--c-text) 10%,transparent))}
+.fr-reels .section__head h2::after{display:none}
+.fr-reels .section__head p{margin-left:auto;margin-right:auto}
+@media (min-width:1024px){.fr-reels .section :is(.entry-list__items,.lobby__grid,.card-grid__items){grid-template-columns:repeat(auto-fill,minmax(170px,1fr))!important;max-width:none}.fr-reels .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{flex-direction:column!important}.fr-reels .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{aspect-ratio:2/3!important;flex:none!important;min-height:0!important}.fr-reels .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body p:not(.entry-card__meta){-webkit-line-clamp:3}}
+@media (max-width:759px){
+.fr-reels .section :is(.entry-list__items,.lobby__grid,.card-grid__items){grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px}
+.fr-reels .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{flex-direction:column!important;border-radius:12px}
+.fr-reels .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{aspect-ratio:2/3!important;flex:none!important;min-height:0!important}
+.fr-reels .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__ph--named span{font-size:.7rem}
+.fr-reels .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body{padding:.45rem .4rem .55rem!important}
+.fr-reels .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body h3{font-size:.78rem!important}
+.fr-reels .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body p{display:none}
+.fr-reels .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body::after{display:none}
+}

@@ -26,3 +26,4 @@
 .fr-chapters .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body{padding:0!important}
 .fr-chapters .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body p:not(.entry-card__meta){display:none}
 }
+@media (max-width:759px){.fr-chapters .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body{position:static!important;background:none!important;color:var(--c-text)}.fr-chapters .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body h3 :is(a,span){color:var(--c-text)!important}}

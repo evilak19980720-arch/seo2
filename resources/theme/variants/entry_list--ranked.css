@@ -8,3 +8,4 @@
 .entry-list--ranked .tile__body{padding:.25rem .5rem!important}
 .entry-list--ranked .tile__body p:not(.entry-card__meta){-webkit-line-clamp:1!important}
 .entry-list--ranked .tile__tag{display:none}
+.entry-list--ranked .section .items--1>.tile>.tile__media,.entry-list--ranked.section .items--1>.tile>.tile__media{min-height:0}

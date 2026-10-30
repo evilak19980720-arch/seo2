@@ -48,7 +48,7 @@ class SiteStyleTest extends TestCase
         // Choices a page skeleton fixes may repeat across skeletons; every free one differs.
         $fixed = array_keys(config('theme.frames.'.$second['look']['frame'], []));
         foreach (array_diff_key($first['look'], array_flip($fixed)) as $key => $value) {
-            $this->assertNotSame($value, $second['look'][$key], "{$key}: two sites never share a choice while others are free");
+            $this->assertNotSame($value, $second['look'][$key] ?? null, "{$key}: two sites never share a choice while others are free");
         }
 
         // Generated again (other sites changed since): the site keeps its look.
@@ -72,7 +72,9 @@ class SiteStyleTest extends TestCase
                 continue;
             }
             $this->assertFileExists(resource_path("theme/frames/{$config['look']['frame']}.css"));
-            $this->assertSame('classic', $config['style']['skin'], 'the frame is the scheme');
+            if (! Variants::decorSkin($config['style']['skin'])) {
+                $this->assertSame('classic', $config['style']['skin'], 'the frame is the scheme');
+            }
             $this->assertContains($config['nav'], $frame['nav']);
             $this->assertContains($config['footer'], $frame['footer']);
             foreach ($frame as $key => $allowed) {
@@ -87,5 +89,18 @@ class SiteStyleTest extends TestCase
         $old = SiteStyle::for(1)->apply(self::SAME_ANSWER)['look'];
         unset($old['frame']);
         $this->assertSame('classic', SiteStyle::for(1, [], $old)->apply(self::SAME_ANSWER)['look']['frame']);
+    }
+
+    public function test_slots_systems_keep_their_skin_on_any_page_skeleton(): void
+    {
+        foreach (['luxe', 'vegas', 'dragon', 'candy', 'olympus', 'cyber', 'velvet', 'arcade', 'aztec', 'aurora'] as $i => $system) {
+            $config = SiteStyle::for($i, [], ['system' => $system, 'frame' => 'jackpot'])->apply(self::SAME_ANSWER);
+            $this->assertSame($system, $config['style']['skin'], 'a decorating skin goes with a frame');
+            $css = Variants::frameCss($config);
+            $this->assertStringContainsString(".st-skin-{$system}", $css);
+            $this->assertLessThan(strpos($css, '.fr-jackpot'), strpos($css, ".st-skin-{$system}"), 'the frame comes last and wins ties');
+        }
+        // A skin that reshapes the page (bold, lobby…) still gives way to a frame.
+        $this->assertSame('classic', SiteStyle::for(1, [], ['system' => 'lobby', 'frame' => 'jackpot'])->apply(self::SAME_ANSWER)['style']['skin']);
     }
 }

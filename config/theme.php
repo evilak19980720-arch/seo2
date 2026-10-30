@@ -85,6 +85,18 @@ $systems = [
     'casino' => ['skin' => 'bold', 'families' => ['jackpot', 'casino', 'royal', 'vip', 'gold', 'scoreboard', 'plaques', 'medals', 'marquee', 'ticket', 'stage', 'vault']],
     'lobby' => ['skin' => 'lobby', 'families' => ['lobby', 'poster', 'glossy', 'rail', 'chips', 'tiles', 'showcase', 'mosaic', 'ranked', 'reels', 'phone']],
     'panels' => ['skin' => 'panels', 'families' => ['panels', 'badges', 'arrows', 'rings', 'framed', 'bordered', 'pill', 'arena', 'slab', 'ladder', 'pills']],
+    // Slots brand-site systems: their skins (resources/theme/skins/{skin}.css) only decorate (type,
+    // card frames, buttons, rules, backdrop), so they combine with any page skeleton.
+    'luxe' => ['skin' => 'luxe', 'families' => ['gold', 'vip', 'royal', 'plaques', 'medals', 'vault', 'jackpot', 'framed', 'ticket']],
+    'vegas' => ['skin' => 'vegas', 'families' => ['marquee', 'neon', 'glow', 'ticker', 'jackpot', 'stage', 'casino', 'spotlight', 'pill']],
+    'dragon' => ['skin' => 'dragon', 'families' => ['royal', 'gold', 'badges', 'framed', 'ribbon', 'ticket', 'medals', 'path']],
+    'candy' => ['skin' => 'candy', 'families' => ['glossy', 'chips', 'tiles', 'pills', 'rings', 'poster', 'phone', 'reels']],
+    'olympus' => ['skin' => 'olympus', 'families' => ['framed', 'bordered', 'numbered', 'plaques', 'royal', 'scoreboard', 'magazine', 'ticks']],
+    'cyber' => ['skin' => 'cyber', 'families' => ['neon', 'glass', 'ranked', 'scoreboard', 'arrows', 'slab', 'ladder', 'rail']],
+    'velvet' => ['skin' => 'velvet', 'families' => ['vip', 'stage', 'royal', 'glow', 'spotlight', 'ticket', 'polaroid', 'mosaic']],
+    'arcade' => ['skin' => 'arcade', 'families' => ['arena', 'slab', 'chips', 'ranked', 'badges', 'scoreboard', 'arrows', 'tiles']],
+    'aztec' => ['skin' => 'aztec', 'families' => ['ribbon', 'ladder', 'path', 'medals', 'badges', 'bordered', 'mosaic', 'poster']],
+    'aurora' => ['skin' => 'aurora', 'families' => ['glow', 'glass', 'glossy', 'showcase', 'rings', 'rail', 'spotlight', 'lobby']],
 ];
 
 // Page skeletons ("frames"): one per site, on top of its system. A frame reshapes the whole page
@@ -115,6 +127,26 @@ $frames = [
         'style.mhero' => ['compact'], 'style.facts' => ['list'], 'style.mfooter' => ['stack'], 'style.mheads' => ['left'], 'navigation.mobile_header' => ['standard', 'cta'], 'navigation.mobile_bar_style' => ['labels']],
     'bento' => ['nav' => ['bar', 'glass'], 'hero' => ['split', 'casino', 'reels'], 'footer' => ['columns', 'badges'],
         'style.mhero' => ['card'], 'style.facts' => ['grid'], 'style.mfooter' => ['split'], 'style.mheads' => ['left'], 'navigation.mobile_header' => ['standard', 'cta'], 'navigation.mobile_bar_style' => ['raised', 'icons']],
+    'jackpot' => ['nav' => ['centered', 'bar', 'gold'], 'hero' => ['stacked', 'jackpot', 'marquee', 'centered'], 'footer' => ['centered', 'gold', 'badges'],
+        'style.mhero' => ['text-top'], 'style.facts' => ['grid'], 'style.mfooter' => ['center'], 'style.mheads' => ['center'], 'navigation.mobile_header' => ['center'], 'navigation.mobile_bar_style' => ['raised', 'cta']],
+    'curtain' => ['nav' => ['centered', 'bar', 'neon'], 'hero' => ['stacked', 'spotlight', 'marquee', 'centered'], 'footer' => ['dark', 'neon', 'centered'],
+        'style.mhero' => ['image-top'], 'style.facts' => ['hidden', 'scroll'], 'style.mfooter' => ['center'], 'style.mheads' => ['center'], 'navigation.mobile_header' => ['center', 'standard'], 'navigation.mobile_bar_style' => ['pill']],
+    'duo' => ['nav' => ['bar', 'split', 'glass'], 'hero' => ['split', 'reels', 'casino'], 'footer' => ['columns', 'slab'],
+        'style.mhero' => ['card'], 'style.facts' => ['list'], 'style.mfooter' => ['split'], 'style.mheads' => ['left'], 'navigation.mobile_header' => ['standard'], 'navigation.mobile_bar_style' => ['labels', 'raised']],
+    'ticker' => ['nav' => ['bar', 'neon'], 'hero' => ['split', 'marquee', 'casino', 'jackpot'], 'footer' => ['neon', 'slab', 'columns'],
+        'style.mhero' => ['compact'], 'style.facts' => ['scroll'], 'style.mfooter' => ['split'], 'style.mheads' => ['left'], 'navigation.mobile_header' => ['cta'], 'navigation.mobile_bar_style' => ['cta', 'icons']],
+    'deck' => ['nav' => ['bar', 'glass', 'centered'], 'hero' => ['stacked', 'split', 'spotlight'], 'footer' => ['centered', 'badges'],
+        'style.mhero' => ['card'], 'style.facts' => ['grid'], 'style.mfooter' => ['stack'], 'style.mheads' => ['center'], 'navigation.mobile_header' => ['standard'], 'navigation.mobile_bar_style' => ['raised', 'pill']],
+    'reels' => ['nav' => ['bar', 'neon', 'split'], 'hero' => ['reels', 'split', 'casino'], 'footer' => ['columns', 'slab'],
+        'style.mhero' => ['text-top'], 'style.facts' => ['scroll'], 'style.mfooter' => ['split'], 'style.mheads' => ['center'], 'navigation.mobile_header' => ['tabs', 'standard'], 'navigation.mobile_bar_style' => ['icons']],
+    'vip' => ['nav' => ['centered', 'gold', 'split'], 'hero' => ['centered', 'royal', 'spotlight', 'stacked'], 'footer' => ['gold', 'centered'],
+        'style.mhero' => ['image-top'], 'style.facts' => ['list'], 'style.mfooter' => ['center'], 'style.mheads' => ['center'], 'navigation.mobile_header' => ['center'], 'navigation.mobile_bar_style' => ['labels', 'flat']],
+    'tournament' => ['nav' => ['bar', 'split', 'neon'], 'hero' => ['split', 'arena', 'casino'], 'footer' => ['slab', 'columns', 'neon'],
+        'style.mhero' => ['compact'], 'style.facts' => ['grid'], 'style.mfooter' => ['stack'], 'style.mheads' => ['left'], 'navigation.mobile_header' => ['cta', 'standard'], 'navigation.mobile_bar_style' => ['cta']],
+    'poster' => ['nav' => ['bar', 'glass', 'minimal'], 'hero' => ['image-bg', 'vault', 'stacked', 'split'], 'footer' => ['dark', 'simple'],
+        'style.mhero' => ['image-top'], 'style.facts' => ['hidden', 'scroll'], 'style.mfooter' => ['stack'], 'style.mheads' => ['left'], 'navigation.mobile_header' => ['standard'], 'navigation.mobile_bar_style' => ['flat', 'raised']],
+    'arch' => ['nav' => ['centered', 'bar', 'split'], 'hero' => ['split', 'stacked', 'centered'], 'footer' => ['centered', 'columns'],
+        'style.mhero' => ['image-top', 'card'], 'style.facts' => ['list'], 'style.mfooter' => ['center'], 'style.mheads' => ['center'], 'navigation.mobile_header' => ['center', 'standard'], 'navigation.mobile_bar_style' => ['pill', 'raised']],
 ];
 
 return [
@@ -160,7 +192,7 @@ return [
         'buttons' => ['solid', 'gradient', 'outline'],
         'headings' => ['normal', 'uppercase', 'accent'],
         // Whole-site schemes (header colour, section rhythm, heading treatment, card frame): the biggest visible difference between sites.
-        'skin' => ['classic', 'bold', 'editorial', 'lobby', 'panels', 'neon'],
+        'skin' => ['classic', 'bold', 'editorial', 'lobby', 'panels', 'neon', 'luxe', 'vegas', 'dragon', 'candy', 'olympus', 'cyber', 'velvet', 'arcade', 'aztec', 'aurora'],
         // Phone skeleton: hero order, the facts strip under it, footer layout, section heading alignment.
         'mhero' => ['image-top', 'text-top', 'card', 'compact'],
         'facts' => ['grid', 'scroll', 'list', 'hidden'],

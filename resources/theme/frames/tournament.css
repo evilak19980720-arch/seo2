@@ -1,0 +1,20 @@
+/* frame tournament: a league table look, each section heading a tab sitting on a thick rule, ranked scoreboard rows on phones */
+.fr-tournament .section__head,.st-mheads-center.fr-tournament .section__head{display:flex;flex-direction:column;align-items:flex-start;text-align:left;margin-left:0;max-width:none;border-bottom:4px solid var(--c-primary)}
+.fr-tournament .section__head h2{margin:0;padding:.55rem 1.3rem .5rem;border-radius:12px 12px 0 0;font-size:clamp(1.1rem,2.8vw,1.7rem);text-transform:uppercase;color:var(--c-on-primary)!important;background:none!important;-webkit-background-clip:border-box!important;background-clip:border-box!important;text-shadow:none!important;background:var(--c-primary)!important}
+.fr-tournament .section__head h2::after,.fr-tournament .section__head h2::before{display:none}
+.fr-tournament .section__head p{order:-1;margin:0 0 .6rem;font-size:.95rem}
+.fr-tournament .hero h1{text-transform:uppercase}
+@media (max-width:759px){
+.fr-tournament .section :is(.entry-list__items,.lobby__grid,.card-grid__items){display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:0;counter-reset:rank;border:1px solid var(--line);border-radius:var(--r-box);overflow:hidden}
+.fr-tournament .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{flex-direction:row!important;align-items:center;gap:.7rem;padding:.55rem .8rem;border:0;border-radius:0;border-bottom:1px solid var(--line);box-shadow:none;counter-increment:rank;background:var(--c-bg)}
+.fr-tournament .section :is(.entry-list__items,.lobby__grid,.card-grid__items)>:nth-child(even) .tile,.fr-tournament .section :is(.entry-list__items,.lobby__grid,.card-grid__items)>.tile:nth-child(even){background:var(--c-surface)}
+.fr-tournament .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile::before{content:counter(rank);flex:none;width:1.8rem;height:1.8rem;display:grid;place-items:center;border-radius:50%;background:var(--c-primary);color:var(--c-on-primary);font:800 .85rem/1 var(--f-heading)}
+.fr-tournament .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{flex:0 0 48px!important;aspect-ratio:1!important;min-height:0!important;border-radius:50%}
+.fr-tournament .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__ph--named span{display:none}
+.fr-tournament .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__tag{display:none}
+.fr-tournament .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body{padding:0!important;flex-direction:row;align-items:center;justify-content:space-between;gap:.5rem}
+.fr-tournament .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body p:not(.entry-card__meta){display:none}
+.fr-tournament .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body::after{display:none}
+.fr-tournament .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .entry-card__meta{text-align:right;font-size:.78rem}
+}
+@media (max-width:759px){.fr-tournament .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body{position:static!important;background:none!important;color:var(--c-text)}.fr-tournament .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body h3 :is(a,span){color:var(--c-text)!important}}

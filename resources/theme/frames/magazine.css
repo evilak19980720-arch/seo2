@@ -28,3 +28,4 @@
 .fr-magazine .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body{padding:0!important}
 .fr-magazine .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body p:not(.entry-card__meta){-webkit-line-clamp:2!important}
 }
+@media (max-width:759px){.fr-magazine .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body{position:static!important;background:none!important;color:var(--c-text)}.fr-magazine .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body h3 :is(a,span){color:var(--c-text)!important}}

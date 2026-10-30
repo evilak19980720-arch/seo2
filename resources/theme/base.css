@@ -362,6 +362,7 @@ main{display:block}
 .st-buttons-gradient .btn:not(.btn--ghost):not(.btn--light){background:linear-gradient(135deg,var(--c-primary),color-mix(in srgb,var(--c-primary) 55%,var(--c-accent)))}
 .st-buttons-outline .btn:not(.btn--ghost){background:transparent;color:var(--c-outline,var(--c-primary));border:2px solid currentColor;box-shadow:none}
 .st-buttons-outline .cta--banner .btn{color:var(--c-on-primary);border-color:var(--c-on-primary)}
+.st-buttons-gradient :is(.cta--banner,.download--banner) .btn:not(.btn--ghost){background:var(--c-on-primary);color:var(--c-primary)}
 .st-buttons-outline .nav--split .btn:not(.btn--ghost),.st-buttons-outline .nav__bar .btn:not(.btn--ghost),.st-buttons-outline .footer:where(:not(.footer--simple)) .btn:not(.btn--ghost){color:var(--c-text);border-color:currentColor}
 .st-headings-uppercase :is(h1,h2,.nav__links a,.footer__title){text-transform:uppercase;letter-spacing:.03em}
 .st-headings-normal .section__head h2::after,.st-headings-normal .section__head h1::after{display:none}

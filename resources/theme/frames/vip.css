@@ -1,0 +1,26 @@
+/* frame vip: an exclusive lounge, a narrow centred column, sections parted by an ornamental divider, framed rows of games */
+@media (min-width:1024px){.fr-vip .container{max-width:1000px}}
+.fr-vip main>.section:not(.hero,.cta--banner,.download--banner,.stats-block--strip,[data-stage])+.section:not(.hero,.cta--banner,.download--banner,.stats-block--strip,[data-stage])::before{content:"\2726";position:absolute;left:50%;top:0;transform:translate(-50%,-50%);width:min(420px,70vw);text-align:center;font-size:.9rem;line-height:1;color:var(--c-primary);background:linear-gradient(90deg,transparent,var(--c-primary) 30%,transparent 44%,transparent 56%,var(--c-primary) 70%,transparent) center/100% 1px no-repeat}
+.fr-vip main>.section:not(.hero,.cta--banner,.download--banner,.stats-block--strip,[data-stage]){background:transparent!important}
+.fr-vip .section__head,.st-mheads-left.fr-vip .section__head{text-align:center;margin-left:auto;margin-right:auto}
+.fr-vip .section__head h2{font-size:clamp(1.3rem,3vw,2.1rem);letter-spacing:.06em;text-transform:uppercase}
+.fr-vip .section__head h2::after{margin-left:auto;margin-right:auto;width:44px;height:2px}
+.fr-vip .section__head p{margin-left:auto;margin-right:auto}
+.fr-vip .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{border:1px solid color-mix(in srgb,var(--c-primary) 45%,transparent)}
+@media (min-width:760px){
+.fr-vip .section :is(.entry-list__items,.lobby__grid,.card-grid__items){grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.fr-vip .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{flex-direction:row}
+.fr-vip .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{flex:0 0 42%;aspect-ratio:auto;min-height:170px}
+.fr-vip .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media img{position:absolute;inset:0;height:100%}
+.fr-vip .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body{justify-content:center}
+}
+@media (max-width:759px){
+.fr-vip .section :is(.entry-list__items,.lobby__grid,.card-grid__items){display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:10px}
+.fr-vip .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{flex-direction:row-reverse!important;align-items:stretch;min-height:104px}
+.fr-vip .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{flex:0 0 104px!important;aspect-ratio:1!important;min-height:0!important}
+.fr-vip .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__ph--named span{font-size:.7rem}
+.fr-vip .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__tag{display:none}
+.fr-vip .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body{justify-content:center}
+.fr-vip .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body p:not(.entry-card__meta){-webkit-line-clamp:2!important}
+}
+@media (max-width:759px){.fr-vip .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body{position:static!important;background:none!important;color:var(--c-text)}.fr-vip .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body h3 :is(a,span){color:var(--c-text)!important}}

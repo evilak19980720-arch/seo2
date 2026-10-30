@@ -83,15 +83,24 @@ class Variants
         return is_string($frame) && config("theme.frames.{$frame}") && is_file(resource_path("theme/frames/{$frame}.css")) ? $frame : null;
     }
 
-    /** CSS of the design's page skeleton. */
+    /** CSS of the design's own skin (if it has a file) and page skeleton; the skeleton comes last and wins ties. */
     public static function frameCss(array $design): string
     {
-        return ($frame = self::frame($design)) ? "\n".file_get_contents(resource_path("theme/frames/{$frame}.css")) : '';
+        $skin = $design['style']['skin'] ?? null;
+        $css = self::decorSkin($skin) ? "\n".file_get_contents(resource_path("theme/skins/{$skin}.css")) : '';
+
+        return $css.(($frame = self::frame($design)) ? "\n".file_get_contents(resource_path("theme/frames/{$frame}.css")) : '');
+    }
+
+    /** Skins kept in their own file only decorate, so they go with any page skeleton. */
+    public static function decorSkin(mixed $skin): bool
+    {
+        return is_string($skin) && preg_match('/^[a-z]+$/', $skin) && is_file(resource_path("theme/skins/{$skin}.css"));
     }
 
     /** Every variant and frame stylesheet (for the class-name vocabulary and checks). */
     public static function allCss(): string
     {
-        return implode("\n", array_map('file_get_contents', array_merge(glob(resource_path('theme/variants/*.css')) ?: [], glob(resource_path('theme/frames/*.css')) ?: [])));
+        return implode("\n", array_map('file_get_contents', array_merge(glob(resource_path('theme/variants/*.css')) ?: [], glob(resource_path('theme/skins/*.css')) ?: [], glob(resource_path('theme/frames/*.css')) ?: [])));
     }
 }

@@ -1,0 +1,15 @@
+/* frame deck: every section is a card dealt on the table, with a tilted card peeking out behind it */
+.fr-deck main>.section:not(.hero,.cta--banner,.download--banner,.stats-block--strip,[data-stage]){background:transparent!important}
+.fr-deck main>.section:not(.hero,.cta--banner,.download--banner,.stats-block--strip,[data-stage])>.container{position:relative;isolation:isolate;background:var(--c-surface);border-radius:26px;padding-top:calc(2.5rem*var(--space));padding-bottom:calc(2.5rem*var(--space));box-shadow:0 26px 50px -34px rgba(0,0,0,.6);width:calc(100% - 24px)}
+.fr-deck main>.section:not(.hero,.cta--banner,.download--banner,.stats-block--strip,[data-stage])>.container::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;background:color-mix(in srgb,var(--c-primary) 35%,var(--c-surface));transform:rotate(-2deg) translateY(6px)}
+.fr-deck main>.section:not(.hero,.cta--banner,.download--banner,.stats-block--strip,[data-stage]):nth-of-type(even)>.container::before{transform:rotate(2deg) translateY(6px);background:color-mix(in srgb,var(--c-accent) 35%,var(--c-surface))}
+@media (min-width:760px){.fr-deck main>.section:not(.hero,.cta--banner,.download--banner,.stats-block--strip,[data-stage])>.container{padding-left:3rem;padding-right:3rem;width:calc(100% - 48px)}}
+.fr-deck main>.section:not(.hero,.cta--banner,.download--banner,.stats-block--strip,[data-stage]){padding-top:calc(3rem*var(--space));padding-bottom:calc(3rem*var(--space))}
+@media (max-width:759px){
+.fr-deck .section :is(.entry-list__items,.lobby__grid,.card-grid__items){display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:12px}
+.fr-deck .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{flex-direction:row!important;min-height:120px}
+.fr-deck .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{flex:0 0 40%!important;aspect-ratio:auto!important;min-height:0!important}
+.fr-deck .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media img{position:absolute;inset:0;height:100%}
+.fr-deck .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body{justify-content:center}
+}
+@media (max-width:759px){.fr-deck .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body{position:static!important;background:none!important;color:var(--c-text)}.fr-deck .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body h3 :is(a,span){color:var(--c-text)!important}}

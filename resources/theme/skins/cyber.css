@@ -1,0 +1,9 @@
+/* skin cyber: a circuit grid, glitch headings, chamfered cards and buttons, scanlines over the hero */
+.st-skin-cyber{background-image:linear-gradient(color-mix(in srgb,var(--c-primary) 6%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--c-primary) 6%,transparent) 1px,transparent 1px);background-size:36px 36px}
+.st-skin-cyber :is(.section__head h2,.hero h1){text-transform:uppercase;letter-spacing:.04em;text-shadow:2px 0 color-mix(in srgb,var(--c-accent) 70%,transparent),-2px 0 color-mix(in srgb,var(--c-primary) 60%,transparent)}
+.st-skin-cyber .section__head h2::after{width:160px;height:4px;border-radius:0;background:linear-gradient(90deg,var(--c-primary) 0 60%,transparent 60% 66%,var(--c-accent) 66% 80%,transparent 80% 86%,var(--c-primary) 86%)}
+.st-skin-cyber :is(.tile,.post-card,.feature,.faq details,.faq__item,.card){border:1px solid color-mix(in srgb,var(--c-primary) 55%,transparent);border-radius:0;clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px)}
+.st-skin-cyber .btn{border-radius:0;clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);text-transform:uppercase;letter-spacing:.08em}
+.st-skin-cyber :is(.tile__tag,.hero__eyebrow,.entry-card__meta,.footer__title){font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.06em}
+.st-skin-cyber .hero::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.07) 0 1px,transparent 1px 4px)}
+.st-skin-cyber .nav{box-shadow:0 1px 0 var(--c-primary),0 4px 0 -2px color-mix(in srgb,var(--c-accent) 60%,transparent)}

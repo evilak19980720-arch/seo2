@@ -108,7 +108,7 @@ class SiteStyle
         foreach ($theme['styles'] as $key => $allowed) {
             $config['style'][$key] = match (true) {
                 // A frame is the site's scheme: the skin stays neutral and is not a choice of its own.
-                $key === 'skin' && $this->frame !== [] => 'classic',
+                $key === 'skin' && $this->frame !== [] && ! Variants::decorSkin($this->system['skin'] ?? null) => 'classic',
                 $key === 'skin' && in_array($this->system['skin'] ?? null, $allowed, true) => $this->look['style.skin'] = $this->system['skin'],
                 default => $this->pick("style.{$key}", $this->inFrame("style.{$key}", $allowed)),
             };
@@ -135,7 +135,7 @@ class SiteStyle
                 }
             }
         }
-        $config['look'] = $this->frame !== [] ? array_diff_key($this->look, ['style.skin' => 1]) : $this->look;
+        $config['look'] = $this->frame !== [] && ! Variants::decorSkin($config['style']['skin'] ?? null) ? array_diff_key($this->look, ['style.skin' => 1]) : $this->look;
 
         return $config;
     }

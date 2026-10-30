@@ -1,0 +1,17 @@
+/* frame arch: temple arches, arched hero picture, arched game pictures, headings under a small arch mark */
+.fr-arch .hero:not(.hero--image-bg) .hero__media img{border-radius:999px 999px var(--r-box) var(--r-box)/42% 42% var(--r-box) var(--r-box);aspect-ratio:4/5}
+.fr-arch .hero:not(.hero--image-bg) .hero__media{max-width:460px;justify-self:center;margin-left:auto;margin-right:auto;width:100%}
+.fr-arch .section__head,.st-mheads-left.fr-arch .section__head{text-align:center;margin-left:auto;margin-right:auto}
+.fr-arch .section__head h2::before{content:"";display:block;width:34px;height:20px;margin:0 auto .8rem;border:3px solid var(--c-primary);border-bottom:0;border-radius:40px 40px 0 0}
+.fr-arch .section__head h2::after{margin-left:auto;margin-right:auto}
+.fr-arch .section__head p{margin-left:auto;margin-right:auto}
+.fr-arch .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{border-radius:999px 999px var(--r-box) var(--r-box)/120px 120px var(--r-box) var(--r-box)}
+.fr-arch .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{border-radius:inherit;border-bottom-left-radius:0;border-bottom-right-radius:0}
+@media (max-width:759px){
+.fr-arch .section :is(.entry-list__items,.lobby__grid,.card-grid__items){grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px}
+.fr-arch .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{flex-direction:column!important;border-radius:999px 999px 18px 18px/80px 80px 18px 18px}
+.fr-arch .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{aspect-ratio:3/4!important;flex:none!important;min-height:0!important}
+.fr-arch .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body{text-align:center;align-items:center}
+.fr-arch .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body p:not(.entry-card__meta){display:none}
+.fr-arch .hero:not(.hero--image-bg) .hero__media{max-width:300px;margin-left:auto;margin-right:auto}
+}
