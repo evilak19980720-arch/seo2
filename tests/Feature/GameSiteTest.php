@@ -134,7 +134,15 @@ class GameSiteTest extends TestCase
         foreach (array_diff($first['nav']['menu'], ['blog']) as $page) {
             $this->assertArrayHasKey($page, $first['pages']);
         }
-        $this->assertSame(array_values(array_intersect($type['positionings'][$first['positioning']]['home'], array_column($type['pages']['home']['sections'], 'key'))), $first['pages']['home'], 'home follows the positioning order');
+        // Home has the positioning's sections: the opener first, FAQ and help last, the middle in the site's own order.
+        $planned = array_values(array_intersect($type['positionings'][$first['positioning']]['home'], array_column($type['pages']['home']['sections'], 'key')));
+        $this->assertEqualsCanonicalizing($planned, $first['pages']['home']);
+        $this->assertSame($planned[0], $first['pages']['home'][0], 'the opener stays first');
+        $tail = array_values(array_intersect($planned, ['faq', 'support']));
+        $this->assertSame($tail, array_slice($first['pages']['home'], -count($tail) ?: count($first['pages']['home'])), 'FAQ and help stay last');
+        $this->assertTrue($first['home_order']);
+        $applied = array_column(SiteStructure::apply($type, $first)['pages']['home']['sections'], 'key');
+        $this->assertSame($first['pages']['home'], $applied, 'the page is built in that order');
         $this->assertLessThanOrEqual(30, count($first['pages']));
         $positionings = collect(range(1, 12))->map(fn () => SiteStructure::choose($this->gameSite(), $type)['positioning'])->unique();
         $this->assertGreaterThan(1, $positionings->count(), 'positioning is drawn per site');

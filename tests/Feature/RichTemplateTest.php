@@ -134,10 +134,38 @@ class RichTemplateTest extends TestCase
         $this->assertMatchesRegularExpression('#<footer.*perguntas-frequentes.*</footer>#s', $home);
         // Footer links come in groups that fold on phones: the submenu item heads its own group, legal comes last.
         preg_match('#<footer.*</footer>#s', $home, $footer);
-        preg_match_all('#<details class="footer__group" data-fold open><summary class="footer__title">([^<]+)</summary>#', $footer[0], $titles);
+        preg_match_all('#<details class="footer__group"(?: data-fold)? open><summary class="footer__title">([^<]+)</summary>#', $footer[0], $titles);
         $this->assertGreaterThanOrEqual(2, count($titles[1]));
         $this->assertSame('Legal', end($titles[1]));
         $this->assertMatchesRegularExpression('#<summary class="footer__title">[^<]+</summary><ul>\s*<li><a href="/[^"]*/">[^<]+</a></li><li><a href="/perguntas-frequentes/">#', $footer[0]);
         $this->assertSame(1, substr_count($footer[0], 'href="/perguntas-frequentes/"'), 'each page once');
+    }
+
+    public function test_phone_parts_change_the_bottom_bar_footer_links_and_hero_order(): void
+    {
+        $this->fakeAi(['design' => ['design' => ['menu' => ['product', 'guide', 'blog'], 'navigation' => ['mobile_bar' => true]]]]);
+        $site = $this->makeSite(['domain' => 'parts.com.br'], ['cta_links' => [['label' => 'Google Play', 'url' => 'https://play.google.com/x']]]);
+        app(SiteGenerator::class)->run(GenerationTask::create(['site_id' => $site->id, 'type' => 'full']));
+        $render = function (array $navigation, array $style) use ($site) {
+            $config = $site->fresh()->design_config;
+            $config['navigation'] = $navigation + $config['navigation'];
+            $config['style'] = $style + $config['style'];
+            $site->forceFill(['design_config' => $config])->save();
+            app(StaticSiteBuilder::class)->buildAll($site->fresh());
+
+            return file_get_contents(StaticSiteBuilder::dirFor($site).'/index.html');
+        };
+
+        $home = $render(['mobile_bar_items' => 'none'], ['mlinks' => 'inline', 'mhorder' => 'cta-top', 'mcookie' => 'top']);
+        $this->assertStringNotContainsString('class="mobile-bar', $home, 'no bottom bar: the header menu does the work');
+        $this->assertStringNotContainsString('has-mobile-bar', $home);
+        $this->assertStringNotContainsString('data-fold', $home, 'links shown, never folded (and no folding script)');
+        $this->assertMatchesRegularExpression('#<body class="[^"]*st-mhorder-cta-top[^"]*st-mlinks-inline[^"]*st-mcookie-top#', $home);
+
+        $home = $render(['mobile_bar_items' => '3', 'mobile_bar_style' => 'raised'], ['mlinks' => 'fold']);
+        preg_match('#<nav class="mobile-bar[^"]*".*?</nav>#s', $home, $bar);
+        $this->assertSame(3, substr_count($bar[0], '<a '), 'home, one page and the brand button');
+        $this->assertStringContainsString('mobile-bar__cta', $bar[0]);
+        $this->assertStringContainsString('data-fold open', $home);
     }
 }

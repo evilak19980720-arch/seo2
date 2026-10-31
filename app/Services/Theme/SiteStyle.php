@@ -97,7 +97,10 @@ class SiteStyle
         if ($this->look !== [] && ! isset($this->look['frame']) && isset($this->look['nav'])) {
             $this->look['frame'] = 'classic';
         }
-        $this->frame = (array) ($theme['frames'][$this->pick('frame', array_keys($theme['frames'] ?? ['classic' => []]))] ?? []);
+        // 'classic' (no skeleton) is only kept for those old looks: a new look always gets a real skeleton.
+        $frames = array_keys($theme['frames'] ?? ['classic' => []]);
+        $frames = ($this->look['frame'] ?? null) === 'classic' ? $frames : (array_values(array_diff($frames, ['classic'])) ?: $frames);
+        $this->frame = (array) ($theme['frames'][$this->pick('frame', $frames)] ?? []);
         // "minimal" has no header buttons: only for sites that show none.
         $buttons = (int) ($config['navigation']['buttons'] ?? 1) > 0;
         $navs = array_values(array_filter($theme['blocks']['nav'], fn ($v) => ! $buttons || Variants::base('nav', $v) !== 'minimal'));

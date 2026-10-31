@@ -135,12 +135,24 @@ class SiteStructure
             }
         }
 
+        // The home page's middle sections in the site's own order: the opener stays first, FAQ and help stay last.
+        // A draw of its own, so the choices above stay as they were; a retry (same round) gets the same order.
+        $ordered = false;
+        if ($plan !== null && count($pages['home'] ?? []) > 3) {
+            $home = $pages['home'];
+            $tail = array_values(array_filter($home, fn ($k) => in_array($k, ['faq', 'support'], true)));
+            $middle = array_values(array_diff(array_slice($home, 1), $tail));
+            $draw = new Randomizer(new Mt19937(crc32('home-order|'.($site->domain_id ?? $site->id).'|'.$site->id.($round ? "|{$round}" : ''))));
+            $pages['home'] = array_merge([$home[0]], $draw->shuffleArray($middle), $tail);
+            $ordered = true;
+        }
+
         $nav = $plan === null ? [] : ['positioning' => $plan['positioning'], 'nav' => [
             'menu' => array_values(array_filter($plan['menu'], fn ($t) => $t === 'blog' || isset($pages[$t]))),
             'parents' => array_filter($plan['parents'], fn ($parent, $child) => isset($pages[$child], $pages[$parent]), ARRAY_FILTER_USE_BOTH),
         ]];
 
-        return ['pages' => $pages, 'collections' => $collections, 'variants' => $variants] + $nav + ($round ? ['round' => $round] : []);
+        return ['pages' => $pages, 'collections' => $collections, 'variants' => $variants] + $nav + ($round ? ['round' => $round] : []) + ($ordered ? ['home_order' => true] : []);
     }
 
     /**
@@ -229,6 +241,9 @@ class SiteStructure
                 fn ($s) => $s + array_filter(['variant' => $structure['variants'][$s['block']] ?? null]),
                 array_filter($def['sections'], fn ($s) => in_array($s['key'], $chosen, true)),
             ));
+            if ($pageType === 'home' && ! empty($structure['home_order'])) {
+                usort($def['sections'], fn ($a, $b) => array_search($a['key'], $chosen, true) <=> array_search($b['key'], $chosen, true));
+            }
             $def['blocks'] = array_column($def['sections'], 'block');
             $pages[$pageType] = $def;
         }

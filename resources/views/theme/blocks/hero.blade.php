@@ -14,7 +14,7 @@
 <section class="hero hero--{{ $variant }}{{ $wide ? ' hero--wide-img' : '' }}">
 <div class="container hero__grid">
 <div class="hero__text">
-@if (! empty($data['eyebrow']))<span class="hero__eyebrow">{{ $data['eyebrow'] }}</span>@endif
+@if (! empty($data['eyebrow']))<div class="hero__tag"><span class="hero__eyebrow">{{ $data['eyebrow'] }}</span></div>@endif
 @php($title = ($isFirst ?? false) ? ($data['heading'] ?? ($isHome ? $ctx->brand->product_name : ($page?->title ?? $ctx->brand->product_name))) : ($data['heading'] ?? $ctx->brand->product_name))
 @php($titleClass = $ctx->titleClass($title))
 @if ($isFirst ?? false)<h1{!! $titleClass !!}>{{ $title }}</h1>@else<h2{!! $titleClass !!}>{{ $title }}</h2>@endif

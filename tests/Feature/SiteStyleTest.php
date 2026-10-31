@@ -59,7 +59,7 @@ class SiteStyleTest extends TestCase
 
     public function test_each_site_gets_a_page_skeleton_that_shapes_its_header_hero_and_footer(): void
     {
-        $frames = config('theme.frames');
+        $frames = array_diff_key(config('theme.frames'), ['classic' => 1]);
         $sites = [];
         foreach (range(1, count($frames)) as $id) {
             $sites[] = SiteStyle::for($id, $sites)->apply(self::SAME_ANSWER);

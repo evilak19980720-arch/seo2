@@ -292,7 +292,8 @@ class ThemeContext
     {
         $cta = $this->ctaLinks(1)[0] ?? null;
         $types = $this->pages->mapWithKeys(fn ($page, $type) => [$this->href($page->slug) => $type])->put($this->href('blog'), 'blog');
-        $items = collect($this->navLinks())->take($cta ? 3 : 4)->map(function ($link) use ($types) {
+        $slots = max(3, min(5, (int) ($this->navigation()['mobile_bar_items'] ?? 5))) - 1;
+        $items = collect($this->navLinks())->take($cta ? $slots - 1 : $slots)->map(function ($link) use ($types) {
             $type = $types[$link['href']] ?? null;
             $fallback = $type === 'blog' ? $this->t('blog') : ($type && Lang::has("theme.page_titles.{$type}", $this->lang) ? $this->t("page_titles.{$type}") : null);
 
@@ -322,8 +323,13 @@ class ThemeContext
     /** Header behaviour from the design (see DesignConfigValidator::navigation). */
     public function navigation(): array
     {
-        return ($this->design['navigation'] ?? []) + ['submenu' => [], 'buttons' => 1, 'mobile_bar' => false, 'sticky' => true, 'home_link' => false,
-            'mobile_header' => 'standard', 'mobile_menu' => 'dropdown', 'mobile_bar_style' => 'raised'];
+        $nav = ($this->design['navigation'] ?? []) + ['submenu' => [], 'buttons' => 1, 'mobile_bar' => false, 'sticky' => true, 'home_link' => false,
+            'mobile_header' => 'standard', 'mobile_menu' => 'dropdown', 'mobile_bar_style' => 'raised', 'mobile_bar_items' => '5'];
+        if ($nav['mobile_bar_items'] === 'none') {
+            $nav['mobile_bar'] = false;
+        }
+
+        return $nav;
     }
 
     /**

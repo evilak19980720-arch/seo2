@@ -198,6 +198,10 @@ return [
         'facts' => ['grid', 'scroll', 'list', 'hidden'],
         'mfooter' => ['stack', 'center', 'split'],
         'mheads' => ['center', 'left'],
+        // Phone parts drawn on their own, whatever the frame: hero element order, footer links, cookie notice.
+        'mhorder' => ['classic', 'points-top', 'cta-top', 'lead-last'],
+        'mlinks' => ['fold', 'open', 'inline'],
+        'mcookie' => ['card', 'bar', 'top', 'compact'],
     ],
 
     'radius' => ['none' => '0', 'sm' => '4px', 'md' => '8px', 'lg' => '16px', 'pill' => '999px'],
