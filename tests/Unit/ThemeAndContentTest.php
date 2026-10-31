@@ -116,4 +116,16 @@ class ThemeAndContentTest extends TestCase
             $this->assertGreaterThanOrEqual(3, Color::contrast($hex, '#15171a'), $hex);
         }
     }
+
+    public function test_ai_css_painted_with_a_token_it_redefines_keeps_the_meant_colour(): void
+    {
+        $colors = ['primary' => '#fcf485', 'on_primary' => '#111111', 'secondary' => '#f39e27', 'on_secondary' => '#111111', 'background' => '#ffffff', 'surface' => '#f2f2f2', 'text' => '#1a1a1a', 'muted' => '#6b5a52', 'link' => '#656235'];
+        // The rule paints its background with --c-text and redefines --c-text as light: text and background used to match.
+        $css = CustomCssValidator::themeSafe('.footer{background:var(--c-text);color:#f4ead9} .faq details{background:var(--c-surface);border:1px solid var(--c-text)}', $colors);
+
+        $this->assertStringContainsString('.footer{background:#1a1a1a;color:#f4ead9', $css);
+        $this->assertStringContainsString('.faq details{background:#f2f2f2;border:1px solid #1a1a1a', $css);
+        preg_match('/\.footer\{background:(#[0-9a-f]{6});color:(#[0-9a-f]{6})/', $css, $m);
+        $this->assertGreaterThanOrEqual(4.5, Color::contrast($m[1], $m[2]));
+    }
 }

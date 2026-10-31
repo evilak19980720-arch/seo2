@@ -119,6 +119,18 @@ class CustomCssValidator
                 // Outline buttons keep the brand colour only where it stands out on this background.
                 '--c-outline' => Color::contrast($colors['primary'] ?? $text, $bg) >= 3 ? ($colors['primary'] ?? $text) : $text,
             ];
+            // A token redefined here would also change this rule's own values ("background:var(--c-text)" next to
+            // "--c-text:#fff" paints the background white): spell out the colour the AI meant, the one from outside.
+            $map = ['bg' => 'background', 'surface' => 'surface', 'text' => 'text', 'muted' => 'muted', 'link' => 'link'];
+            foreach ($decls as $prop => $value) {
+                if (! str_starts_with($prop, '--')) {
+                    $decls[$prop] = preg_replace_callback('/var\(--c-(bg|surface|text|muted|link)\s*(?:,[^()]*)?\)/i', function ($m) use ($colors, $map) {
+                        $hex = $colors[$map[strtolower($m[1])]] ?? null;
+
+                        return $hex && Color::isHex($hex) ? Color::normalize($hex) : $m[0];
+                    }, $value);
+                }
+            }
         } elseif (isset($decls['color']) && ! preg_match('/^(inherit|currentcolor|var\(--c-(text|muted|link)\))/i', $decls['color'])) {
             // A text colour without a background of its own may land on any background: the theme's context colours decide instead.
             unset($decls['color']);
