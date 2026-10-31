@@ -168,4 +168,19 @@ class RichTemplateTest extends TestCase
         $this->assertStringContainsString('mobile-bar__cta', $bar[0]);
         $this->assertStringContainsString('data-fold open', $home);
     }
+
+    public function test_cookie_notice_only_shows_where_something_sets_cookies(): void
+    {
+        $this->fakeAi(['design' => ['design' => ['menu' => ['product', 'guide', 'blog']]]]);
+        $site = $this->makeSite(['domain' => 'cookies.com.br']);
+        app(SiteGenerator::class)->run(GenerationTask::create(['site_id' => $site->id, 'type' => 'full']));
+        $home = fn () => file_get_contents(StaticSiteBuilder::dirFor($site).'/index.html');
+
+        $this->assertStringNotContainsString('id="cookie"', $home(), 'a plain static site sets no cookies');
+        $this->assertStringNotContainsString('localStorage', $home());
+
+        $site->forceFill(['ga4_measurement_id' => 'G-TEST123'])->save();
+        app(StaticSiteBuilder::class)->buildAll($site->fresh());
+        $this->assertStringContainsString('id="cookie"', $home(), 'analytics sets cookies: ask first');
+    }
 }

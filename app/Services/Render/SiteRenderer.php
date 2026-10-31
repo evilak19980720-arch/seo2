@@ -558,6 +558,16 @@ class SiteRenderer
      * Per-site path for the click/impression beacon instead of one shared
      * "/_t/" on every site of the network (a footprint).
      */
+    /**
+     * Whether the site asks for cookie consent: only when something on it sets cookies (GA4 or active ad
+     * code). A plain static site writes none, so it shows no notice and no "change cookie choice" button.
+     */
+    public static function needsConsent(Site $site): bool
+    {
+        return (bool) Settings::get('cookie_banner', true)
+            && (filled($site->ga4_measurement_id) || $site->ads()->where('is_active', true)->exists());
+    }
+
     public static function trackingPrefix(Site $site): string
     {
         return 'x'.substr(hash_hmac('sha256', 'track|'.$site->id, (string) config('app.key')), 0, 6);
@@ -634,7 +644,7 @@ class SiteRenderer
             'base_css' => '/assets/'.$this->baseCssName(),
             'site_css' => '/assets/site.css?v='.substr(md5($this->siteCss()), 0, 10),
             'preload_fonts' => array_slice($fonts, 0, 2),
-            'cookie_banner' => (bool) Settings::get('cookie_banner', true),
+            'cookie_banner' => self::needsConsent($this->site),
             'ads' => $ads,
             'has_ads' => $ads['top'] !== [] || $ads['bottom'] !== [],
             'ads_js' => $this->adsScript(),

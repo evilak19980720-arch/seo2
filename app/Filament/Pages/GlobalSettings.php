@@ -93,7 +93,7 @@ class GlobalSettings extends Page
                     ]),
                     Section::make('站点生成')->columns(2)->schema([
                         Toggle::make('auto_launch')->label('生成成功后自动上线并提交 sitemap')->helperText('关闭则生成后先预览，手动上线'),
-                        Toggle::make('cookie_banner')->label('显示 Cookie 同意横幅（GA4 Consent Mode）'),
+                        Toggle::make('cookie_banner')->label('显示 Cookie 同意横幅（GA4 Consent Mode）')->helperText('只在填了 GA4 或启用了广告代码的站点显示；没有统计和广告的站点不写 cookie，不显示横幅'),
                         Toggle::make('robots_allow_ai_search')->label('robots.txt 放行 AI 搜索爬虫')->helperText('OAI-SearchBot、PerplexityBot、Claude-SearchBot 等，会在 AI 搜索里引用并链接网站'),
                         Toggle::make('robots_block_ai_training')->label('robots.txt 屏蔽 AI 训练爬虫')->helperText('GPTBot、Google-Extended、CCBot 等，不影响 Google 搜索'),
                         Toggle::make('mfa_required')->label('后台强制两步验证'),
