@@ -16,6 +16,8 @@ use App\Services\Theme\Variants;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Lang;
+use Random\Engine\Mt19937;
+use Random\Randomizer;
 
 /**
  * Everything a theme view needs about the site being rendered. Built once per
@@ -191,34 +193,46 @@ class ThemeContext
     }
 
     /**
-     * Footer link groups, following the menu: a menu item with a submenu is
-     * its own group, the other menu items form "Pages", every page outside
-     * the menu "More". Phones show them folded (one tap opens a group).
+     * Footer link groups, kept short (2-3 groups, about a dozen links): the
+     * main menu's own pages, a few useful pages from outside it (the site
+     * type's "footer_picks" first), and the essential legal pages with the
+     * sitemap, which lists everything else. How many of each, and whether the
+     * first two share a group, is drawn per site (a new template draws again).
+     * Phones show the groups folded, open or inline (style "mlinks").
      *
      * @return array<int, array{title: string, links: array<int, array{label: string, href: string}>}>
      */
     public function footerGroups(): array
     {
-        $links = collect($this->navLinks(all: true))->keyBy('href');
-        $groups = [];
-        $plain = [];
-        foreach ($this->navLinks() as $item) {
-            if ($item['children'] !== []) {
-                $groups[] = ['title' => $item['label'], 'links' => [Arr::except($item, 'children'), ...$item['children']]];
-            } else {
-                $plain[] = Arr::except($item, 'children');
-            }
+        $draw = new Randomizer(new Mt19937(crc32('footer|'.($this->site->domain_id ?: $this->site->id).'|'.($this->design['look']['round'] ?? 0))));
+        $main = collect($this->navLinks())->map(fn ($l) => Arr::except($l, 'children'));
+        $shown = $main->pluck('href')->all();
+        $legalTypes = $this->legalTypes();
+        $picks = collect($this->site->typeConfig()['footer_picks'] ?? [])
+            ->filter(fn ($t) => $this->pages->has($t) && ! in_array($t, $this->hidden, true) && ! in_array($t, $legalTypes, true))
+            ->map(fn ($t) => $this->link($t))
+            ->merge(collect($this->navLinks(all: true))->map(fn ($l) => Arr::except($l, 'children')))
+            ->reject(fn ($l) => in_array($l['href'], $shown, true))->unique('href')->values();
+        $main = $main->take($draw->getInt(4, 5))->all();
+        $extra = $picks->take($draw->getInt(2, 4))->all();
+
+        // Legal: the site's terms and privacy pages, the cookie policy only where cookies are set, and the sitemap.
+        $essential = array_values(array_filter(['terms', 'privacy', 'game_terms', SiteRenderer::needsConsent($this->site) ? 'cookies' : null, 'sitemap'],
+            fn ($t) => $t && in_array($t, $legalTypes, true) && $this->pages->has($t)));
+        $legal = array_map(fn ($t) => ['label' => $this->pages[$t]->title, 'href' => $this->href($this->pages[$t]->slug)], array_slice($essential, 0, 4));
+        if ($legal === []) {
+            $legal = array_slice($this->legalLinks(), 0, 4);
         }
-        $used = collect($groups)->flatMap(fn ($g) => array_column($g['links'], 'href'))->merge(array_column($plain, 'href'))->all();
-        $rest = $links->except($used)->map(fn ($l) => Arr::except($l, 'children'))->values()->all();
-        if ($plain !== []) {
-            array_unshift($groups, ['title' => $this->t('pages'), 'links' => $plain]);
-        }
-        if ($rest !== []) {
-            $groups[] = ['title' => $this->t('more_pages'), 'links' => $rest];
+        if ($this->brand->company_email) {
+            $legal[] = ['label' => $this->brand->company_email, 'href' => 'mailto:'.$this->brand->company_email];
         }
 
-        return $groups;
+        $groups = $draw->getInt(0, 1) === 1 || $extra === []
+            ? [['title' => $this->t('pages'), 'links' => array_merge($main, $extra)]]
+            : [['title' => $this->t('pages'), 'links' => $main], ['title' => $this->t('more_pages'), 'links' => $extra]];
+        $groups[] = ['title' => $this->t('legal'), 'links' => $legal];
+
+        return array_values(array_filter($groups, fn ($g) => $g['links'] !== []));
     }
 
     /** @return array{label: string, href: string} */

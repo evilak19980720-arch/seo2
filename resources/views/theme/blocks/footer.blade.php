@@ -1,6 +1,5 @@
 @php($cta = $ctx->primaryCta())
-@php($legal = array_merge($ctx->legalLinks(), $ctx->brand->company_email ? [['label' => $ctx->brand->company_email, 'href' => 'mailto:'.$ctx->brand->company_email]] : []))
-@php($groups = array_merge($ctx->footerGroups(), $legal ? [['title' => $ctx->t('legal'), 'links' => $legal]] : []))
+@php($groups = $ctx->footerGroups())
 <footer class="footer footer--{{ $variant }}">
 <div class="container">
 <div class="footer__cols{{ count($groups) > 3 ? ' footer__cols--wide' : '' }}" style="--fg:{{ count($groups) > 3 ? min(6, count($groups)) : max(1, count($groups)) }}">

@@ -106,6 +106,8 @@ return [
     'footer_pages' => ['responsible', 'terms', 'privacy', 'cookies', 'regions', 'sitemap', 'search'],
     'footer_optional' => ['security', 'fairness', 'community', 'game_terms', 'ip', 'accessibility'],
     'footer_optional_count' => [2, 3],
+    // Pages outside the main menu worth a footer link, most useful first (the footer keeps only a few).
+    'footer_picks' => ['responsible', 'help', 'contact', 'about', 'download', 'security', 'fairness', 'community'],
     // The app page joins the menu (before help) when the brand has an app.
     'app_page' => 'download',
     // Pages that no longer exist on their own, and the page their old address now leads to (301).

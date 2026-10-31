@@ -130,14 +130,16 @@ class RichTemplateTest extends TestCase
         $this->assertStringContainsString('<a class="mobile-bar__cta" href="https://play.google.com/x"', $home, 'the brand link is the raised button');
         $this->assertSame('Perguntas', ThemeContext::shortLabel('Perguntas frequentes sobre o jogo', 'Perguntas frequentes'));
         $this->assertSame('Como jogar', ThemeContext::shortLabel('Guia completo de como jogar', 'Como jogar'));
-        // The footer still lists every page.
+        // A dropdown page can still be one of the footer picks.
         $this->assertMatchesRegularExpression('#<footer.*perguntas-frequentes.*</footer>#s', $home);
-        // Footer links come in groups that fold on phones: the submenu item heads its own group, legal comes last.
+        // Footer links come in groups (folded, open or inline on phones), legal last.
         preg_match('#<footer.*</footer>#s', $home, $footer);
         preg_match_all('#<details class="footer__group"(?: data-fold)? open><summary class="footer__title">([^<]+)</summary>#', $footer[0], $titles);
         $this->assertGreaterThanOrEqual(2, count($titles[1]));
         $this->assertSame('Legal', end($titles[1]));
-        $this->assertMatchesRegularExpression('#<summary class="footer__title">[^<]+</summary><ul>\s*<li><a href="/[^"]*/">[^<]+</a></li><li><a href="/perguntas-frequentes/">#', $footer[0]);
+        // Kept short: at most three groups and about a dozen links; the sitemap page lists the rest.
+        $this->assertLessThanOrEqual(3, count($titles[1]));
+        $this->assertLessThanOrEqual(14, substr_count($footer[0], '<li><a '));
         $this->assertSame(1, substr_count($footer[0], 'href="/perguntas-frequentes/"'), 'each page once');
     }
 
