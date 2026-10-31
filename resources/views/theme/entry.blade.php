@@ -25,10 +25,13 @@
         if (isset($classes['theme'])) {
             unset($params['themes']);
         }
-        // Each mechanic links to the knowledge article that explains it, when the site has one.
+        // Each mechanic links to its topic page (the games that use it) when the site has one, else to the
+        // knowledge article that explains it.
+        $topics = $ctx->children('mechanics')->map(fn ($c) => $c + ['match' => array_filter(explode('|', substr((string) ($ctx->section('mechanics', $c['key'])['filter'] ?? ''), 5)))]);
         $articles = $ctx->children('academy')->map(fn ($c) => $c + ['match' => (array) ($ctx->section('academy', $c['key'])['match'] ?? [])]);
-        $mechanics = collect((array) $entry->get('mechanics', []))->filter(fn ($v) => is_string($v) && trim($v) !== '')->map(function ($m) use ($articles) {
-            $article = $articles->first(fn ($a) => collect($a['match'])->contains(fn ($w) => str_contains(mb_strtolower($m), mb_strtolower($w))));
+        $mechanics = collect((array) $entry->get('mechanics', []))->filter(fn ($v) => is_string($v) && trim($v) !== '')->map(function ($m) use ($topics, $articles) {
+            $hit = fn ($a) => collect($a['match'])->contains(fn ($w) => str_contains(mb_strtolower($m), mb_strtolower($w)));
+            $article = $topics->first($hit) ?? $articles->first($hit);
 
             return ['label' => trim($m), 'href' => $article['href'] ?? null];
         })->values()->all();

@@ -143,7 +143,7 @@ class GameSiteTest extends TestCase
         $this->assertTrue($first['home_order']);
         $applied = array_column(SiteStructure::apply($type, $first)['pages']['home']['sections'], 'key');
         $this->assertSame($first['pages']['home'], $applied, 'the page is built in that order');
-        $this->assertLessThanOrEqual(30, count($first['pages']));
+        $this->assertLessThanOrEqual(34, count($first['pages']));
         $positionings = collect(range(1, 12))->map(fn () => SiteStructure::choose($this->gameSite(), $type)['positioning'])->unique();
         $this->assertGreaterThan(1, $positionings->count(), 'positioning is drawn per site');
         // No accounts, no payments, no licence: none of those pages or sections.
@@ -230,8 +230,8 @@ class GameSiteTest extends TestCase
         $gamesSlug = $site->pages()->where('type', 'games')->value('slug');
         $this->assertContains("{$gamesSlug}/fortune-tiger", $written, 'games own the game detail pages');
 
-        // The game list is the lobby: one page, with search and filters (no separate lobby column).
-        $lobby = file_get_contents("{$dir}/{$gamesSlug}/index.html");
+        // The game lobby (under the game centre) has search and filters; it shares the game detail pages.
+        $lobby = file_get_contents("{$dir}/".$site->pages()->where('type', 'hall')->value('slug').'/index.html');
         $this->assertStringContainsString('data-lobby', $lobby);
         $this->assertStringContainsString('data-filter="provider"', $lobby);
         $this->assertStringNotContainsString('data-tab="favorites"', $lobby, 'no personal tabs');
@@ -486,5 +486,24 @@ class GameSiteTest extends TestCase
         $this->assertNotEmpty($m[1], 'small logos get a capped card width');
         $this->assertGreaterThanOrEqual(300, min($m[1]), 'never a column narrower than a readable card');
         $this->assertMatchesRegularExpression('/tiles--small\{grid-template-columns:repeat\(auto-fill,minmax\(min\(100%,max\(150px,/', file_get_contents(resource_path('theme/base.css')));
+    }
+
+    public function test_menu_is_drawn_per_site_with_games_and_news_always_and_the_game_centre_under_games(): void
+    {
+        $type = config('game_site');
+        $menus = [];
+        foreach (range(1, 120) as $seed) {
+            $plan = SiteStructure::plan($type, new \Random\Randomizer(new \Random\Engine\Mt19937($seed)), ['app' => true], null, 0);
+            $this->assertSame('games', $plan['menu'][0], 'games comes first');
+            $this->assertContains('blog', $plan['menu']);
+            $this->assertGreaterThanOrEqual(5, count($plan['menu']));
+            $this->assertLessThanOrEqual(7, count($plan['menu']));
+            foreach ($type['game_centre'] as $page) {
+                $this->assertTrue(in_array($page, $plan['menu'], true) || ($plan['parents'][$page] ?? null) === 'games', "{$page} is in the game centre");
+            }
+            $this->assertLessThanOrEqual($type['dropdown_max'], max(array_count_values($plan['parents']) ?: [0]));
+            $menus[] = implode(',', $plan['menu']);
+        }
+        $this->assertGreaterThan(80, count(array_unique($menus)), 'menus differ between sites, also in order');
     }
 }

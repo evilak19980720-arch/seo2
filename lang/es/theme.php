@@ -122,6 +122,9 @@ return [
         'news' => 'Noticias',
     ],
     'page_titles' => [
+        'game_intro' => 'Conoce los juegos',
+        'hall' => 'Sala de juegos',
+        'mechanics' => 'Mecánicas de juegos',
         'brand_story' => 'Nuestra historia',
         'company' => 'Empresa',
         'press' => 'Prensa y socios',

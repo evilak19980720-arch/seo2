@@ -175,17 +175,21 @@ class SiteStructure
         $def = $type['positionings'][$name];
         $ok = fn (string $page) => isset($type['pages'][$page]) && (empty($type['pages'][$page]['requires']) || ($met[$type['pages'][$page]['requires']] ?? false));
 
-        $menu = array_values(array_filter($def['menu'], fn ($t) => $t === 'blog' || $ok($t)));
-        $app = $type['app_page'] ?? null;
-        if ($app && $ok($app) && ! in_array($app, $menu, true) && count($menu) < (int) ($type['main_nav_max'] ?? 8) - 1) {
-            $at = array_search('help', $menu, true);
-            array_splice($menu, $at === false ? count($menu) : $at, 0, [$app]);
-        }
-        $parents = [];
-        foreach ($def['children'] ?? [] as $parent => $children) {
-            foreach ($children as $child) {
-                if (in_array($parent, $menu, true) && $ok($child) && ! in_array($child, $menu, true) && ! isset($parents[$child])) {
-                    $parents[$child] = $parent;
+        if (isset($type['menu_pool'])) {
+            [$menu, $parents] = self::drawMenu($type, $def, $rand, $ok);
+        } else {
+            $menu = array_values(array_filter($def['menu'], fn ($t) => $t === 'blog' || $ok($t)));
+            $app = $type['app_page'] ?? null;
+            if ($app && $ok($app) && ! in_array($app, $menu, true) && count($menu) < (int) ($type['main_nav_max'] ?? 8) - 1) {
+                $at = array_search('help', $menu, true);
+                array_splice($menu, $at === false ? count($menu) : $at, 0, [$app]);
+            }
+            $parents = [];
+            foreach ($def['children'] ?? [] as $parent => $children) {
+                foreach ($children as $child) {
+                    if (in_array($parent, $menu, true) && $ok($child) && ! in_array($child, $menu, true) && ! isset($parents[$child])) {
+                        $parents[$child] = $parent;
+                    }
                 }
             }
         }
@@ -195,9 +199,65 @@ class SiteStructure
         $extra = $count > 0 ? array_slice($rand->shuffleArray($optional), 0, $count) : [];
         // Promotion terms belong to sites that list promotions.
         $terms = in_array('promotions', $menu, true) || isset($parents['promotions']) ? ['bonus_terms'] : [];
-        $pages = array_values(array_unique(array_filter(array_merge(['home'], $menu, array_keys($parents), $type['footer_pages'] ?? [], $extra, $terms), $ok)));
+        $required = array_keys(array_filter($type['pages'], fn ($p) => ! empty($p['required'])));
+        $pages = array_values(array_unique(array_filter(array_merge(['home'], $menu, array_keys($parents), $required, $type['footer_pages'] ?? [], $extra, $terms), $ok)));
 
         return ['positioning' => $name, 'menu' => $menu, 'parents' => $parents, 'pages' => $pages, 'home' => $def['home'] ?? []];
+    }
+
+    /**
+     * The header menu drawn per site: the required entries, then pool entries (the positioning's own
+     * menu favoured) up to a drawn size, games first and the rest shuffled; then each page that can
+     * hang under a menu entry gets one of its possible parents (the positioning's choice first).
+     * Game-centre pages are always kept, under games when not in the menu themselves.
+     *
+     * @return array{0: array<int, string>, 1: array<string, string>}
+     */
+    protected static function drawMenu(array $type, array $def, Randomizer $rand, callable $ok): array
+    {
+        $usable = fn (string $t) => $t === 'blog' || $ok($t);
+        $required = array_values(array_filter($type['menu_required'] ?? ['games', 'blog'], $usable));
+        [$min, $max] = $type['menu_size'] ?? [5, 7];
+        $size = $rand->getInt((int) $min, (int) $max);
+        $pool = array_values(array_filter(array_diff($type['menu_pool'] ?? [], $required), $usable));
+        $favoured = array_values(array_intersect($rand->shuffleArray($pool), $def['menu'] ?? []));
+        $picked = array_values(array_filter($favoured, fn () => $rand->nextFloat() < (float) ($type['menu_favoured'] ?? 0.75)));
+        $others = array_values(array_diff($rand->shuffleArray($pool), $picked));
+        $picked = array_slice(array_merge($picked, $others), 0, max(0, $size - count($required)));
+        $first = in_array('games', $required, true) ? ['games'] : [];
+        $menu = array_merge($first, $rand->shuffleArray(array_values(array_merge(array_diff($required, $first), $picked))));
+
+        $parents = [];
+        $chosen = [];
+        foreach ($def['children'] ?? [] as $parent => $children) {
+            foreach ($children as $child) {
+                $chosen[$child][] = $parent;
+            }
+        }
+        $centre = $type['game_centre'] ?? [];
+        foreach ($type['child_of'] ?? [] as $child => $options) {
+            if (in_array($child, $menu, true) || ! $ok($child)) {
+                continue;
+            }
+            // The positioning's own children always come; any other page that can hang somewhere half the time.
+            $wanted = isset($chosen[$child]) || in_array($child, $centre, true) || $rand->nextFloat() < 0.5;
+            $in = array_values(array_filter($options, fn ($p) => in_array($p, $menu, true)));
+            if (! $wanted || $in === []) {
+                continue;
+            }
+            $own = array_values(array_intersect($chosen[$child] ?? [], $in));
+            $parent = $own !== [] && $rand->nextFloat() < 0.6 ? $own[0] : $in[$rand->getInt(0, count($in) - 1)];
+            // A dropdown stays short: past the limit a page tries its other parents, else stays off the menu.
+            $full = fn ($p) => count(array_keys($parents, $p, true)) >= (int) ($type['dropdown_max'] ?? 6);
+            if ($full($parent) && ! in_array($child, $centre, true)) {
+                $parent = collect($in)->first(fn ($p) => ! $full($p));
+            }
+            if ($parent !== null) {
+                $parents[$child] = $parent;
+            }
+        }
+
+        return [$menu, $parents];
     }
 
     /** Sections of one page under a positioning: home in the positioning's order, other pages a few each. */
@@ -339,6 +399,14 @@ class SiteStructure
         })->count();
     }
 
+    /** Whether a game's mechanics or types mention one of the words ("free spin|giros|…"). */
+    public static function usesMechanic(Entry $entry, string $words): bool
+    {
+        $text = mb_strtolower(implode(' ', array_filter(array_merge((array) $entry->get('mechanics', []), (array) $entry->get('types', [])), 'is_string')));
+
+        return $text !== '' && collect(explode('|', mb_strtolower($words)))->filter()->contains(fn ($w) => str_contains($text, $w));
+    }
+
     /** Whether an item belongs to a classification filter (type:, theme:, device:, tag:, or everything). */
     public static function matches(Entry $entry, string $filter): bool
     {
@@ -349,6 +417,7 @@ class SiteStructure
             'theme' => in_array($value, (array) $entry->get('theme_keys', []), true),
             'device' => in_array($value, (array) $entry->get('devices', []), true),
             'tag' => in_array($value, $entry->tags(), true),
+            'mech' => self::usesMechanic($entry, (string) $value),
             default => true,
         };
     }

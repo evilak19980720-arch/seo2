@@ -63,6 +63,20 @@ $themes = [
     'seasonal' => ['季节限定主题', 'seasonal'],
 ];
 
+// Mechanic topics: a game belongs when its mechanics or types contain one of the words.
+$mechanics = [
+    'free_spins' => ['免费旋转游戏', 'games with free spins', ['free spin', 'free game', 'giros', 'rodadas', 'tiradas']],
+    'multipliers' => ['倍数游戏', 'games with multipliers', ['multiplier', 'multiplicador']],
+    'cascades' => ['连锁消除游戏', 'games with cascading reels', ['cascad', 'tumbl', 'avalanche', 'cascata']],
+    'megaways' => ['Megaways 游戏', 'Megaways games', ['megaways']],
+    'hold_win' => ['Hold & Win 游戏', 'hold and win / respin games', ['hold', 'respin', 're-spin']],
+    'jackpots' => ['奖池游戏', 'games with jackpots', ['jackpot', 'pote', 'bote']],
+    'cluster' => ['集群赔付游戏', 'cluster pays games', ['cluster']],
+    'expanding' => ['扩展符号游戏', 'games with expanding symbols or reels', ['expand', 'expans']],
+    'buy_bonus' => ['购买奖励游戏', 'games with a bonus buy', ['buy', 'compra']],
+    'wilds' => ['Wild 玩法游戏', 'games built around wild symbols', ['wild']],
+];
+
 return [
     'label' => '游戏品牌站',
     'schema' => 'VideoGame',
@@ -102,6 +116,24 @@ return [
             'home' => ['intro', 'live_events', 'promos', 'hot_games', 'trust', 'latest_notices', 'faq', 'support'],
         ],
     ],
+    // The header menu (home is always the logo link): "menu_required" always, then a draw from
+    // "menu_pool" (the positioning's own menu items are favoured) up to "menu_size" entries, in a
+    // shuffled order with games first. Every page in "child_of" not in the menu hangs under one of
+    // the parents listed for it that is in the menu (the positioning's own children first);
+    // "game_centre" pages are always on the site, under games.
+    'menu_required' => ['games', 'blog'],
+    'menu_pool' => ['providers', 'promotions', 'events', 'academy', 'guide', 'help', 'about', 'download', 'notices', 'hall', 'game_intro', 'business'],
+    'menu_size' => [5, 7],
+    'menu_favoured' => 0.75,
+    'dropdown_max' => 6,
+    'game_centre' => ['hall', 'game_intro', 'providers'],
+    'child_of' => [
+        'hall' => ['games'], 'game_intro' => ['games'], 'providers' => ['games'], 'slot_types' => ['games', 'game_intro'],
+        'themes' => ['games', 'game_intro'], 'mechanics' => ['games', 'game_intro'], 'academy' => ['games', 'guide', 'help'],
+        'guide' => ['help', 'academy'], 'notices' => ['help', 'about'], 'contact' => ['help', 'about'],
+        'brand_story' => ['about'], 'company' => ['about'], 'press' => ['about'], 'official_channels' => ['about', 'help'],
+        'events' => ['promotions'], 'promotions' => ['events'], 'download' => ['help', 'games'],
+    ],
     // Pages every positioning has (footer and legal), and a few more drawn per site.
     'footer_pages' => ['responsible', 'terms', 'privacy', 'cookies', 'regions', 'sitemap', 'search'],
     'footer_optional' => ['security', 'fairness', 'community', 'game_terms', 'ip', 'accessibility'],
@@ -111,10 +143,13 @@ return [
     // The app page joins the menu (before help) when the brand has an app.
     'app_page' => 'download',
     // Pages that no longer exist on their own, and the page their old address now leads to (301).
-    'moved' => ['game_math' => 'academy', 'lobby' => 'games', 'news' => 'blog', 'status' => 'notices', 'behind_scenes' => 'blog'],
+    'moved' => ['game_math' => 'academy', 'lobby' => 'hall', 'news' => 'blog', 'status' => 'notices', 'behind_scenes' => 'blog'],
     // Which pages a page or detail page links to first (1.md section 7); missing ones are skipped.
     'related' => [
-        'games' => ['providers', 'slot_types', 'themes', 'academy'],
+        'games' => ['hall', 'game_intro', 'providers', 'slot_types', 'themes', 'mechanics'],
+        'game_intro' => ['hall', 'mechanics', 'academy'],
+        'hall' => ['game_intro', 'providers', 'themes'],
+        'mechanics' => ['academy', 'game_intro', 'hall'],
         'providers' => ['games', 'slot_types', 'academy'],
         'slot_types' => ['themes', 'academy', 'games'],
         'themes' => ['slot_types', 'games', 'academy'],
@@ -125,7 +160,7 @@ return [
         'notices' => ['help', 'contact', 'security'],
         'help' => ['contact', 'guide', 'notices'],
         'about' => ['brand_story', 'official_channels', 'contact'],
-        'entry:game' => ['academy', 'slot_types', 'themes'],
+        'entry:game' => ['hall', 'mechanics', 'academy', 'slot_types', 'themes'],
         'entry:provider' => ['games', 'slot_types'],
         'entry:promotion' => ['bonus_terms', 'help', 'games'],
         'entry:event' => ['promotions', 'games', 'help'],
@@ -264,17 +299,48 @@ return [
             ],
         ],
 
-        // 二、游戏（一级）：全部游戏就是带搜索和筛选的大厅；类型、主题、供应商、知识库是它的二级栏目。
+        // 二、游戏中心（一级）：入口页。二级：游戏介绍（讲特色与规则）、游戏大厅（搜索、分类、筛选）、
+        // 游戏供应商，以及按类型、主题、机制组织的专题页；介绍和大厅共用同一套游戏详情页（/游戏中心/游戏/）。
         'games' => [
-            'label' => '游戏', 'slug' => $slug('games', 'jogos', 'juegos'), 'nav' => 'main', 'required' => true, 'min_words' => 250,
+            'label' => '游戏中心', 'slug' => $slug('games', 'jogos', 'juegos'), 'nav' => 'main', 'required' => true, 'min_words' => 250,
             'sections' => [
-                $s('overview', 'prose', '全部游戏介绍', 'overview of the games on the site and how they differ', $req),
-                $s('lobby', 'game_lobby', '全部游戏 / 搜索 / 筛选', 'every game with search and filters by provider, type, theme and device', $req),
+                $s('overview', 'prose', '游戏中心介绍', 'overview of the games on the site and where to find what', $req),
+                $s('centre', 'link_grid', '游戏中心入口', 'the parts of the game centre', $req + ['links' => ['hall', 'game_intro', 'providers', 'slot_types', 'themes', 'mechanics']]),
                 $list('hot', '热门游戏', 'popular games', 'game', 'hot'),
                 $list('new', '新上线游戏', 'newly added games', 'game', 'new'),
                 $s('categories', 'link_grid', '按类型浏览', 'browse by type', ['links' => 'sections:slot_types']),
                 $s('faq', 'faq', '游戏常见问题', 'common questions about the games'),
             ],
+        ],
+        // 二级：游戏介绍，侧重讲解游戏特色与规则；游戏卡片进入共用的游戏详情页。
+        'game_intro' => [
+            'label' => '游戏介绍', 'slug' => $slug('game-guides', 'conheca-os-jogos', 'conoce-los-juegos'), 'nav' => 'secondary', 'parent' => 'games', 'min_words' => 250,
+            'sections' => [
+                $s('intro', 'prose', '如何看懂一款游戏', 'what to look at in a game: its features, its rules and how a round plays', $req),
+                $list('featured', '精选游戏介绍', 'editor\'s picks, each with what makes it special', 'game', 'featured', $req),
+                $s('features', 'features', '游戏特色看点', 'the features players meet most across the site\'s games'),
+                $list('classic', '经典玩法', 'games with simple, classic rules', 'game', 'classic'),
+                $s('topics', 'link_grid', '游戏专题', 'topic pages by type, theme and mechanic', ['links' => ['slot_types', 'themes', 'mechanics', 'academy']]),
+                $s('faq', 'faq', '规则常见问题', 'questions about game rules'),
+            ],
+        ],
+        // 二级：游戏大厅，侧重搜索、分类和筛选；和游戏介绍共用游戏详情页。
+        'hall' => [
+            'label' => '游戏大厅', 'slug' => $slug('game-lobby', 'salao-de-jogos', 'sala-de-juegos'), 'nav' => 'secondary', 'parent' => 'games', 'min_words' => 0,
+            'sections' => [
+                $s('lobby', 'game_lobby', '全部游戏 / 搜索 / 筛选', 'every game with search and filters by provider, type, theme and device', $req),
+                $s('categories', 'link_grid', '按类型浏览', 'browse by type', ['links' => 'sections:slot_types']),
+                $s('themes', 'link_grid', '按主题浏览', 'browse by theme', ['links' => 'sections:themes']),
+            ],
+        ],
+        // 二级专题：按机制组织的游戏合集，每个机制一个三级合集页（站上至少 3 款游戏用到才生成）。
+        'mechanics' => [
+            'label' => '机制专题', 'slug' => $slug('game-mechanics', 'mecanicas-de-jogos', 'mecanicas-de-juegos'), 'nav' => 'secondary', 'parent' => 'games',
+            'split' => ['index' => ['intro'], 'min_items' => 3, 'max' => 10],
+            'sections' => array_merge(
+                [$s('intro', 'prose', '机制说明', 'how game mechanics change the way a game plays', $req)],
+                array_map(fn ($key, $m) => $list($key, $m[0], $m[1].': how the mechanic plays in these games', 'game', 'mech:'.implode('|', $m[2])), array_keys($mechanics), $mechanics),
+            ),
         ],
         // 二级：游戏类型。每个类型是一个三级合集页（站上至少 3 款该类型的游戏才生成）。
         'slot_types' => [

@@ -789,6 +789,7 @@ class ThemeContext
             str_starts_with($filter, 'device:') => $items->filter(fn (Entry $e) => in_array(substr($filter, 7), (array) $e->get('devices', []), true)),
             $filter === 'latest' => $byDate($items),
             str_starts_with($filter, 'tag:') => $tagged(substr($filter, 4)),
+            str_starts_with($filter, 'mech:') => $items->filter(fn (Entry $e) => SiteStructure::usesMechanic($e, substr($filter, 5))),
             $filter === 'classic' => $tagged('classic'),
             default => in_array($collection, ['news', 'notice'], true) ? $byDate($items) : $items,
         };

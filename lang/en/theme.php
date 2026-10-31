@@ -122,6 +122,9 @@ return [
         'news' => 'News',
     ],
     'page_titles' => [
+        'game_intro' => 'Game guides',
+        'hall' => 'Game lobby',
+        'mechanics' => 'Game mechanics',
         'brand_story' => 'Our story',
         'company' => 'Company',
         'press' => 'Press & partners',
