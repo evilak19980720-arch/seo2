@@ -211,6 +211,8 @@ class DesignConfigValidator
         'mobile_bar_style' => ['raised', 'flat', 'pill', 'cta', 'icons', 'labels'],
         // Slots of the phone bottom bar, home included; "none" shows no bar (the header menu does the work).
         'mobile_bar_items' => ['5', '4', '3', 'none'],
+        // How the bar's icons are painted.
+        'mobile_bar_icons' => ['line', 'bold', 'duo', 'chip', 'dot'],
     ];
 
     protected function navigation(mixed $nav, array $menu, array $siteTypeConfig, string $variant, int $seed = 0): array

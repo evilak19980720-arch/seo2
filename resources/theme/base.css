@@ -874,3 +874,12 @@ body .hero__points li{min-width:0;white-space:normal;line-height:1.35;font-size:
 .st-mcookie-compact .cookie__actions{display:flex;flex-direction:column;gap:.3rem;margin:0}
 .st-mcookie-compact .cookie__actions .btn{min-height:34px;padding:0 .8rem;font-size:.78rem;flex:none}
 }
+/* Bottom-bar icon paint (mobile-bar--i-*): line is the default */
+.mobile-bar--i-bold svg{stroke-width:2.4}
+.mobile-bar--i-duo svg{fill:color-mix(in srgb,currentColor 18%,transparent)}
+.mobile-bar--i-duo a[aria-current] svg{fill:color-mix(in srgb,currentColor 34%,transparent)}
+.mobile-bar--i-chip a:not(.mobile-bar__cta):not(.mobile-bar__button) svg{width:44px;height:28px;padding:4px 11px;border-radius:999px;transition:background .2s}
+.mobile-bar--i-chip a[aria-current]:not(.mobile-bar__cta) svg{background:color-mix(in srgb,var(--c-primary) 20%,transparent)}
+.mobile-bar--i-dot a{position:relative}
+.mobile-bar--i-dot a:not(.mobile-bar__cta):not(.mobile-bar__button)[aria-current]::before{content:"";position:absolute;top:5px;left:50%;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:var(--c-primary)}
+.mobile-bar--i-dot svg{stroke-width:1.6}

@@ -124,7 +124,7 @@ class RichTemplateTest extends TestCase
         $this->assertStringContainsString('<ul class="nav__sub"><li><a href="/perguntas-frequentes/">', $home);
         $this->assertStringContainsString('nav--static', $home);
         $this->assertSame(2, substr_count($home, 'btn nav__cta'));
-        $this->assertMatchesRegularExpression('#class="mobile-bar mobile-bar--[a-z]+"#', $home);
+        $this->assertMatchesRegularExpression('#class="mobile-bar mobile-bar--[a-z]+ mobile-bar--i-[a-z]+"#', $home);
         $this->assertStringContainsString('has-mobile-bar', $home);
         $this->assertStringContainsString('<li><a href="/" aria-current="page">Início</a></li>', $home, 'the current page is marked');
         $this->assertStringContainsString('<a class="mobile-bar__cta" href="https://play.google.com/x"', $home, 'the brand link is the raised button');

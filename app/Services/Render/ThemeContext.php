@@ -10,6 +10,7 @@ use App\Services\Content\SeoRules;
 use App\Services\Sites\PictureRole;
 use App\Services\Sites\ReferenceLibrary;
 use App\Services\Sites\SiteStructure;
+use App\Services\Theme\BarIcons;
 use App\Services\Theme\DefaultDesign;
 use App\Services\Theme\DesignConfigValidator;
 use App\Services\Theme\Variants;
@@ -311,13 +312,20 @@ class ThemeContext
             $type = $types[$link['href']] ?? null;
             $fallback = $type === 'blog' ? $this->t('blog') : ($type && Lang::has("theme.page_titles.{$type}", $this->lang) ? $this->t("page_titles.{$type}") : null);
 
-            return ['label' => self::shortLabel($link['label'], $fallback), 'href' => $link['href'], 'current' => trim($link['href'], '/') === $this->currentPath];
+            return ['label' => self::shortLabel($link['label'], $fallback), 'href' => $link['href'], 'current' => trim($link['href'], '/') === $this->currentPath,
+                'icon' => BarIcons::svg($type, $this->iconSeed())];
         })->values()->all();
         if ($cta) {
             $cta['label'] = self::shortLabel($cta['label'], $this->t('get_started'));
         }
 
-        return ['items' => $items, 'cta' => $cta, 'home_current' => $this->currentPath === ''];
+        return ['items' => $items, 'cta' => $cta, 'home_current' => $this->currentPath === '', 'home_icon' => BarIcons::svg('home', $this->iconSeed())];
+    }
+
+    /** Which icon shapes the site draws: its own, and new ones with each new template. */
+    protected function iconSeed(): string
+    {
+        return ($this->site->domain_id ?: $this->site->id).'#'.($this->design['look']['round'] ?? 0);
     }
 
     /** A label that fits a bottom-bar slot: the page's own if short, else the default name, else its first word. */
@@ -338,7 +346,7 @@ class ThemeContext
     public function navigation(): array
     {
         $nav = ($this->design['navigation'] ?? []) + ['submenu' => [], 'buttons' => 1, 'mobile_bar' => false, 'sticky' => true, 'home_link' => false,
-            'mobile_header' => 'standard', 'mobile_menu' => 'dropdown', 'mobile_bar_style' => 'raised', 'mobile_bar_items' => '5'];
+            'mobile_header' => 'standard', 'mobile_menu' => 'dropdown', 'mobile_bar_style' => 'raised', 'mobile_bar_items' => '5', 'mobile_bar_icons' => 'line'];
         if ($nav['mobile_bar_items'] === 'none') {
             $nav['mobile_bar'] = false;
         }

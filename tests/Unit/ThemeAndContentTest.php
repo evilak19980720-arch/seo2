@@ -128,4 +128,17 @@ class ThemeAndContentTest extends TestCase
         preg_match('/\.footer\{background:(#[0-9a-f]{6});color:(#[0-9a-f]{6})/', $css, $m);
         $this->assertGreaterThanOrEqual(4.5, Color::contrast($m[1], $m[2]));
     }
+
+    public function test_bottom_bar_icons_follow_the_page_and_differ_between_sites(): void
+    {
+        $this->assertSame('promo', \App\Services\Theme\BarIcons::topic('promotions'));
+        $this->assertSame('games', \App\Services\Theme\BarIcons::topic('live_games'), 'unknown types fall back to words in their name');
+        $this->assertSame('more', \App\Services\Theme\BarIcons::topic('legal_stuff'));
+        foreach (\App\Services\Theme\BarIcons::GLYPHS as $topic => $shapes) {
+            $this->assertCount(3, array_unique($shapes), $topic);
+        }
+        $shapes = collect(range(1, 30))->map(fn ($site) => \App\Services\Theme\BarIcons::svg('games', (string) $site))->unique();
+        $this->assertCount(3, $shapes, 'sites draw different shapes');
+        $this->assertSame(\App\Services\Theme\BarIcons::svg('games', '7#1'), \App\Services\Theme\BarIcons::svg('games', '7#1'), 'stable per site');
+    }
 }
