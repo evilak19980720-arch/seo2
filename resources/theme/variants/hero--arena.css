@@ -1,0 +1,15 @@
+/* hero arena: full picture, title low and centred in bold italic, points as a scoreboard bar */
+.hero--arena{align-items:flex-end;text-align:center}
+.hero--arena .hero__media::after{background:linear-gradient(0deg,var(--c-secondary) 8%,color-mix(in srgb,var(--c-secondary) 60%,transparent) 50%,color-mix(in srgb,var(--c-secondary) 20%,transparent))}
+.hero--arena .hero__text{max-width:860px;margin:0 auto}
+.hero--arena :is(h1,h2){font-size:clamp(2.1rem,7vw,4.6rem);font-style:italic;text-transform:uppercase;letter-spacing:-.01em;text-shadow:0 2px 16px rgba(0,0,0,.3)}
+.hero--arena .hero__lead{margin:0 auto}
+.hero--arena .hero__actions{justify-content:center}
+.hero--arena .hero__eyebrow{background:var(--c-primary);color:var(--c-on-primary);transform:skewX(-10deg);border-radius:4px}
+.hero--arena .hero__eyebrow::before{background:currentColor}
+.hero--arena .hero__points{justify-content:center;gap:0;margin-top:1.5rem;border-radius:var(--r-box);overflow:hidden;background:color-mix(in srgb,var(--c-secondary) 70%,transparent);border:1px solid color-mix(in srgb,var(--c-on-secondary) 18%,transparent);color:var(--c-on-secondary)}
+.hero--arena .hero__points li{flex:1 1 33%;justify-content:center;padding:.7rem .6rem;font-size:.85rem;text-transform:uppercase;letter-spacing:.06em}
+.hero--arena .hero__points li+li{border-left:1px solid color-mix(in srgb,var(--c-on-secondary) 18%,transparent)}
+.hero--arena .hero__points li::before{display:none}
+.hero--arena .hero__actions .btn:not(.btn--ghost){border-radius:6px;padding:0 2.4rem;text-transform:uppercase;font-style:italic;box-shadow:0 0 30px -6px var(--c-primary)}
+@media (max-width:759px){.hero--arena .hero__points{flex-direction:column}.hero--arena .hero__points li{flex:none}.hero--arena .hero__points li+li{border-left:0;border-top:1px solid color-mix(in srgb,var(--c-on-secondary) 18%,transparent)}}

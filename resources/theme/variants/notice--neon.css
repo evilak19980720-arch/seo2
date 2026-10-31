@@ -1,0 +1,6 @@
+/* notice neon: dark bar with a lit bottom edge, pulsing star and glowing link */
+.notice--neon{background:linear-gradient(90deg,var(--c-secondary),color-mix(in srgb,var(--c-primary) 28%,var(--c-secondary)),var(--c-secondary));box-shadow:inset 0 -1px 0 color-mix(in srgb,var(--c-primary) 70%,transparent)}
+.notice--neon .notice__icon{color:var(--c-accent);text-shadow:0 0 10px var(--c-accent);animation:notice-blink 1.6s ease-in-out infinite}
+@keyframes notice-blink{50%{opacity:.35}}
+.notice--neon .notice__link{text-shadow:0 0 10px color-mix(in srgb,var(--c-primary) 80%,transparent)}
+@media (prefers-reduced-motion:reduce){.notice--neon .notice__icon{animation:none}}

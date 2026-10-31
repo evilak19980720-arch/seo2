@@ -1,0 +1,5 @@
+/* notice pill: a floating rounded announcement pill on the page background */
+.notice--pill{background:transparent;color:var(--c-text);padding:.6rem 0 0}
+.notice--pill .notice__inner{min-height:46px;padding:0 .4rem 0 1rem;border-radius:999px;background:var(--c-surface);border:1px solid color-mix(in srgb,var(--c-primary) 35%,transparent);box-shadow:0 8px 22px -16px var(--c-primary);width:calc(100% - 24px)}
+.notice--pill .notice__icon{color:var(--c-primary)}
+.notice--pill .notice__link{padding:0 1rem;min-height:36px;border-radius:999px;background:var(--c-primary);color:var(--c-on-primary)}

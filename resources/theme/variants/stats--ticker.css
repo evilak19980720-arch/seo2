@@ -1,0 +1,9 @@
+/* stats ticker: compact accent strip, values and labels inline like a live ticker */
+.stats-block--ticker{padding:.9rem 0;background:var(--c-accent);color:var(--c-on-accent)}
+.stats-block--ticker .stats-block__title{font-size:1rem;margin-bottom:.5rem;color:inherit}
+.stats-block--ticker .stats-block__grid{display:flex;gap:0;overflow-x:auto;scrollbar-width:none}
+.stats-block--ticker .stats-block__grid::-webkit-scrollbar{display:none}
+.stats-block--ticker .stats-block__item{flex:1 0 auto;display:flex;align-items:baseline;justify-content:center;gap:.45rem;padding:.35rem 1.1rem;text-align:left}
+.stats-block--ticker .stats-block__item+.stats-block__item{border-left:1px solid color-mix(in srgb,var(--c-on-accent) 30%,transparent)!important}
+.stats-block--ticker .stats-block__item dd{color:inherit;font-size:1.2rem}
+.stats-block--ticker .stats-block__item dt{order:2;margin:0;color:inherit;opacity:.85;font-size:.75rem;white-space:nowrap}

@@ -1,0 +1,29 @@
+/* frame palace: centred royal layout, ornament above every heading, double-framed cards, ceremonial footer */
+@media (min-width:1100px){.fr-palace .container{max-width:1160px}}
+.fr-palace .nav{border-bottom:1px solid color-mix(in srgb,var(--c-primary) 45%,transparent);box-shadow:0 3px 0 -2px color-mix(in srgb,var(--c-primary) 25%,transparent)}
+.fr-palace .hero{text-align:center}
+.fr-palace .hero__lead{margin-left:auto;margin-right:auto}
+.fr-palace .hero__actions,.fr-palace .hero__points{justify-content:center}
+.fr-palace .hero h1{letter-spacing:.01em}
+.fr-palace .hero::after{content:"";position:absolute;left:50%;bottom:16px;width:12px;height:12px;margin-left:-6px;transform:rotate(45deg);border:1px solid var(--c-primary);background:var(--c-bg)}
+.fr-palace .section__head,.st-mheads-left.fr-palace .section__head{text-align:center;margin-left:auto;margin-right:auto}
+.fr-palace .section__head p{margin-left:auto;margin-right:auto}
+.fr-palace .section__head h2{text-transform:uppercase;letter-spacing:.08em;font-size:clamp(1.35rem,3.4vw,2.3rem)}
+.fr-palace .section__head h2::before{content:"\25C6";display:block;margin:0 auto .9rem;color:var(--c-primary);font-size:.75rem;line-height:1;letter-spacing:0;background:linear-gradient(90deg,transparent,var(--c-primary) 30%,transparent 46%,transparent 54%,var(--c-primary) 70%,transparent) center/min(280px,80%) 1px no-repeat}
+.fr-palace .section__head h2::after{width:110px;height:5px;margin:1rem auto 0;background:none;border-top:1px solid var(--c-primary);border-bottom:1px solid var(--c-primary);border-radius:0}
+.fr-palace :is(.tile,.post-card,.feature,.faq details,.faq__item,.card){border:1px solid color-mix(in srgb,var(--c-primary) 45%,transparent)!important;outline:1px solid color-mix(in srgb,var(--c-primary) 22%,transparent);outline-offset:4px}
+.fr-palace .btn{text-transform:uppercase;letter-spacing:.07em;font-size:.92rem}
+.fr-palace .footer{border-top:4px double var(--c-primary);text-align:center}
+.fr-palace .footer p{margin-left:auto;margin-right:auto}
+.fr-palace .footer__brand{text-transform:uppercase;letter-spacing:.12em}
+
+/* phones: everything centred, collections as a two-column gallery of square framed pieces */
+@media (max-width:759px){
+.fr-palace .section :is(.entry-list__items,.lobby__grid,.card-grid__items){grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:14px}
+.fr-palace .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{flex-direction:column!important;text-align:center}
+.fr-palace .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{aspect-ratio:1!important;flex:none!important;min-height:0!important}
+.fr-palace .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body{align-items:center;padding:.7rem .5rem .9rem!important}
+.fr-palace .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body p:not(.entry-card__meta){display:none}
+.fr-palace .section{padding-top:calc(3.5rem*var(--space));padding-bottom:calc(3.5rem*var(--space))}
+.fr-palace .hero h1{text-transform:uppercase;letter-spacing:.04em}
+}

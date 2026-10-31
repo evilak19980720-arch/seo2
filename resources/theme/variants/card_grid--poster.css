@@ -1,0 +1,9 @@
+/* card grid poster: stage cards with tall pictures, gold edge and a glowing title bar */
+.card-grid--poster .tile{background:var(--c-surface);border:1px solid color-mix(in srgb,var(--c-accent) 40%,transparent);box-shadow:0 18px 40px -26px #000}
+.card-grid--poster .tile:hover{border-color:var(--c-accent);box-shadow:0 0 30px -8px color-mix(in srgb,var(--c-accent) 70%,transparent)}
+.card-grid--poster .tile__media{aspect-ratio:4/5}
+.card-grid--poster .tile__body{border-top:3px solid var(--c-accent);text-align:center}
+.card-grid--poster .tile__body h3{text-transform:uppercase;letter-spacing:.03em;font-size:.98rem}
+.card-grid--poster .tile__tag{background:var(--c-primary);color:var(--c-on-primary)}
+@media (min-width:1024px){.card-grid--poster .card-grid__items{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (min-width:1024px){.card-grid--poster .card-grid__items:has(>:last-child:nth-child(3n)){grid-template-columns:repeat(6,minmax(0,1fr))}}

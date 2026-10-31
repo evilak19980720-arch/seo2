@@ -1,0 +1,11 @@
+/* hero reels: split, picture inside a slot-machine cabinet (header lights, reel dividers, lever) */
+.hero--reels .hero__media{position:relative;padding:34px 14px 14px;border-radius:calc(var(--r-box) + 14px);background:linear-gradient(180deg,color-mix(in srgb,var(--c-secondary) 80%,#fff 8%),var(--c-secondary));box-shadow:0 0 0 3px var(--c-accent),0 30px 60px -24px rgba(0,0,0,.55)}
+.hero--reels .hero__media::before{content:"";position:absolute;top:12px;left:50%;width:46%;height:10px;transform:translateX(-50%);border-radius:10px;background:radial-gradient(circle,var(--c-accent) 0 3px,transparent 4px) 0 50%/16px 10px repeat-x}
+.hero--reels .hero__media::after{content:"";position:absolute;left:14px;right:14px;top:34px;bottom:14px;border-radius:var(--r-box);pointer-events:none;background:linear-gradient(90deg,transparent calc(33.33% - 1px),color-mix(in srgb,var(--c-secondary) 70%,transparent) calc(33.33% - 1px) calc(33.33% + 2px),transparent calc(33.33% + 2px) calc(66.66% - 1px),color-mix(in srgb,var(--c-secondary) 70%,transparent) calc(66.66% - 1px) calc(66.66% + 2px),transparent 0),linear-gradient(180deg,rgba(0,0,0,.35),transparent 18%,transparent 82%,rgba(0,0,0,.35))}
+.hero--reels.hero--wide-img .hero__media::after{background:linear-gradient(180deg,rgba(0,0,0,.25),transparent 18%,transparent 82%,rgba(0,0,0,.25))}
+.hero--reels .hero__media img{box-shadow:none}
+.hero--reels .hero__eyebrow{background:var(--c-accent);color:var(--c-on-accent)}
+.hero--reels .hero__eyebrow::before{background:currentColor}
+.hero--reels :is(h1,h2){font-size:clamp(2rem,5.4vw,3.6rem)}
+.hero--reels .hero__actions .btn:not(.btn--ghost){box-shadow:0 5px 0 color-mix(in srgb,var(--c-primary) 55%,#000),0 12px 26px -10px var(--c-primary)}
+@media (min-width:860px){.hero--reels .hero__media{margin-right:22px}.hero--reels .hero__grid::after{content:"";position:absolute;right:-4px;top:30%;width:14px;height:34%;border-radius:8px;background:linear-gradient(90deg,color-mix(in srgb,var(--c-secondary) 70%,#fff 20%),var(--c-secondary));box-shadow:0 -18px 0 -2px var(--c-accent)}}

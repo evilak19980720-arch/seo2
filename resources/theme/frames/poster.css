@@ -1,0 +1,22 @@
+/* frame poster: on wide screens the home hero is a full-height poster held on the left while the page scrolls on the right; phones get a tall poster hero and swipeable poster cards */
+.fr-poster .hero h1{font-size:clamp(2.2rem,6vw,4.4rem);letter-spacing:-.03em;line-height:1}
+@media (min-width:1100px){
+.fr-poster main:has(>.hero:first-child){display:grid;grid-template-columns:minmax(0,42%) minmax(0,1fr);align-items:start}
+.fr-poster main:has(>.hero:first-child)>*{grid-column:2;min-width:0}
+.fr-poster main:has(>.hero:first-child)>.hero:first-child{grid-column:1;grid-row:1/span 60;position:sticky;top:72px;height:calc(100vh - 72px);min-height:0;display:flex;align-items:center;padding:3rem 0}
+.fr-poster main>.hero:first-child .hero__grid{grid-template-columns:1fr!important;gap:1.5rem}
+.fr-poster main>.hero:first-child:not(.hero--image-bg) .hero__media img{aspect-ratio:4/3;max-height:38vh}
+.fr-poster main:has(>.hero:first-child)>.stats{margin-top:2rem}
+.fr-poster main:has(>.hero:first-child)>.section .container{padding-left:2.5rem;padding-right:2.5rem}
+}
+@media (max-width:759px){
+.fr-poster main>.hero:first-child{min-height:80svh;display:flex;align-items:flex-end}
+.fr-poster .section :is(.entry-list__items,.lobby__grid,.card-grid__items){display:flex!important;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;margin:0 -20px;padding:0 20px .75rem;scroll-padding:0 20px;scrollbar-width:none}
+.fr-poster .section :is(.entry-list__items,.lobby__grid,.card-grid__items)>*{flex:0 0 80%;scroll-snap-align:start;max-width:none}
+.fr-poster .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{flex-direction:column!important}
+.fr-poster .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{aspect-ratio:4/5!important;flex:none!important;min-height:0!important}
+.fr-poster .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{position:relative}
+.fr-poster .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body{position:absolute;left:0;right:0;bottom:0;padding:2.4rem .8rem .75rem!important;background:linear-gradient(transparent,rgba(0,0,0,.85));color:#fff}
+.fr-poster .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body :is(h3,a,p){color:#fff!important}
+.fr-poster .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body p:not(.entry-card__meta){display:none}
+}

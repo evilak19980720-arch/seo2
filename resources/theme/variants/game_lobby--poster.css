@@ -1,0 +1,11 @@
+/* game lobby poster: tall covers with titles over the picture, underlined tabs */
+.lobby--poster .lobby__tabs{gap:0;border-bottom:1px solid var(--line)}
+.lobby--poster .lobby__tab{border:0;border-radius:0;background:transparent;border-bottom:3px solid transparent}
+.lobby--poster .lobby__tab[aria-pressed=true]{background:transparent;color:var(--c-text);border-bottom-color:var(--c-primary)}
+.lobby--poster .tile{border:0;box-shadow:0 16px 30px -22px rgba(0,0,0,.7)}
+.lobby--poster .tile__media{aspect-ratio:3/4}
+.lobby--poster .tile__body{position:absolute;left:0;right:0;bottom:0;padding:2.5rem .75rem .75rem!important;background:linear-gradient(0deg,rgba(0,0,0,.9),transparent);color:#fff}
+.lobby--poster .tile__body :is(h3,a){color:#fff}
+.lobby--poster .tile__body p{color:rgba(255,255,255,.82)!important}
+.lobby--poster .tile__body p:not(.entry-card__meta){display:none}
+@media (min-width:1024px){.lobby--poster .lobby__grid{grid-template-columns:repeat(5,minmax(0,1fr))}}

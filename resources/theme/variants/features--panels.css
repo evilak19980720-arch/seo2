@@ -1,0 +1,6 @@
+/* features panels: alternating picture rows inside framed panels with a numbered tab */
+.features--panels .feature{position:relative;background:var(--c-surface);border:1px solid var(--line);border-radius:calc(var(--r-box) + 4px);padding:1rem;counter-increment:fp}
+.features--panels .grid{counter-reset:fp;gap:1.5rem}
+.features--panels .feature::before{content:counter(fp,decimal-leading-zero);position:absolute;top:-14px;left:18px;z-index:1;padding:.15rem .7rem;border-radius:999px;background:var(--c-accent);color:var(--c-on-accent);font:800 .85rem/1.4 var(--f-heading)}
+.features--panels .feature__media img{box-shadow:none}
+@media (min-width:860px){.features--panels .feature{padding:1.5rem 2rem}}

@@ -1,0 +1,6 @@
+/* download ribbon: dark band crossed by a slanted primary ribbon behind the title */
+.download--ribbon{overflow:hidden}
+.download--ribbon::before{content:"";position:absolute;left:-10%;right:-10%;top:50%;height:46%;transform:translateY(-50%) rotate(-4deg);background:linear-gradient(90deg,color-mix(in srgb,var(--c-primary) 30%,transparent),color-mix(in srgb,var(--c-accent) 25%,transparent));pointer-events:none}
+.download--ribbon .download__box{position:relative}
+.download--ribbon :is(h1,h2){text-transform:uppercase;letter-spacing:.02em}
+.download--ribbon .btn:not(.btn--ghost){background:var(--c-accent);color:var(--c-on-accent)}

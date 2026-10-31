@@ -1,0 +1,10 @@
+/* skin luxe: gold-leaf headings, metallic gold buttons, gold-edged cards on a faint diamond weave */
+.st-skin-luxe{--gold:color-mix(in srgb,var(--c-primary) 12%,#e0b43c);background-image:repeating-linear-gradient(45deg,color-mix(in srgb,var(--gold) 6%,transparent) 0 1px,transparent 1px 22px),repeating-linear-gradient(-45deg,color-mix(in srgb,var(--gold) 6%,transparent) 0 1px,transparent 1px 22px)}
+.st-skin-luxe :is(.section__head h2,.hero h1){background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 55%,#fff),var(--gold) 55%,color-mix(in srgb,var(--gold) 78%,#000))!important;-webkit-background-clip:text!important;background-clip:text!important;color:transparent!important}
+.st-skin-luxe .section__head h2::after{width:140px;height:8px;border-radius:0;background:linear-gradient(var(--gold),var(--gold)) 0 50%/44% 1px no-repeat,linear-gradient(var(--gold),var(--gold)) 100% 50%/44% 1px no-repeat,radial-gradient(circle,var(--gold) 3px,transparent 3.5px) 50% 50%/8px 8px no-repeat}
+.st-skin-luxe :is(.tile,.post-card,.feature,.faq details,.faq__item,.card){border:1px solid transparent;background:linear-gradient(var(--c-bg),var(--c-bg)) padding-box,linear-gradient(135deg,var(--gold),color-mix(in srgb,var(--gold) 15%,transparent) 45%,var(--gold)) border-box}
+.st-skin-luxe .btn:not(.btn--ghost){background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 55%,#fff),var(--gold) 48%,color-mix(in srgb,var(--gold) 70%,#000));color:#1c1400;border:1px solid color-mix(in srgb,var(--gold) 55%,#000);text-shadow:0 1px 0 rgba(255,255,255,.35);box-shadow:0 10px 24px -12px color-mix(in srgb,var(--gold) 80%,transparent)}
+.st-skin-luxe .btn--ghost{border-color:var(--gold)}
+.st-skin-luxe .nav{box-shadow:0 1px 0 color-mix(in srgb,var(--gold) 60%,transparent)}
+.st-skin-luxe .footer{box-shadow:inset 0 2px 0 var(--gold)}
+.st-skin-luxe .tile__tag{background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 55%,#fff),var(--gold));color:#1c1400}

@@ -1,0 +1,9 @@
+/* steps path: numbered steps joined by a dashed path, big gradient numbers */
+.steps--path .step{position:relative}
+.steps--path .step__n{width:56px;height:56px;border-radius:18px;transform:rotate(45deg);background:linear-gradient(135deg,var(--c-primary),var(--c-accent));box-shadow:0 10px 24px -10px var(--c-primary)}
+.steps--path .step__n{font-size:0;flex:none}
+.steps--path .steps__list{counter-reset:sp}
+.steps--path .step{counter-increment:sp}
+.steps--path .step__n::before{content:counter(sp);transform:rotate(-45deg);font-size:1.3rem;color:var(--c-on-primary)}
+.steps--path .step:not(:last-child)::after{content:"";position:absolute;left:27px;top:66px;bottom:-1.25rem;border-left:2px dashed color-mix(in srgb,var(--c-primary) 55%,transparent)}
+@media (min-width:860px){.steps--path .step:not(:last-child)::after{left:66px;right:-2rem;top:27px;bottom:auto;border-left:0;border-top:2px dashed color-mix(in srgb,var(--c-primary) 55%,transparent)}}

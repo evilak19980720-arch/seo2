@@ -1,0 +1,8 @@
+/* game lobby neon: stage lobby, lit tab pills, glowing search and cards */
+.lobby--neon .lobby__tab{background:transparent;border-color:color-mix(in srgb,var(--c-primary) 45%,transparent);color:var(--c-text)}
+.lobby--neon .lobby__tab[aria-pressed=true]{background:var(--c-primary);color:var(--c-on-primary);box-shadow:0 0 18px -2px var(--c-primary)}
+.lobby--neon :is(.lobby__search,.lobby__select){background:var(--c-surface);border-color:color-mix(in srgb,var(--c-primary) 40%,transparent);color:var(--c-text)}
+.lobby--neon :is(.lobby__search,.lobby__select):focus{outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--c-primary) 45%,transparent)}
+.lobby--neon .tile{background:var(--c-surface);border-color:color-mix(in srgb,var(--c-primary) 45%,transparent)}
+.lobby--neon .tile:hover{box-shadow:0 0 30px -8px var(--c-primary)}
+@media (min-width:1024px){.lobby--neon .lobby__grid{grid-template-columns:repeat(5,minmax(0,1fr))}}

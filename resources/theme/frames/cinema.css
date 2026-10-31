@@ -1,0 +1,33 @@
+/* frame cinema: a full-screen hero under a see-through header, giant display title, wide stage, oversized left headings, dark bands */
+@media (min-width:1100px){.fr-cinema .container{max-width:1360px;padding:0 40px}}
+.fr-cinema .hero{min-height:min(86svh,820px);display:flex;align-items:center}
+.fr-cinema .hero>.container{width:100%}
+.fr-cinema .hero h1{font-size:clamp(2.3rem,9vw,6.2rem);line-height:.98;letter-spacing:-.03em;text-transform:uppercase}
+.fr-cinema .hero__lead{font-size:clamp(1.05rem,2.2vw,1.4rem)}
+@media (min-width:901px){
+.fr-cinema:has(.nav+main>.hero--image-bg:first-child) .nav{position:absolute;left:0;right:0;background:linear-gradient(180deg,color-mix(in srgb,var(--c-secondary) 75%,transparent),transparent);border:0;box-shadow:none;--c-bg:var(--c-secondary);--c-surface:color-mix(in srgb,var(--c-on-secondary) 8%,var(--c-secondary));--c-text:var(--c-on-secondary);--c-muted:color-mix(in srgb,var(--c-on-secondary) 78%,var(--c-secondary));--c-link:var(--c-on-secondary);--c-outline:var(--c-on-secondary);--line:color-mix(in srgb,var(--c-on-secondary) 16%,transparent);color:var(--c-text)}
+.fr-cinema:has(.nav+main>.hero--image-bg:first-child) .nav .nav__inner{background:transparent;border-color:transparent;box-shadow:none}
+.fr-cinema .nav+main>.hero--image-bg:first-child{min-height:100svh;padding-top:calc(72px + 3rem)}
+}
+.fr-cinema .section__head{text-align:left;margin-left:0;max-width:none}
+.fr-cinema .section__head h2{font-size:clamp(1.8rem,5.2vw,3.8rem);letter-spacing:-.025em;text-transform:uppercase;line-height:1}
+.fr-cinema .section__head h2::after{margin:1.1rem 0 0;width:min(220px,45%);height:3px;border-radius:0}
+.fr-cinema .section__head p{margin-left:0;max-width:62ch}
+.fr-cinema main>.section:not(.hero,.cta--banner,.download--banner,.stats-block--strip,[data-stage]):nth-of-type(even){--c-bg:var(--c-secondary);--c-surface:color-mix(in srgb,var(--c-on-secondary) 8%,var(--c-secondary));--c-text:var(--c-on-secondary);--c-muted:color-mix(in srgb,var(--c-on-secondary) 78%,var(--c-secondary));--c-link:var(--c-on-secondary);--c-outline:var(--c-on-secondary);--line:color-mix(in srgb,var(--c-on-secondary) 16%,transparent);color:var(--c-text);background:linear-gradient(180deg,color-mix(in srgb,var(--c-primary) 10%,transparent),transparent 40%),var(--c-secondary)!important}
+@media (min-width:900px){.fr-cinema main>.section{padding-top:calc(6.5rem*var(--space));padding-bottom:calc(6.5rem*var(--space))}}
+.fr-cinema .tile__media{overflow:hidden}
+.fr-cinema .tile__media img{transition:transform .6s}
+.fr-cinema .tile:hover .tile__media img{transform:scale(1.06)}
+.fr-cinema .footer__brand{font-size:clamp(1.6rem,4.5vw,2.8rem);text-transform:uppercase;letter-spacing:-.02em}
+.fr-cinema .btn--lg{min-height:60px;padding:0 2.4rem;text-transform:uppercase;letter-spacing:.06em}
+
+/* phones: a near full-screen poster hero with the title low on the picture, lists as a swipeable rail of tall posters */
+@media (max-width:759px){
+.fr-cinema .hero--image-bg{min-height:86svh;align-items:flex-end;padding-bottom:2.5rem}
+.fr-cinema .hero--image-bg .hero__media::after{background:linear-gradient(0deg,var(--c-secondary) 12%,color-mix(in srgb,var(--c-secondary) 45%,transparent) 55%,transparent)}
+.fr-cinema .hero h1{font-size:clamp(2.2rem,11vw,3.2rem)!important}
+.fr-cinema .section :is(.entry-list__items,.lobby__grid,.card-grid__items){display:flex!important;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;margin:0 -20px;padding:0 20px .75rem;scroll-padding:0 20px;scrollbar-width:none}
+.fr-cinema .section :is(.entry-list__items,.lobby__grid,.card-grid__items)>*{flex:0 0 68%;scroll-snap-align:start;max-width:none}
+.fr-cinema .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{aspect-ratio:3/4}
+.fr-cinema .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body p:not(.entry-card__meta){display:none}
+}

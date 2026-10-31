@@ -1,0 +1,10 @@
+/* hero spotlight: light page, spotlight cone over a centred title with a marker underline, tilted showcase picture */
+.hero--spotlight{background:radial-gradient(50% 70% at 50% -10%,color-mix(in srgb,var(--c-primary) 30%,transparent),transparent 70%),conic-gradient(from 160deg at 50% -20%,transparent 0 10deg,color-mix(in srgb,var(--c-accent) 14%,transparent) 20deg,transparent 30deg),var(--c-bg)}
+.hero--spotlight :is(h1,h2){font-size:clamp(2.1rem,6.6vw,4.2rem);letter-spacing:-.02em}
+.hero--spotlight :is(h1,h2)::after{content:"";display:block;width:min(240px,50%);height:10px;margin:.75rem auto 0;border-radius:10px;background:linear-gradient(90deg,var(--c-primary),var(--c-accent));opacity:.85}
+.hero--spotlight .hero__eyebrow{background:var(--c-secondary);color:var(--c-on-secondary)}
+.hero--spotlight .hero__eyebrow::before{background:var(--c-accent)}
+.hero--spotlight .hero__media img{border:1px solid var(--line);box-shadow:0 40px 80px -30px color-mix(in srgb,var(--c-primary) 60%,rgba(0,0,0,.5))}
+@media (min-width:860px){.hero--spotlight .hero__media{perspective:1400px}.hero--spotlight:not(.hero--wide-img) .hero__media img{transform:rotateX(9deg);transform-origin:50% 100%}}
+.hero--spotlight .hero__points li::before{background:var(--c-accent);color:var(--c-on-accent)}
+@media (min-width:860px){.hero--spotlight .hero__media{order:2;max-width:1000px}}

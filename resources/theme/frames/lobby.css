@@ -1,0 +1,40 @@
+/* frame lobby: on wide screens a fixed game-lobby sidebar replaces the top header; the hero is a rounded banner; dense, left-led sections */
+.fr-lobby{--space:.85}
+@media (min-width:1100px){.fr-lobby .container{max-width:1280px}}
+.fr-lobby .hero{margin:12px;border-radius:24px}
+.fr-lobby .section__head,.st-mheads-center.fr-lobby .section__head{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .75rem;text-align:left;margin-left:0;max-width:none}
+.fr-lobby .section__head::before{content:"";flex:none;width:8px;height:1.6em;border-radius:4px;background:linear-gradient(var(--c-primary),var(--c-accent))}
+.fr-lobby .section__head h2{margin:0;font-size:clamp(1.25rem,2.8vw,1.8rem)}
+.fr-lobby .section__head h2::after{display:none}
+.fr-lobby .section__head p{flex:1 1 100%;margin:0}
+.fr-lobby :is(.tile,.post-card){border-radius:18px}
+@media (min-width:1100px){
+.fr-lobby{padding-left:256px}
+.fr-lobby .nav{position:fixed;top:0;left:0;bottom:0;width:256px;overflow-y:auto;border-bottom:0;border-right:1px solid var(--line);background:var(--c-surface);padding:0}
+.fr-lobby .nav .nav__inner{flex-direction:column;align-items:stretch;gap:1rem;min-height:100%;padding:1.25rem 14px;width:auto;margin:0;border:0;border-radius:0;box-shadow:none;background:transparent}
+.fr-lobby .nav__brand{margin:0 0 .5rem;white-space:normal}
+.fr-lobby .nav__menu{display:block}
+.fr-lobby .nav__links{flex-direction:column;gap:2px}
+.fr-lobby .nav__links a{display:flex;width:100%;justify-content:flex-start;border-radius:12px;padding:0 .9rem}
+.fr-lobby .nav__links>li>a[aria-current],.fr-lobby .nav__links>li>a:hover{background:color-mix(in srgb,var(--c-primary) 16%,transparent);opacity:1}
+.fr-lobby .nav__sub{position:static;opacity:1;visibility:visible;transform:none;display:block;min-width:0;padding:0 0 .3rem .9rem;border:0;border-left:2px solid var(--line);margin-left:.9rem;border-radius:0;box-shadow:none;background:transparent}
+.fr-lobby .nav__sub a{min-height:36px;font-size:.88rem;font-weight:500}
+.fr-lobby .nav__has-sub>a::after{display:none}
+.fr-lobby .nav__actions{margin-top:auto;display:grid;gap:.5rem}
+.fr-lobby .nav__actions .btn{width:100%}
+.fr-lobby .hero{margin:20px;border-radius:28px}
+}
+
+/* phones: an app-store lobby, three small rounded icons a row with the name under each */
+@media (max-width:759px){
+.fr-lobby .section :is(.entry-list__items,.lobby__grid,.card-grid__items){grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:14px 10px}
+.fr-lobby .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{flex-direction:column!important;background:transparent;border:0;box-shadow:none;overflow:visible}
+.fr-lobby .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{aspect-ratio:1!important;flex:none!important;min-height:0!important;border-radius:22%;box-shadow:0 8px 18px -10px rgba(0,0,0,.5)}
+.fr-lobby .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__ph--named span{font-size:.75rem}
+.fr-lobby .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__tag{display:none}
+.fr-lobby .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body{padding:.45rem 0 0!important;text-align:center}
+.fr-lobby .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body h3{font-size:.8rem!important}
+.fr-lobby .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body p{display:none}
+.fr-lobby .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body::after{display:none}
+.fr-lobby .section{padding-top:calc(2rem*var(--space));padding-bottom:calc(2rem*var(--space))}
+}

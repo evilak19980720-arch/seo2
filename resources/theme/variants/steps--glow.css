@@ -1,0 +1,5 @@
+/* steps glow: stage cards with a giant outlined number behind the text */
+.steps--glow .step{position:relative;overflow:hidden;background:var(--c-surface);border-color:color-mix(in srgb,var(--c-primary) 40%,transparent);min-height:170px}
+.steps--glow .step__n{position:absolute;right:.6rem;top:-.4rem;width:auto;height:auto;background:none;box-shadow:none;font-size:5rem;line-height:1;color:transparent;-webkit-text-stroke:2px color-mix(in srgb,var(--c-primary) 55%,transparent)}
+.steps--glow .step>div{position:relative}
+.steps--glow .step:hover{box-shadow:0 0 30px -8px var(--c-primary)}

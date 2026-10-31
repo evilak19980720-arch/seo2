@@ -1,0 +1,3 @@
+/* checklist glow: two columns of items in soft glowing panels */
+.checklist--glow .checklist__item{padding:1rem 1.1rem;border-radius:var(--r-box);background:linear-gradient(160deg,color-mix(in srgb,var(--c-primary) 10%,var(--c-bg)),var(--c-bg));border:1px solid color-mix(in srgb,var(--c-primary) 25%,transparent);box-shadow:0 14px 28px -22px var(--c-primary)}
+.checklist--glow .checklist__icon{box-shadow:0 0 0 4px color-mix(in srgb,var(--c-primary) 20%,transparent)}

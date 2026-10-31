@@ -1,0 +1,8 @@
+/* skin vegas: marquee bulbs, neon-lit headings and casino-sign cards */
+.st-skin-vegas :is(.section__head h2,.hero h1){text-transform:uppercase;letter-spacing:.03em;text-shadow:0 0 6px color-mix(in srgb,var(--c-primary) 75%,transparent),0 0 22px color-mix(in srgb,var(--c-primary) 45%,transparent)}
+.st-skin-vegas .section__head h2::after{width:150px;height:10px;border-radius:0;background:radial-gradient(circle,color-mix(in srgb,var(--c-accent) 80%,#fff) 0 3px,transparent 3.5px) 0 50%/15px 10px repeat-x}
+.st-skin-vegas :is(.tile,.post-card,.feature,.faq details,.faq__item,.card){border:2px dotted color-mix(in srgb,var(--c-primary) 80%,#fff);box-shadow:0 0 0 4px color-mix(in srgb,var(--c-primary) 14%,transparent),0 0 26px -8px var(--c-primary)}
+.st-skin-vegas main>.section:not(.hero,[data-stage])::after{content:"";position:absolute;left:0;right:0;top:0;height:10px;background:radial-gradient(circle,color-mix(in srgb,var(--c-accent) 85%,#fff) 0 2.5px,transparent 3px) 0 50%/20px 10px repeat-x;opacity:.7;pointer-events:none}
+.st-skin-vegas .btn:not(.btn--ghost){border:2px dotted color-mix(in srgb,var(--c-on-primary) 70%,transparent);box-shadow:0 0 22px -4px var(--c-primary),inset 0 -3px 0 rgba(0,0,0,.18);text-transform:uppercase;letter-spacing:.05em}
+.st-skin-vegas .nav{box-shadow:0 2px 0 var(--c-primary),0 6px 24px -10px var(--c-primary)}
+.st-skin-vegas .footer{border-top:3px dotted var(--c-primary)}

@@ -1,0 +1,9 @@
+/* entry list rail: one swipeable row of square game covers, the next one peeking in */
+.entry-list--rail .entry-list__items{gap:.85rem;margin:0 -20px;padding:0 20px .75rem;scroll-padding:0 20px;scrollbar-width:none}
+.entry-list--rail .entry-list__items::-webkit-scrollbar{display:none}
+.entry-list--rail .entry-card{flex:0 0 40%;border:0;background:transparent}
+.entry-list--rail .tile__media{aspect-ratio:1;border-radius:var(--r-box);box-shadow:0 12px 26px -18px rgba(0,0,0,.7),0 0 0 1px var(--line)}
+.entry-list--rail .tile__body{padding:.55rem .1rem 0!important}
+.entry-list--rail .tile__body p:not(.entry-card__meta){display:none}
+@media (min-width:760px){.entry-list--rail .entry-card{flex-basis:23%}}
+@media (min-width:1100px){.entry-list--rail .entry-card{flex-basis:calc((100% - 4.25rem)/6)}}

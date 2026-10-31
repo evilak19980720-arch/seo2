@@ -1,0 +1,4 @@
+/* steps ladder: stage timeline with glowing nodes and a lit rail */
+.steps--ladder .step:not(:last-child)::before{background:linear-gradient(var(--c-accent),color-mix(in srgb,var(--c-accent) 10%,transparent))!important;box-shadow:0 0 10px var(--c-accent)}
+.steps--ladder .step__n{background:var(--c-secondary);color:var(--c-text);border:2px solid var(--c-accent);box-shadow:0 0 16px -2px var(--c-accent),inset 0 0 10px -4px var(--c-accent)}
+.steps--ladder .step>div{background:var(--c-surface);border:1px solid var(--line);border-radius:var(--r-box);padding:1rem 1.15rem;flex:1}

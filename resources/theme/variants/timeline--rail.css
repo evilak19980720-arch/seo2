@@ -1,0 +1,7 @@
+/* timeline rail: a horizontal swipeable timeline with numbered stops */
+.timeline--rail .timeline__list{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:1rem;max-width:none;padding:1.5rem 0 .75rem;scrollbar-width:none}
+.timeline--rail .timeline__list::-webkit-scrollbar{display:none}
+.timeline--rail .timeline__list::before{left:0;right:0;top:calc(1.5rem + 9px);bottom:auto;width:auto;height:2px}
+.timeline--rail .timeline__item{flex:0 0 min(70%,260px);scroll-snap-align:start;padding:2.25rem 0 0}
+.timeline--rail .timeline__dot{top:0;left:0}
+.timeline--rail .timeline__body{padding:1rem;border-radius:var(--r-box);background:var(--c-surface);border:1px solid var(--line);height:100%}

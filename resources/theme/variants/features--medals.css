@@ -1,0 +1,4 @@
+/* features medals: centred cards with a ringed medal number and a ribbon under it */
+.features--medals .feature{text-align:center;border-top:0!important;padding-top:2rem}
+.features--medals .feature__icon{position:relative;width:66px;height:66px;border-radius:50%;margin:0 auto 1.25rem;background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--c-accent) 60%,#fff),var(--c-accent) 60%,color-mix(in srgb,var(--c-accent) 70%,#000));color:var(--c-on-accent);box-shadow:0 0 0 5px color-mix(in srgb,var(--c-accent) 25%,transparent)}
+.features--medals .feature__icon::after{content:"";position:absolute;left:50%;bottom:-12px;width:26px;height:14px;transform:translateX(-50%);background:var(--c-primary);clip-path:polygon(0 0,100% 0,100% 100%,50% 60%,0 100%);z-index:-1}

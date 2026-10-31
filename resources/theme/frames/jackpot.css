@@ -1,0 +1,23 @@
+/* frame jackpot: a centred jackpot-hall hero, the facts strip as a big glowing jackpot board, every section titled by a ribbon banner */
+.fr-jackpot .hero{text-align:center}
+.fr-jackpot .hero__lead{margin-left:auto;margin-right:auto}
+.fr-jackpot .hero :is(.hero__actions,.hero__points){justify-content:center}
+.fr-jackpot .hero h1{font-size:clamp(2.2rem,7vw,5.2rem);text-transform:uppercase;letter-spacing:-.01em}
+.fr-jackpot .stats__grid{background:linear-gradient(180deg,color-mix(in srgb,var(--c-secondary) 92%,#fff),var(--c-secondary));border:2px solid var(--c-primary);box-shadow:0 0 0 6px color-mix(in srgb,var(--c-primary) 18%,transparent),0 24px 50px -24px var(--c-primary)}
+.fr-jackpot .stats__item{background:transparent;text-align:center;color:var(--c-on-secondary)}
+.fr-jackpot .stats__item dd{font:900 clamp(1.2rem,3.4vw,2rem)/1.1 var(--f-heading);color:color-mix(in srgb,var(--c-primary) 75%,#fff);text-shadow:0 0 18px color-mix(in srgb,var(--c-primary) 60%,transparent)}
+.fr-jackpot .stats__item dt{color:color-mix(in srgb,var(--c-on-secondary) 70%,transparent)}
+.fr-jackpot .section__head{text-align:center;margin-left:auto;margin-right:auto;max-width:none}
+.fr-jackpot .section__head h2{display:inline-block;padding:.65rem 2.6rem;background:linear-gradient(180deg,color-mix(in srgb,var(--c-primary) 85%,#fff),var(--c-primary))!important;clip-path:polygon(20px 0,calc(100% - 20px) 0,100% 50%,calc(100% - 20px) 100%,20px 100%,0 50%);font-size:clamp(1.15rem,3vw,1.9rem);text-transform:uppercase;color:var(--c-on-primary)!important;background:none!important;-webkit-background-clip:border-box!important;background-clip:border-box!important;text-shadow:none!important;background:linear-gradient(180deg,color-mix(in srgb,var(--c-primary) 85%,#fff),var(--c-primary))!important}
+.fr-jackpot .section__head h2::after,.fr-jackpot .section__head h2::before{display:none}
+.fr-jackpot .section__head p{margin:.9rem auto 0}
+@media (max-width:759px){
+.fr-jackpot .section :is(.entry-list__items,.lobby__grid,.card-grid__items){grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px}
+.fr-jackpot .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{flex-direction:column!important}
+.fr-jackpot .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{aspect-ratio:3/4!important;flex:none!important;min-height:0!important}
+.fr-jackpot .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{position:relative}
+.fr-jackpot .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body{position:absolute;left:0;right:0;bottom:0;padding:2.4rem .8rem .75rem!important;background:linear-gradient(transparent,rgba(0,0,0,.85));color:#fff}
+.fr-jackpot .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body :is(h3,a,p){color:#fff!important}
+.fr-jackpot .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body p:not(.entry-card__meta){display:none}
+.fr-jackpot .section__head h2{padding:.55rem 1.8rem}
+}

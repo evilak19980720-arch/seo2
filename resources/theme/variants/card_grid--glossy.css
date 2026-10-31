@@ -1,0 +1,8 @@
+/* card grid glossy: wide showcase cards with a glossy highlight and a gradient frame */
+.card-grid--glossy .tile{border:0;padding:2px;background:linear-gradient(135deg,var(--c-primary),var(--c-accent))}
+.card-grid--glossy .tile>*{background:var(--c-bg)}
+.card-grid--glossy .tile__media{border-radius:calc(var(--r-box) - 2px) calc(var(--r-box) - 2px) 0 0}
+.card-grid--glossy .tile__media::after{content:"";position:absolute;inset:0;background:linear-gradient(160deg,rgba(255,255,255,.32),transparent 38%);pointer-events:none}
+.card-grid--glossy .tile__body{border-radius:0 0 calc(var(--r-box) - 2px) calc(var(--r-box) - 2px)}
+@media (min-width:760px){.card-grid--glossy .tile__media{border-radius:calc(var(--r-box) - 2px) 0 0 calc(var(--r-box) - 2px)}.card-grid--glossy .tile__body{border-radius:0 calc(var(--r-box) - 2px) calc(var(--r-box) - 2px) 0}}
+.card-grid--glossy .tile .btn{box-shadow:0 5px 0 color-mix(in srgb,var(--c-primary) 55%,#000)}

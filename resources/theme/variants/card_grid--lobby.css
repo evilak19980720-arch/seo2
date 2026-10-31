@@ -1,0 +1,10 @@
+/* card grid lobby: game-lobby tiles, picture with a play badge and the title on a dark fade */
+.card-grid--lobby .tile{border:0;background:transparent;border-radius:var(--r-box);overflow:hidden;box-shadow:0 14px 30px -20px rgba(0,0,0,.6)}
+.card-grid--lobby .tile__media{aspect-ratio:3/4;border-radius:var(--r-box)}
+.card-grid--lobby .tile__media::after{content:"▶";position:absolute;left:50%;top:42%;width:52px;height:52px;margin:-26px 0 0 -26px;display:grid;place-items:center;border-radius:50%;background:var(--c-primary);color:var(--c-on-primary);font-size:1.1rem;box-shadow:0 0 0 6px color-mix(in srgb,var(--c-primary) 30%,transparent);opacity:.92;transition:transform .2s}
+.card-grid--lobby .tile:hover .tile__media::after{transform:scale(1.1)}
+.card-grid--lobby .tile__body{position:absolute;left:0;right:0;bottom:0;padding:2.5rem .8rem .8rem;background:linear-gradient(0deg,rgba(0,0,0,.85),transparent);color:#fff}
+.card-grid--lobby .tile__body h3{color:#fff;font-size:.98rem}
+.card-grid--lobby .tile__body p{display:none}
+@media (min-width:1024px){.card-grid--lobby .card-grid__items{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (min-width:1024px){.card-grid--lobby .card-grid__items:has(>:last-child:nth-child(3n)){grid-template-columns:repeat(6,minmax(0,1fr))}}

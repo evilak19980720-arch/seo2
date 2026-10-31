@@ -1,0 +1,5 @@
+/* article list neon: stage post cards with glowing frames */
+.article-list--neon .post-card{background:var(--c-surface);border-color:color-mix(in srgb,var(--c-primary) 40%,transparent)}
+.article-list--neon .post-card:hover{box-shadow:0 0 30px -8px var(--c-primary)}
+.article-list--neon .post-card h3{color:var(--c-text)}
+.article-list--neon .post-card time{color:var(--c-muted)}

@@ -1,0 +1,12 @@
+/* entry list mosaic: a big lead cover beside smaller ones, titles over the pictures */
+.entry-list--mosaic .entry-card{border:0}
+.entry-list--mosaic .tile__media{aspect-ratio:1}
+.entry-list--mosaic .tile__body{position:absolute;left:0;right:0;bottom:0;padding:2.5rem .8rem .8rem!important;background:linear-gradient(0deg,rgba(0,0,0,.88),transparent);color:#fff}
+.entry-list--mosaic .tile__body :is(h3,a){color:#fff}
+.entry-list--mosaic .tile__body p{color:rgba(255,255,255,.82)!important}
+.entry-list--mosaic .tile__body p:not(.entry-card__meta){display:none}
+.entry-list--mosaic .entry-list__items>:first-child{flex-direction:column!important}
+.entry-list--mosaic .entry-list__items>:first-child .tile__media{aspect-ratio:16/10!important;flex:none!important}
+.entry-list--mosaic .entry-list__items>:first-child .tile__body h3{font-size:1.3rem}
+@media (min-width:760px){.entry-list--mosaic .entry-list__items{grid-template-columns:repeat(4,minmax(0,1fr))}.entry-list--mosaic .entry-list__items>:first-child{grid-column:span 2;grid-row:span 2}.entry-list--mosaic .entry-list__items>:first-child .tile__media{aspect-ratio:auto!important;height:100%}}
+@media (max-width:759px){.entry-list--mosaic .entry-list__items>:last-child:nth-child(even){grid-column:1/-1}.entry-list--mosaic .entry-list__items>:last-child:nth-child(even) .tile__media{aspect-ratio:16/9}}

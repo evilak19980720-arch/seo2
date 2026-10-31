@@ -1,0 +1,5 @@
+/* table scoreboard: header-coloured label column, value column in bold figures */
+.data-table--scoreboard table{border:0;border-radius:var(--r-box);overflow:hidden;box-shadow:0 16px 34px -24px rgba(0,0,0,.5)}
+.data-table--scoreboard th{background:var(--c-secondary);color:var(--c-on-secondary);border-bottom-color:color-mix(in srgb,var(--c-on-secondary) 14%,transparent)}
+.data-table--scoreboard td{font-weight:600}
+.data-table--scoreboard tr:nth-child(odd) td{background:var(--c-surface)}

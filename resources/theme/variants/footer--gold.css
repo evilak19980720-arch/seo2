@@ -1,0 +1,6 @@
+/* footer gold: deep footer framed by gold rules, gold brand mark and button */
+.footer--gold{border-top:3px solid var(--c-accent);box-shadow:inset 0 6px 0 -3px color-mix(in srgb,var(--c-accent) 30%,transparent)}
+.footer--gold .footer__brand::before{content:"♛";margin-right:.45rem;color:var(--c-accent)}
+.footer--gold .footer__title{color:var(--c-accent);opacity:1}
+.footer--gold .btn{background:linear-gradient(180deg,color-mix(in srgb,var(--c-accent) 80%,#fff),var(--c-accent));color:var(--c-on-accent)}
+.footer--gold .footer__legal{border-top-color:color-mix(in srgb,var(--c-accent) 40%,transparent)!important}

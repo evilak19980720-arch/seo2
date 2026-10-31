@@ -1,0 +1,9 @@
+/* game lobby glossy: gradient-framed cards with a shine, chunky pill tabs */
+.lobby--glossy .lobby__tab{border:0;background:var(--c-surface);box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--c-text) 12%,transparent)}
+.lobby--glossy .lobby__tab[aria-pressed=true]{background:linear-gradient(180deg,color-mix(in srgb,var(--c-primary) 82%,#fff),var(--c-primary));box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--c-primary) 55%,#000)}
+.lobby--glossy .tile{border:0;padding:2px;background:linear-gradient(150deg,var(--c-primary),var(--c-accent))}
+.lobby--glossy .tile>*{background:var(--c-bg)}
+.lobby--glossy .tile__media{border-radius:calc(var(--r-box) - 2px) calc(var(--r-box) - 2px) 0 0}
+.lobby--glossy .tile__media::before{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(155deg,rgba(255,255,255,.35),transparent 40%);pointer-events:none}
+.lobby--glossy .tile__body{border-radius:0 0 calc(var(--r-box) - 2px) calc(var(--r-box) - 2px)}
+.lobby--glossy .tile__tag{z-index:2}

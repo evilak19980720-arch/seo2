@@ -1,0 +1,6 @@
+/* footer badges: centred footer, links as pill badges, brand over a glowing ring */
+.footer--badges .footer__brand{display:inline-flex;align-items:center;gap:.6rem;padding:.4rem 1.1rem;border-radius:999px;border:1px solid color-mix(in srgb,var(--c-primary) 55%,transparent);box-shadow:0 0 22px -8px var(--c-primary)}
+.footer--badges ul{gap:.5rem!important}
+.footer--badges li a:not(.btn){padding:0 .9rem;border-radius:999px;background:var(--c-surface);border:1px solid var(--line);opacity:1}
+.footer--badges li a:not(.btn):hover{border-color:var(--c-primary)}
+.footer--badges .footer__title{margin-top:.5rem}

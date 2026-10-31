@@ -1,0 +1,6 @@
+/* nav gold: dark header with a gold double rule and a gold call-to-action */
+.nav--gold{border-bottom:2px solid var(--c-accent);box-shadow:0 4px 0 -2px color-mix(in srgb,var(--c-accent) 35%,transparent)}
+.nav--gold .nav__cta:not(.btn--ghost){background:linear-gradient(180deg,color-mix(in srgb,var(--c-accent) 80%,#fff),var(--c-accent));color:var(--c-on-accent);box-shadow:0 6px 16px -8px var(--c-accent)}
+.nav--gold .nav__mark{background:linear-gradient(135deg,var(--c-accent),color-mix(in srgb,var(--c-accent) 60%,#000));color:var(--c-on-accent)}
+.nav--gold .nav__brand{letter-spacing:.02em}
+@media (min-width:901px){.nav--gold .nav__links a:hover{background:color-mix(in srgb,var(--c-accent) 18%,transparent)}}

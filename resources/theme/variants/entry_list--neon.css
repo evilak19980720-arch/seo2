@@ -1,0 +1,9 @@
+/* entry list neon: stage cards with glowing frames and a lit "play" strip */
+.entry-list--neon .entry-card{background:var(--c-surface);border:1px solid color-mix(in srgb,var(--c-primary) 55%,transparent);box-shadow:0 0 24px -10px var(--c-primary)}
+.entry-list--neon .entry-card:hover{box-shadow:0 0 34px -6px var(--c-primary)}
+.entry-list--neon .tile__media{aspect-ratio:4/3}
+.entry-list--neon .tile__body{border-top:1px solid color-mix(in srgb,var(--c-primary) 40%,transparent)}
+.entry-list--neon .tile__tag{background:var(--c-primary);color:var(--c-on-primary);box-shadow:0 0 12px var(--c-primary)}
+.entry-list--neon .entry-list__more .btn--ghost{border-color:var(--c-primary);box-shadow:0 0 18px -6px var(--c-primary)}
+@media (min-width:1024px){.entry-list--neon .entry-list__items{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (min-width:1024px){.entry-list--neon .entry-list__items:has(>:last-child:nth-child(3n)){grid-template-columns:repeat(3,minmax(0,1fr))}}

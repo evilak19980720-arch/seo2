@@ -1,0 +1,9 @@
+/* skin candy: sweet-shop style, soft polka dots, plump rounded cards and pressable 3D buttons, sticker headings */
+.st-skin-candy{--r-box:26px;--r-btn:999px;background-image:radial-gradient(circle,color-mix(in srgb,var(--c-accent) 12%,transparent) 2px,transparent 2.5px);background-size:26px 26px}
+.st-skin-candy :is(.section__head h2,.hero h1){text-shadow:3px 3px 0 color-mix(in srgb,var(--c-accent) 45%,transparent)}
+.st-skin-candy .section__head h2::after{width:96px;height:10px;border-radius:0;background:radial-gradient(circle,var(--c-primary) 4px,transparent 4.5px) 0 50%/16px 10px repeat-x}
+.st-skin-candy :is(.tile,.post-card,.feature,.faq details,.faq__item,.card){border:3px solid color-mix(in srgb,var(--c-primary) 22%,var(--c-bg));box-shadow:0 8px 0 color-mix(in srgb,var(--c-primary) 16%,transparent)}
+.st-skin-candy .btn:not(.btn--ghost){box-shadow:0 5px 0 color-mix(in srgb,var(--c-primary) 55%,#000),0 12px 22px -10px color-mix(in srgb,var(--c-primary) 60%,transparent);border:0;transform:translateY(0)}
+.st-skin-candy .btn:not(.btn--ghost):active{transform:translateY(4px);box-shadow:0 1px 0 color-mix(in srgb,var(--c-primary) 55%,#000)}
+.st-skin-candy .tile__tag{border-radius:999px;transform:rotate(-4deg);box-shadow:0 3px 0 rgba(0,0,0,.18)}
+.st-skin-candy .nav{border-bottom:4px solid color-mix(in srgb,var(--c-primary) 30%,transparent)}

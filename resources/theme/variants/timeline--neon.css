@@ -1,0 +1,4 @@
+/* timeline neon: stage timeline with a glowing rail and ringed nodes */
+.timeline--neon .timeline__list::before{background:linear-gradient(var(--c-primary),var(--c-accent));box-shadow:0 0 10px var(--c-primary)}
+.timeline--neon .timeline__dot{background:var(--c-secondary);border:3px solid var(--c-primary);box-shadow:0 0 0 4px var(--c-secondary),0 0 14px var(--c-primary)}
+.timeline--neon .timeline__body{padding:.9rem 1.1rem;border-radius:var(--r-box);background:var(--c-surface);border:1px solid color-mix(in srgb,var(--c-primary) 35%,transparent)}

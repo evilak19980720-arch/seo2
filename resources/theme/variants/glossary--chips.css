@@ -1,0 +1,3 @@
+/* glossary chips: each term as a pill tag above its definition card */
+.glossary--chips .glossary__item{position:relative;padding-top:1.6rem;margin-top:.8rem;box-shadow:none}
+.glossary--chips .glossary__item dt{position:absolute;top:-.85rem;left:1rem;padding:.2rem .9rem;border-radius:999px;background:linear-gradient(135deg,var(--c-primary),var(--c-accent));color:var(--c-on-primary)}

@@ -1,0 +1,4 @@
+/* quote neon: stage quote card with big glowing quote marks */
+.quote-block--neon .quote{position:relative;padding-top:3rem;border-color:color-mix(in srgb,var(--c-primary) 45%,transparent);box-shadow:0 0 30px -12px var(--c-primary)}
+.quote-block--neon .quote::before{content:"\201C";position:absolute;left:50%;top:-.2rem;transform:translateX(-50%);font:900 4.5rem/1 var(--f-heading);color:var(--c-primary);text-shadow:0 0 18px var(--c-primary)}
+.quote-block--neon .quote blockquote p::before,.quote-block--neon .quote blockquote p::after{content:none}

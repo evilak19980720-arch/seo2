@@ -1,0 +1,7 @@
+/* footer neon: lit gradient top edge, glowing brand and column titles with accent bars */
+.footer--neon{position:relative;background:radial-gradient(60% 80% at 50% 0,color-mix(in srgb,var(--c-primary) 20%,transparent),transparent 70%),var(--c-secondary)}
+.footer--neon::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,transparent,var(--c-primary),var(--c-accent),transparent);box-shadow:0 0 18px var(--c-primary)}
+.footer--neon .footer__brand{text-shadow:0 0 18px color-mix(in srgb,var(--c-primary) 70%,transparent)}
+.footer--neon .footer__title{display:flex;align-items:center;gap:.5rem}
+.footer--neon .footer__title::before{content:"";width:16px;height:3px;border-radius:3px;background:var(--c-primary);box-shadow:0 0 8px var(--c-primary)}
+.footer--neon .btn{box-shadow:0 0 22px -4px var(--c-primary)}

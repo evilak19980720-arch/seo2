@@ -1,0 +1,11 @@
+/* skin arcade: retro cabinet, chunky outlines with hard offset shadows, punchy shadowed headings, square corners */
+.st-skin-arcade{--r-box:6px;--r-btn:6px}
+.st-skin-arcade :is(.section__head h2,.hero h1){text-transform:uppercase;letter-spacing:.02em;text-shadow:3px 3px 0 color-mix(in srgb,var(--c-accent) 70%,transparent)}
+.st-skin-arcade .section__head h2::after{width:84px;height:8px;border-radius:0;background:repeating-linear-gradient(90deg,var(--c-primary) 0 12px,transparent 12px 18px)}
+.st-skin-arcade :is(.tile,.post-card,.feature,.faq details,.faq__item,.card){border:3px solid var(--c-text);box-shadow:5px 5px 0 var(--c-primary)}
+.st-skin-arcade .btn{border:3px solid var(--c-text);box-shadow:4px 4px 0 var(--c-text);text-transform:uppercase;letter-spacing:.04em}
+.st-skin-arcade .btn:hover{transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--c-text)}
+.st-skin-arcade .btn:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--c-text)}
+.st-skin-arcade .tile__tag{border-radius:0;border:2px solid var(--c-text)}
+.st-skin-arcade .nav{border-bottom:4px solid var(--c-text)}
+.st-skin-arcade .footer{border-top:4px solid var(--c-primary)}

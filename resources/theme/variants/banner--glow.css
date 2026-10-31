@@ -1,0 +1,7 @@
+/* banner glow: boxed slide with a neon outline, text on a dark left fade */
+.banner--glow .banner__track{border:2px solid color-mix(in srgb,var(--c-primary) 75%,transparent);box-shadow:0 0 0 4px color-mix(in srgb,var(--c-primary) 16%,transparent),0 0 46px -6px color-mix(in srgb,var(--c-primary) 75%,transparent)}
+.banner--glow .banner__slide{align-items:center}
+.banner--glow .banner__media::after{background:linear-gradient(0deg,color-mix(in srgb,var(--c-secondary) 85%,transparent),transparent 70%)}
+@media (min-width:760px){.banner--glow .banner__media::after{background:linear-gradient(90deg,var(--c-secondary) 10%,color-mix(in srgb,var(--c-secondary) 55%,transparent) 50%,transparent)}}
+.banner--glow .banner__body :is(h1,h2){text-shadow:0 0 22px color-mix(in srgb,var(--c-primary) 80%,transparent)}
+.banner--glow .banner__body .btn{border-radius:999px;box-shadow:0 0 26px -4px var(--c-primary)}

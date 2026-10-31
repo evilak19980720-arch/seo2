@@ -1,0 +1,4 @@
+/* timeline glow: alternating cards hung on a gradient spine, nodes with a halo */
+.timeline--glow .timeline__list::before{width:4px;border-radius:4px;background:linear-gradient(var(--c-primary),var(--c-accent))}
+.timeline--glow .timeline__dot{box-shadow:0 0 0 4px var(--c-bg),0 0 0 8px color-mix(in srgb,var(--c-primary) 25%,transparent)}
+.timeline--glow .timeline__body{padding:1rem 1.15rem;border-radius:var(--r-box);background:var(--c-bg);border:1px solid var(--line);box-shadow:0 14px 30px -22px var(--c-primary)}

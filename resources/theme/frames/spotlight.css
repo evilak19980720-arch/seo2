@@ -1,0 +1,25 @@
+/* frame spotlight: the whole site sits on the dark stage colour under coloured light pools, centred narrow layout, glowing glass cards */
+.fr-spotlight{--c-bg:var(--c-secondary);--c-surface:color-mix(in srgb,var(--c-on-secondary) 8%,var(--c-secondary));--c-text:var(--c-on-secondary);--c-muted:color-mix(in srgb,var(--c-on-secondary) 78%,var(--c-secondary));--c-link:var(--c-on-secondary);--c-outline:var(--c-on-secondary);--line:color-mix(in srgb,var(--c-on-secondary) 16%,transparent);color:var(--c-text);background:radial-gradient(60vw 50vh at 50% -10%,color-mix(in srgb,var(--c-primary) 30%,transparent),transparent 70%),radial-gradient(40vw 40vh at 100% 60%,color-mix(in srgb,var(--c-accent) 14%,transparent),transparent 70%),radial-gradient(40vw 40vh at 0 100%,color-mix(in srgb,var(--c-primary) 14%,transparent),transparent 70%),var(--c-secondary);background-attachment:fixed}
+@media (min-width:1024px){.fr-spotlight .container{max-width:1100px}}
+.fr-spotlight .nav{background:color-mix(in srgb,var(--c-secondary) 82%,transparent)}
+.fr-spotlight main>.section:not(.hero,.cta--banner,.download--banner,.stats-block--strip,[data-stage]){background:transparent!important}
+.fr-spotlight main>.section:not(.hero,.cta--banner,.download--banner,.stats-block--strip,[data-stage])::before{content:"";position:absolute;left:15%;right:15%;top:0;height:1px;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--c-primary) 70%,transparent),transparent)}
+.fr-spotlight .hero{background:transparent;text-align:center}
+.fr-spotlight .hero::before{content:"";position:absolute;left:50%;top:-30%;width:min(1000px,140vw);aspect-ratio:3/2;transform:translateX(-50%);background:radial-gradient(closest-side,color-mix(in srgb,var(--c-primary) 42%,transparent),transparent);pointer-events:none}
+.fr-spotlight .hero h1{text-shadow:0 0 40px color-mix(in srgb,var(--c-primary) 55%,transparent)}
+.fr-spotlight .section__head h2{text-shadow:0 0 22px color-mix(in srgb,var(--c-primary) 45%,transparent)}
+.fr-spotlight :is(.tile,.post-card,.feature,.faq details,.faq__item,.card){background:color-mix(in srgb,var(--c-on-secondary) 6%,transparent)!important;border:1px solid color-mix(in srgb,var(--c-primary) 35%,transparent)!important;box-shadow:0 0 30px -12px color-mix(in srgb,var(--c-primary) 60%,transparent)!important}
+.fr-spotlight .btn:not(.btn--ghost){box-shadow:0 0 28px -4px color-mix(in srgb,var(--c-primary) 85%,transparent)}
+.fr-spotlight .footer{background:color-mix(in srgb,#000 30%,var(--c-secondary));border-top:1px solid color-mix(in srgb,var(--c-primary) 40%,transparent)}
+
+/* phones: a centred stage, collections as a rail of square glowing cards */
+@media (max-width:759px){
+.fr-spotlight .hero__text,.fr-spotlight .section__head{text-align:center!important;margin-left:auto!important;margin-right:auto!important}
+.fr-spotlight .hero :is(.hero__actions,.hero__points){justify-content:center!important}
+.fr-spotlight .section__head h2::after{margin-left:auto!important;margin-right:auto!important}
+.fr-spotlight .section :is(.entry-list__items,.lobby__grid,.card-grid__items){display:flex!important;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;margin:0 -20px;padding:0 20px .75rem;scroll-padding:0 20px;scrollbar-width:none}
+.fr-spotlight .section :is(.entry-list__items,.lobby__grid,.card-grid__items)>*{flex:0 0 58%;scroll-snap-align:center;max-width:none}
+.fr-spotlight .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{aspect-ratio:1}
+.fr-spotlight .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body{text-align:center}
+.fr-spotlight .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__body p:not(.entry-card__meta){display:none}
+}

@@ -1,0 +1,5 @@
+/* card grid ribbon: cards with a corner ribbon for the tag and a coloured bottom rule */
+.card-grid--ribbon .tile{border-bottom:4px solid var(--c-primary)}
+.card-grid--ribbon .tile__tag{top:14px;left:-34px;right:auto;width:130px;padding:.25rem 0;border-radius:0;text-align:center;transform:rotate(-45deg);background:var(--c-accent);color:var(--c-on-accent);box-shadow:0 4px 10px -4px rgba(0,0,0,.5)}
+.card-grid--ribbon .tile__body h3{display:flex;align-items:center;gap:.5rem}
+.card-grid--ribbon .tile__body h3::before{content:"";flex:none;width:8px;height:8px;border-radius:2px;transform:rotate(45deg);background:var(--c-primary)}

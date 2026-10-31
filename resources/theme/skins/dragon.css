@@ -1,0 +1,11 @@
+/* skin dragon: oriental fortune style, fish-scale backdrop, cloud-wave rules, corner-ornamented cards, red lacquer buttons with gold rims */
+.st-skin-dragon{background-image:radial-gradient(circle at 50% 0,transparent 9px,color-mix(in srgb,var(--c-text) 5%,transparent) 10px,transparent 11px);background-size:22px 11px}
+.st-skin-dragon .section__head h2{letter-spacing:.04em}
+.st-skin-dragon .section__head h2::after{width:132px;height:10px;border-radius:0;background:radial-gradient(circle at 50% 100%,transparent 5px,var(--c-primary) 5.5px 7.5px,transparent 8px) 0 0/22px 10px repeat-x}
+.st-skin-dragon :is(.tile,.post-card,.feature,.faq details,.faq__item,.card){border:1px solid color-mix(in srgb,var(--c-accent) 45%,transparent)}
+.st-skin-dragon :is(.tile,.post-card,.feature,.card){position:relative}
+.st-skin-dragon :is(.tile,.post-card,.feature,.card)::before{content:"";position:absolute;inset:6px;z-index:2;pointer-events:none;--o:color-mix(in srgb,var(--c-accent) 85%,var(--c-primary));background:linear-gradient(var(--o),var(--o)) 0 0/18px 2px,linear-gradient(var(--o),var(--o)) 0 0/2px 18px,linear-gradient(var(--o),var(--o)) 100% 0/18px 2px,linear-gradient(var(--o),var(--o)) 100% 0/2px 18px,linear-gradient(var(--o),var(--o)) 0 100%/18px 2px,linear-gradient(var(--o),var(--o)) 0 100%/2px 18px,linear-gradient(var(--o),var(--o)) 100% 100%/18px 2px,linear-gradient(var(--o),var(--o)) 100% 100%/2px 18px;background-repeat:no-repeat}
+.st-skin-dragon .btn:not(.btn--ghost){color:var(--c-on-primary);background:linear-gradient(180deg,color-mix(in srgb,var(--c-primary) 80%,#fff),var(--c-primary) 55%,color-mix(in srgb,var(--c-primary) 75%,#000));border:2px solid var(--c-accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--c-accent) 25%,transparent),0 10px 20px -10px rgba(0,0,0,.5)}
+.st-skin-dragon .tile__tag{border-radius:3px;border:1px solid var(--c-accent)}
+.st-skin-dragon .nav{border-bottom:3px double var(--c-accent)}
+.st-skin-dragon .footer{border-top:3px double var(--c-accent)}

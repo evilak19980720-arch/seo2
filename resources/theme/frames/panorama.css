@@ -1,0 +1,24 @@
+/* frame panorama: a big picture hero, then sections stacked like sheets, each sliding over the one before with rounded top corners */
+.fr-panorama{--sheet:24px}
+@media (min-width:900px){.fr-panorama{--sheet:40px}}
+.fr-panorama .hero h1{font-size:clamp(2.2rem,7vw,5rem);letter-spacing:-.03em}
+.fr-panorama main>.section+.section,.fr-panorama main+.footer{margin-top:calc(-1*var(--sheet));border-radius:var(--sheet) var(--sheet) 0 0;box-shadow:0 -18px 40px -26px rgba(0,0,0,.45)}
+.fr-panorama main>.section+.section{padding-top:calc(5rem*var(--space) + var(--sheet))}
+.fr-panorama main>.hero+.section{padding-bottom:calc(5rem*var(--space) + var(--sheet))}
+.fr-panorama main>.section:nth-of-type(odd):not(.hero,[data-stage]){background:var(--c-bg)!important}
+.fr-panorama main>.section:nth-of-type(even):not(.hero,[data-stage]){background:var(--c-surface)!important}
+.fr-panorama main>.section:nth-of-type(4n+3):not(.hero,[data-stage],.cta--banner,.download--banner){--c-bg:var(--c-secondary);--c-surface:color-mix(in srgb,var(--c-on-secondary) 8%,var(--c-secondary));--c-text:var(--c-on-secondary);--c-muted:color-mix(in srgb,var(--c-on-secondary) 78%,var(--c-secondary));--c-link:var(--c-on-secondary);--c-outline:var(--c-on-secondary);--line:color-mix(in srgb,var(--c-on-secondary) 16%,transparent);color:var(--c-text);background:var(--c-secondary)!important}
+.fr-panorama main>.hero:first-child{padding-bottom:calc(5rem*var(--space) + var(--sheet))}
+.fr-panorama main>.hero:first-child+.section{margin-top:calc(-1*var(--sheet))}
+.fr-panorama main+.footer{padding-top:calc(4rem*var(--space) + var(--sheet))}
+.fr-panorama main>.section:last-child{padding-bottom:calc(5rem*var(--space) + var(--sheet))}
+.fr-panorama .section__head h2{font-size:clamp(1.6rem,4.4vw,3rem)}
+
+/* phones: wide landscape cards in a swipeable rail, a big picture hero */
+@media (max-width:759px){
+.fr-panorama .hero--image-bg{min-height:72svh;align-items:flex-end}
+.fr-panorama .section :is(.entry-list__items,.lobby__grid,.card-grid__items){display:flex!important;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;margin:0 -20px;padding:0 20px .75rem;scroll-padding:0 20px;scrollbar-width:none}
+.fr-panorama .section :is(.entry-list__items,.lobby__grid,.card-grid__items)>*{flex:0 0 84%;scroll-snap-align:start;max-width:none}
+.fr-panorama .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile{flex-direction:column!important}
+.fr-panorama .section :is(.entry-list__items,.lobby__grid,.card-grid__items) .tile__media{aspect-ratio:16/9!important;flex:none!important;min-height:0!important}
+}

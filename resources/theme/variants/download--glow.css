@@ -1,0 +1,5 @@
+/* download glow: split box over a soft primary glow, buttons as app-store style pills */
+.download--glow .download__box{background:radial-gradient(60% 100% at 100% 50%,color-mix(in srgb,var(--c-primary) 22%,transparent),transparent 70%),var(--c-surface);border:1px solid var(--line);border-radius:calc(var(--r-box)*1.4);padding:calc(2.5rem*var(--space)) 1.5rem}
+.download--glow .download__links .btn{border-radius:14px;min-height:56px;padding:0 1.4rem}
+.download--glow .download__links .btn::before{content:"⬇";font-size:1rem}
+@media (min-width:860px){.download--glow .download__box{padding:3rem}}

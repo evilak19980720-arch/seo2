@@ -1,0 +1,7 @@
+/* steps arrows: chevron cards that point to the next step */
+.steps--arrows .steps__list{gap:.6rem}
+.steps--arrows .step{position:relative;padding:1.25rem 1.25rem 1.6rem;background:linear-gradient(160deg,color-mix(in srgb,var(--c-primary) 14%,var(--c-bg)),var(--c-bg));border-color:color-mix(in srgb,var(--c-primary) 30%,transparent)}
+.steps--arrows .step__n{display:inline-flex;align-self:flex-start;white-space:nowrap;width:auto;height:auto;padding:.15rem .7rem;border-radius:999px;box-shadow:none;font-size:.85rem;letter-spacing:.06em}
+.steps--arrows .step__n::before{content:"#"}
+.steps--arrows .step:not(:last-child)::after{content:"";position:absolute;left:50%;bottom:-14px;z-index:1;width:22px;height:22px;transform:translateX(-50%) rotate(45deg);background:var(--c-primary);border-radius:4px}
+@media (min-width:860px){.steps--arrows .steps__list{gap:1.6rem}.steps--arrows .step:not(:last-child)::after{left:auto;right:-19px;top:50%;bottom:auto;transform:translateY(-50%) rotate(45deg)}}

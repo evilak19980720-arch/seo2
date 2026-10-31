@@ -1,0 +1,4 @@
+/* faq bordered: two-column questions under accent bars, answers in a soft panel */
+.faq--bordered .faq__item{background:transparent;border:0;border-top:3px solid var(--c-primary);border-radius:0;padding:1rem 0 1.25rem}
+.faq--bordered .faq__item h3{font-size:1.05rem}
+.faq--bordered .faq__item p{margin-top:.5rem;padding:.75rem 1rem;border-radius:var(--r-box);background:var(--c-surface)}

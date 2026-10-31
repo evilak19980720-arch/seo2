@@ -2,24 +2,22 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Support\Settings;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
-     * Seed the application's database.
+     * Default data for a fresh install: prompt templates and guardrail
+     * settings. Site type presets and theme components live in config/.
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $this->call(PromptSeeder::class);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        if (! Settings::get('indexnow_key')) {
+            Settings::set('indexnow_key', Str::lower(Str::random(32)));
+        }
     }
 }

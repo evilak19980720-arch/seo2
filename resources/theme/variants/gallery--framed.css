@@ -1,0 +1,5 @@
+/* gallery framed: lead picture with a gradient frame and side pictures with caption bars */
+.gallery--framed figure{position:relative}
+.gallery--framed figure:first-child{padding:4px;background:linear-gradient(135deg,var(--c-primary),var(--c-accent))}
+.gallery--framed figure:first-child img{border-radius:calc(var(--r-box) - 4px)}
+.gallery--framed figcaption{position:absolute;left:0;right:0;bottom:0;padding:1.5rem .9rem .6rem;background:linear-gradient(0deg,rgba(0,0,0,.8),transparent);color:#fff;border-radius:0 0 var(--r-box) var(--r-box)}

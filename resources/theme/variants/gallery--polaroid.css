@@ -1,0 +1,6 @@
+/* gallery polaroid: snapshots in white frames, slightly turned, straighten on hover */
+.gallery--polaroid figure{background:#fff;padding:10px 10px 12px;border-radius:6px;box-shadow:0 14px 30px -18px rgba(0,0,0,.5);transform:rotate(-1.5deg);transition:transform .2s}
+.gallery--polaroid figure:nth-child(even){transform:rotate(1.5deg)}
+.gallery--polaroid figure:hover{transform:none}
+.gallery--polaroid img{border-radius:3px}
+.gallery--polaroid figcaption{color:#333;text-align:center;font-weight:600}

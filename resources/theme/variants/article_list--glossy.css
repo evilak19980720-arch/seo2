@@ -1,0 +1,6 @@
+/* article list glossy: cards with a gradient frame, glossy pictures and a category tab */
+.article-list--glossy .post-card{border:0;padding:2px;background:linear-gradient(150deg,var(--c-primary),var(--c-accent))}
+.article-list--glossy .post-card>*{background:var(--c-bg)}
+.article-list--glossy .post-card :is(img,.post-card__ph){border-radius:calc(var(--r-box) - 2px) calc(var(--r-box) - 2px) 0 0}
+.article-list--glossy .post-card__body{border-radius:0 0 calc(var(--r-box) - 2px) calc(var(--r-box) - 2px)}
+.article-list--glossy .post-card h3::before{content:"";display:block;width:28px;height:4px;border-radius:4px;margin-bottom:.6rem;background:var(--c-accent)}

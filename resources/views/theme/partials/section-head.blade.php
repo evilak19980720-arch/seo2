@@ -1,0 +1,1 @@
+<div class="section__head">@if (! empty($data['eyebrow']))<span class="section__eyebrow">{{ $data['eyebrow'] }}</span>@endif @if ($isFirst ?? false)<h1>{{ $data['heading'] ?? $page?->title }}</h1>@elseif (filled($data['heading'] ?? $fallback ?? null))<h2>{{ $data['heading'] ?? $fallback }}</h2>@endif @if (! empty($data['intro']))<p>{{ $data['intro'] }}</p>@endif</div>

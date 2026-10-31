@@ -1,0 +1,4 @@
+/* download neon: stage card with glowing frame and app icon halo */
+.download--neon .download__box{background:var(--c-surface);border:1px solid color-mix(in srgb,var(--c-primary) 50%,transparent);border-radius:calc(var(--r-box)*1.4);padding:calc(3rem*var(--space)) 1.5rem;box-shadow:0 0 40px -14px var(--c-primary)}
+.download--neon .download__logo{box-shadow:0 0 0 4px color-mix(in srgb,var(--c-primary) 35%,transparent),0 0 30px -4px var(--c-primary)}
+.download--neon .btn:not(.btn--ghost){box-shadow:0 0 24px -4px var(--c-primary)}

@@ -1,0 +1,4 @@
+/* features badges: cards led by a hexagon badge number, accent glow on hover */
+.features--badges .feature{text-align:center;padding-top:2.25rem}
+.features--badges .feature__icon{width:64px;height:72px;border-radius:0;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);background:linear-gradient(160deg,var(--c-accent),color-mix(in srgb,var(--c-accent) 55%,var(--c-primary)));color:var(--c-on-accent);font-size:1.15rem;margin:0 auto 1rem}
+.features--badges .feature:hover{box-shadow:0 0 0 2px color-mix(in srgb,var(--c-accent) 60%,transparent),0 22px 40px -24px rgba(0,0,0,.4)}
